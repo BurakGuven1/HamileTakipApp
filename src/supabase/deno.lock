@@ -1,0 +1,9 @@
+{
+  "version": "5",
+  "redirects": {
+    "https://esm.sh/@supabase/supabase-js@2": "https://esm.sh/@supabase/supabase-js@2.107.0"
+  },
+  "remote": {
+    "https://esm.sh/@supabase/supabase-js@2.107.0": "8caa09b0223684d83cfa273de2946af25430d7ca8e5320b721226a0c7a8c6e98"
+  }
+}

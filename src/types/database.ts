@@ -12,27 +12,30 @@ export type Database = {
       profiles: {
         Row: {
           id: string;
-          full_name: string | null;
+          display_name: string | null;
           forum_nickname: string | null;
-          is_onboarding_complete: boolean;
-          pregnancy_due_date: string | null;
+          avatar_url: string | null;
+          is_pregnant: boolean;
+          due_date: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id: string;
-          full_name?: string | null;
+          display_name?: string | null;
           forum_nickname?: string | null;
-          is_onboarding_complete?: boolean;
-          pregnancy_due_date?: string | null;
+          avatar_url?: string | null;
+          is_pregnant?: boolean;
+          due_date?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
-          full_name?: string | null;
+          display_name?: string | null;
           forum_nickname?: string | null;
-          is_onboarding_complete?: boolean;
-          pregnancy_due_date?: string | null;
+          avatar_url?: string | null;
+          is_pregnant?: boolean;
+          due_date?: string | null;
           updated_at?: string;
         };
         Relationships: [];
@@ -40,32 +43,30 @@ export type Database = {
       babies: {
         Row: {
           id: string;
-          user_id: string;
+          parent_id: string;
           name: string;
-          birth_date: string | null;
-          due_date: string | null;
-          gender: "female" | "male" | "unknown" | null;
-          photo_path: string | null;
+          birth_date: string;
+          gender: "kiz" | "erkek" | "belirtilmemis" | null;
+          photo_url: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
-          user_id: string;
+          parent_id: string;
           name: string;
-          birth_date?: string | null;
-          due_date?: string | null;
-          gender?: "female" | "male" | "unknown" | null;
-          photo_path?: string | null;
+          birth_date: string;
+          gender?: "kiz" | "erkek" | "belirtilmemis" | null;
+          photo_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
+          parent_id?: string;
           name?: string;
-          birth_date?: string | null;
-          due_date?: string | null;
-          gender?: "female" | "male" | "unknown" | null;
-          photo_path?: string | null;
+          birth_date?: string;
+          gender?: "kiz" | "erkek" | "belirtilmemis" | null;
+          photo_url?: string | null;
           updated_at?: string;
         };
         Relationships: [];
@@ -74,24 +75,28 @@ export type Database = {
         Row: {
           id: string;
           vaccine_name: string;
-          dose_label: string;
-          due_offset_days: number;
+          vaccine_code: string | null;
+          recommended_age_days: number;
+          dose_number: number;
           description: string | null;
-          created_at: string;
+          sort_order: number;
         };
         Insert: {
           id?: string;
           vaccine_name: string;
-          dose_label: string;
-          due_offset_days: number;
+          vaccine_code?: string | null;
+          recommended_age_days: number;
+          dose_number?: number;
           description?: string | null;
-          created_at?: string;
+          sort_order?: number;
         };
         Update: {
           vaccine_name?: string;
-          dose_label?: string;
-          due_offset_days?: number;
+          vaccine_code?: string | null;
+          recommended_age_days?: number;
+          dose_number?: number;
           description?: string | null;
+          sort_order?: number;
         };
         Relationships: [];
       };
@@ -100,8 +105,9 @@ export type Database = {
           id: string;
           baby_id: string;
           vaccine_schedule_id: string;
-          due_date: string;
-          completed_at: string | null;
+          scheduled_date: string;
+          completed: boolean;
+          completed_date: string | null;
           notes: string | null;
           created_at: string;
           updated_at: string;
@@ -110,15 +116,17 @@ export type Database = {
           id?: string;
           baby_id: string;
           vaccine_schedule_id: string;
-          due_date: string;
-          completed_at?: string | null;
+          scheduled_date: string;
+          completed?: boolean;
+          completed_date?: string | null;
           notes?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
-          due_date?: string;
-          completed_at?: string | null;
+          scheduled_date?: string;
+          completed?: boolean;
+          completed_date?: string | null;
           notes?: string | null;
           updated_at?: string;
         };
@@ -128,8 +136,8 @@ export type Database = {
         Row: {
           id: string;
           baby_id: string;
-          measured_at: string;
-          weight_grams: number | null;
+          record_date: string;
+          weight_kg: number | null;
           height_cm: number | null;
           head_circumference_cm: number | null;
           notes: string | null;
@@ -138,16 +146,16 @@ export type Database = {
         Insert: {
           id?: string;
           baby_id: string;
-          measured_at: string;
-          weight_grams?: number | null;
+          record_date?: string;
+          weight_kg?: number | null;
           height_cm?: number | null;
           head_circumference_cm?: number | null;
           notes?: string | null;
           created_at?: string;
         };
         Update: {
-          measured_at?: string;
-          weight_grams?: number | null;
+          record_date?: string;
+          weight_kg?: number | null;
           height_cm?: number | null;
           head_circumference_cm?: number | null;
           notes?: string | null;
@@ -159,7 +167,6 @@ export type Database = {
           id: string;
           baby_id: string;
           storage_path: string;
-          thumbnail_path: string | null;
           taken_at: string | null;
           caption: string | null;
           created_at: string;
@@ -168,13 +175,11 @@ export type Database = {
           id?: string;
           baby_id: string;
           storage_path: string;
-          thumbnail_path?: string | null;
           taken_at?: string | null;
           caption?: string | null;
           created_at?: string;
         };
         Update: {
-          thumbnail_path?: string | null;
           taken_at?: string | null;
           caption?: string | null;
         };
@@ -186,7 +191,9 @@ export type Database = {
           title: string;
           duration_minutes: 15 | 30 | 60;
           storage_path: string;
-          is_premium: boolean;
+          cover_image_url: string | null;
+          category: string | null;
+          is_active: boolean;
           created_at: string;
         };
         Insert: {
@@ -194,14 +201,18 @@ export type Database = {
           title: string;
           duration_minutes: 15 | 30 | 60;
           storage_path: string;
-          is_premium?: boolean;
+          cover_image_url?: string | null;
+          category?: string | null;
+          is_active?: boolean;
           created_at?: string;
         };
         Update: {
           title?: string;
           duration_minutes?: 15 | 30 | 60;
           storage_path?: string;
-          is_premium?: boolean;
+          cover_image_url?: string | null;
+          category?: string | null;
+          is_active?: boolean;
         };
         Relationships: [];
       };
@@ -209,20 +220,21 @@ export type Database = {
         Row: {
           id: string;
           name: string;
-          slug: string;
+          description: string | null;
+          icon: string | null;
           sort_order: number;
-          created_at: string;
         };
         Insert: {
           id?: string;
           name: string;
-          slug: string;
+          description?: string | null;
+          icon?: string | null;
           sort_order?: number;
-          created_at?: string;
         };
         Update: {
           name?: string;
-          slug?: string;
+          description?: string | null;
+          icon?: string | null;
           sort_order?: number;
         };
         Relationships: [];
@@ -232,8 +244,12 @@ export type Database = {
           id: string;
           category_id: string;
           author_id: string;
+          forum_nickname: string;
           title: string;
-          body: string;
+          content: string;
+          is_flagged: boolean;
+          flagged_reason: string | null;
+          is_hidden: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -241,14 +257,22 @@ export type Database = {
           id?: string;
           category_id: string;
           author_id: string;
+          forum_nickname: string;
           title: string;
-          body: string;
+          content: string;
+          is_flagged?: boolean;
+          flagged_reason?: string | null;
+          is_hidden?: boolean;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
+          category_id?: string;
           title?: string;
-          body?: string;
+          content?: string;
+          is_flagged?: boolean;
+          flagged_reason?: string | null;
+          is_hidden?: boolean;
           updated_at?: string;
         };
         Relationships: [];
@@ -258,43 +282,54 @@ export type Database = {
           id: string;
           post_id: string;
           author_id: string;
-          body: string;
+          forum_nickname: string;
+          content: string;
+          is_flagged: boolean;
+          flagged_reason: string | null;
+          is_hidden: boolean;
           created_at: string;
-          updated_at: string;
         };
         Insert: {
           id?: string;
           post_id: string;
           author_id: string;
-          body: string;
+          forum_nickname: string;
+          content: string;
+          is_flagged?: boolean;
+          flagged_reason?: string | null;
+          is_hidden?: boolean;
           created_at?: string;
-          updated_at?: string;
         };
         Update: {
-          body?: string;
-          updated_at?: string;
+          content?: string;
+          is_flagged?: boolean;
+          flagged_reason?: string | null;
+          is_hidden?: boolean;
         };
         Relationships: [];
       };
       forum_reports: {
         Row: {
           id: string;
-          post_id: string | null;
-          comment_id: string | null;
           reporter_id: string;
+          target_type: "post" | "comment";
+          target_id: string;
           reason: string;
+          status: "pending" | "reviewed" | "dismissed";
           created_at: string;
         };
         Insert: {
           id?: string;
-          post_id?: string | null;
-          comment_id?: string | null;
           reporter_id: string;
+          target_type: "post" | "comment";
+          target_id: string;
           reason: string;
+          status?: "pending" | "reviewed" | "dismissed";
           created_at?: string;
         };
         Update: {
           reason?: string;
+          status?: "pending" | "reviewed" | "dismissed";
         };
         Relationships: [];
       };
@@ -302,26 +337,26 @@ export type Database = {
         Row: {
           id: string;
           user_id: string;
-          entitlement_id: string;
-          product_id: string;
-          status: "active" | "expired" | "cancelled";
+          product_id: string | null;
+          status: "active" | "expired" | "cancelled" | "grace_period";
           expires_at: string | null;
+          is_lifetime: boolean;
           updated_at: string;
         };
         Insert: {
           id?: string;
           user_id: string;
-          entitlement_id: string;
-          product_id: string;
-          status: "active" | "expired" | "cancelled";
+          product_id?: string | null;
+          status?: "active" | "expired" | "cancelled" | "grace_period";
           expires_at?: string | null;
+          is_lifetime?: boolean;
           updated_at?: string;
         };
         Update: {
-          entitlement_id?: string;
-          product_id?: string;
-          status?: "active" | "expired" | "cancelled";
+          product_id?: string | null;
+          status?: "active" | "expired" | "cancelled" | "grace_period";
           expires_at?: string | null;
+          is_lifetime?: boolean;
           updated_at?: string;
         };
         Relationships: [];
@@ -331,17 +366,43 @@ export type Database = {
           id: string;
           user_id: string | null;
           event_name: string;
-          properties: Json;
+          event_properties: Json;
+          session_id: string | null;
           created_at: string;
         };
         Insert: {
           id?: string;
           user_id?: string | null;
           event_name: string;
-          properties?: Json;
+          event_properties?: Json;
+          session_id?: string | null;
           created_at?: string;
         };
         Update: never;
+        Relationships: [];
+      };
+      push_tokens: {
+        Row: {
+          id: string;
+          user_id: string;
+          expo_push_token: string;
+          device_type: "ios" | "android" | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          expo_push_token: string;
+          device_type?: "ios" | "android" | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          expo_push_token?: string;
+          device_type?: "ios" | "android" | null;
+          updated_at?: string;
+        };
         Relationships: [];
       };
     };
@@ -350,12 +411,12 @@ export type Database = {
         Row: {
           id: string;
           category_id: string;
+          forum_nickname: string;
           title: string;
-          body: string;
-          forum_nickname: string | null;
-          comment_count: number;
+          content: string;
           created_at: string;
           updated_at: string;
+          comment_count: number;
         };
         Relationships: [];
       };
@@ -363,20 +424,24 @@ export type Database = {
         Row: {
           id: string;
           post_id: string;
-          body: string;
-          forum_nickname: string | null;
+          forum_nickname: string;
+          content: string;
           created_at: string;
-          updated_at: string;
         };
         Relationships: [];
       };
     };
     Functions: {
-      create_baby_vaccination_schedule: {
+      get_upcoming_vaccinations: {
         Args: {
-          baby_id: string;
+          days_ahead?: number;
         };
-        Returns: void;
+        Returns: {
+          baby_id: string;
+          parent_id: string;
+          vaccine_name: string;
+          scheduled_date: string;
+        }[];
       };
     };
     Enums: Record<string, never>;

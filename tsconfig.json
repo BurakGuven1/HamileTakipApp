@@ -10,5 +10,6 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true
   },
-  "include": ["app", "src", "app.config.ts", "expo-env.d.ts"]
+  "include": ["app", "src", "app.config.ts", "expo-env.d.ts"],
+  "exclude": ["src/supabase/functions"]
 }

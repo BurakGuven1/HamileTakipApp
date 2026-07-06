@@ -100,8 +100,8 @@ export async function reportForumContent(report: TablesInsert<"forum_reports">) 
   }
 
   await trackEvent("forum_post_reported", {
-    post_id: report.post_id ?? "",
-    comment_id: report.comment_id ?? ""
+    target_type: report.target_type,
+    target_id: report.target_id
   });
 
   return data;

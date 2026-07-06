@@ -12,7 +12,7 @@ export async function trackEvent(
 
   const { error } = await supabase.from("analytics_events").insert({
     event_name: eventName,
-    properties,
+    event_properties: properties,
     user_id: user?.id ?? null
   });
 

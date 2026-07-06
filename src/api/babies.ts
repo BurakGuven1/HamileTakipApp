@@ -30,9 +30,6 @@ export async function createBaby(input: BabyInsert) {
     throw error;
   }
 
-  await supabase.rpc("create_baby_vaccination_schedule", {
-    baby_id: data.id
-  });
   await trackEvent("baby_profile_created", { baby_id: data.id });
 
   return data;

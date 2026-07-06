@@ -28,6 +28,19 @@ export async function uploadBabyPhoto(input: {
   caption?: string;
   takenAt?: string;
 }) {
+  const {
+    data: { user },
+    error: userError
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    throw userError;
+  }
+
+  if (!user) {
+    throw new Error("Auth session is required");
+  }
+
   const compressed = await ImageManipulator.manipulateAsync(
     input.uri,
     [{ resize: { width: 1920 } }],
@@ -39,7 +52,7 @@ export async function uploadBabyPhoto(input: {
 
   const response = await fetch(compressed.uri);
   const body = await response.arrayBuffer();
-  const storagePath = `${input.babyId}/${Date.now()}.jpg`;
+  const storagePath = `${user.id}/${input.babyId}/${Date.now()}.jpg`;
 
   const { error: uploadError } = await supabase.storage
     .from(bucketName)
@@ -56,7 +69,7 @@ export async function uploadBabyPhoto(input: {
     baby_id: input.babyId,
     storage_path: storagePath,
     caption: input.caption,
-    taken_at: input.takenAt ?? new Date().toISOString()
+    taken_at: (input.takenAt ?? new Date().toISOString()).slice(0, 10)
   };
 
   const { data, error } = await supabase

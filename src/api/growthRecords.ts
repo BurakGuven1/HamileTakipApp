@@ -10,7 +10,7 @@ export async function listGrowthRecords(babyId: string) {
     .from("growth_records")
     .select("*")
     .eq("baby_id", babyId)
-    .order("measured_at", { ascending: true });
+    .order("record_date", { ascending: true });
 
   if (error) {
     throw error;

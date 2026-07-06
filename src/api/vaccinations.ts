@@ -10,7 +10,7 @@ export async function listVaccinationsForBaby(babyId: string) {
     .from("baby_vaccinations")
     .select("*, vaccine_schedule(*)")
     .eq("baby_id", babyId)
-    .order("due_date", { ascending: true });
+    .order("scheduled_date", { ascending: true });
 
   if (error) {
     throw error;
@@ -24,7 +24,8 @@ export async function markVaccinationDone(
   completedAt = new Date().toISOString()
 ) {
   const update: TablesUpdate<"baby_vaccinations"> = {
-    completed_at: completedAt,
+    completed: true,
+    completed_date: completedAt.slice(0, 10),
     updated_at: new Date().toISOString()
   };
 

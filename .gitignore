@@ -39,3 +39,5 @@ Thumbs.db
 # Supabase local temp
 supabase/.branches/
 supabase/.temp/
+**/supabase/.branches/
+**/supabase/.temp/
