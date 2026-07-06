@@ -1,11 +1,15 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
 const isDevelopment = process.env.APP_VARIANT === "development";
+const expoOwner = process.env.EXPO_OWNER ?? "burakguven351999";
+const easProjectId =
+  process.env.EAS_PROJECT_ID ?? "710c02c1-ddbb-4433-818f-00dadd19a758";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
+  owner: expoOwner,
   name: isDevelopment ? "Hamile Takip Dev" : "Hamile Takip",
-  slug: "hamile-bebek-takip",
+  slug: "hamileliktakipapp",
   scheme: "hamiletakip",
   version: "0.1.0",
   orientation: "portrait",
@@ -66,7 +70,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   extra: {
     eas: {
-      projectId: process.env.EAS_PROJECT_ID
+      projectId: easProjectId
     },
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
     revenueCatIosApiKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY,
