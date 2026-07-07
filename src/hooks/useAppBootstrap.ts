@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 import { initializeAds } from "@/lib/admob";
-import { registerForPushNotifications } from "@/lib/notifications";
+import { registerAndSavePushToken } from "@/lib/notifications";
 import { configureRevenueCat } from "@/lib/revenuecat";
 import { supabase } from "@/lib/supabase";
 
@@ -20,7 +20,10 @@ export function useAppBootstrap() {
 
       configureRevenueCat(user?.id);
       await initializeAds();
-      await registerForPushNotifications();
+
+      if (user) {
+        await registerAndSavePushToken();
+      }
     }
 
     bootstrap().catch((error) => {

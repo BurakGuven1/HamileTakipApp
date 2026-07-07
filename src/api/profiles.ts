@@ -73,3 +73,15 @@ export async function updateCurrentProfile(update: ProfileUpdate) {
 
   return data;
 }
+
+export async function isNicknameAvailable(nickname: string) {
+  const { data, error } = await supabase.rpc("is_nickname_available", {
+    nickname
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}

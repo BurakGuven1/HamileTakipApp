@@ -67,6 +67,7 @@ Deno.serve(async (req) => {
       .from("profiles")
       .select("id, due_date")
       .eq("is_pregnant", true)
+      .eq("notify_weekly_pregnancy_updates", true)
       .not("due_date", "is", null);
 
     if (error) {

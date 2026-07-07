@@ -83,12 +83,42 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2) İlgili ebeveynlerin push token'larını çek
+    // 2) İlgili ebeveynlerin bildirim tercihlerini ve push token'larını çek
     const parentIds = [...new Set(rows.map((r) => r.parent_id))];
+    const { data: parentProfiles, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, notify_vaccine_reminders")
+      .in("id", parentIds);
+
+    if (profileError) {
+      console.error("profiles tercih sorgu hatası:", profileError);
+      return new Response(JSON.stringify({ error: profileError.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const enabledParentIds = new Set(
+      (parentProfiles ?? [])
+        .filter((profile) => profile.notify_vaccine_reminders)
+        .map((profile) => profile.id),
+    );
+
+    if (enabledParentIds.size === 0) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          sent: 0,
+          message: "Yaklaşan aşı var ama tüm ebeveynler bildirimi kapatmış",
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const { data: tokens, error: tokenError } = await supabase
       .from("push_tokens")
       .select("user_id, expo_push_token")
-      .in("user_id", parentIds);
+      .in("user_id", [...enabledParentIds]);
 
     if (tokenError) {
       console.error("push_tokens sorgu hatası:", tokenError);
@@ -108,6 +138,7 @@ Deno.serve(async (req) => {
     // 3) Her yaklaşan aşı için Expo push mesajı oluştur
     const messages: ExpoPushMessage[] = [];
     for (const row of rows) {
+      if (!enabledParentIds.has(row.parent_id)) continue;
       const userTokens = tokensByUser.get(row.parent_id) ?? [];
       for (const token of userTokens) {
         messages.push({

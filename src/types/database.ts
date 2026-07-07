@@ -17,6 +17,12 @@ export type Database = {
           avatar_url: string | null;
           is_pregnant: boolean;
           due_date: string | null;
+          onboarding_completed: boolean;
+          onboarding_step: string;
+          notify_forum_comments: boolean;
+          notify_forum_likes: boolean;
+          notify_vaccine_reminders: boolean;
+          notify_weekly_pregnancy_updates: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -27,6 +33,12 @@ export type Database = {
           avatar_url?: string | null;
           is_pregnant?: boolean;
           due_date?: string | null;
+          onboarding_completed?: boolean;
+          onboarding_step?: string;
+          notify_forum_comments?: boolean;
+          notify_forum_likes?: boolean;
+          notify_vaccine_reminders?: boolean;
+          notify_weekly_pregnancy_updates?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -36,6 +48,12 @@ export type Database = {
           avatar_url?: string | null;
           is_pregnant?: boolean;
           due_date?: string | null;
+          onboarding_completed?: boolean;
+          onboarding_step?: string;
+          notify_forum_comments?: boolean;
+          notify_forum_likes?: boolean;
+          notify_vaccine_reminders?: boolean;
+          notify_weekly_pregnancy_updates?: boolean;
           updated_at?: string;
         };
         Relationships: [];
@@ -333,6 +351,34 @@ export type Database = {
         };
         Relationships: [];
       };
+      forum_post_likes: {
+        Row: {
+          post_id: string;
+          user_id: string;
+          created_at: string;
+        };
+        Insert: {
+          post_id: string;
+          user_id: string;
+          created_at?: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
+      forum_comment_likes: {
+        Row: {
+          comment_id: string;
+          user_id: string;
+          created_at: string;
+        };
+        Insert: {
+          comment_id: string;
+          user_id: string;
+          created_at?: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
       subscriptions: {
         Row: {
           id: string;
@@ -412,11 +458,14 @@ export type Database = {
           id: string;
           category_id: string;
           forum_nickname: string;
+          author_badge: string;
           title: string;
           content: string;
           created_at: string;
           updated_at: string;
           comment_count: number;
+          like_count: number;
+          liked_by_current_user: boolean;
         };
         Relationships: [];
       };
@@ -425,13 +474,22 @@ export type Database = {
           id: string;
           post_id: string;
           forum_nickname: string;
+          author_badge: string;
           content: string;
           created_at: string;
+          like_count: number;
+          liked_by_current_user: boolean;
         };
         Relationships: [];
       };
     };
     Functions: {
+      is_nickname_available: {
+        Args: {
+          nickname: string;
+        };
+        Returns: boolean;
+      };
       get_upcoming_vaccinations: {
         Args: {
           days_ahead?: number;

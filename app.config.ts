@@ -8,7 +8,7 @@ const easProjectId =
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   owner: expoOwner,
-  name: isDevelopment ? "Hamile Takip Dev" : "Hamile Takip",
+  name: isDevelopment ? "Anne+ Dev" : "Anne+",
   slug: "hamileliktakipapp",
   scheme: "hamiletakip",
   version: "0.1.0",
