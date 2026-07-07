@@ -4,8 +4,13 @@ import type { Tables, TablesUpdate } from "@/types/database";
 
 export type BabyVaccination = Tables<"baby_vaccinations">;
 export type VaccineScheduleItem = Tables<"vaccine_schedule">;
+export type BabyVaccinationWithSchedule = BabyVaccination & {
+  vaccine_schedule: VaccineScheduleItem | null;
+};
 
-export async function listVaccinationsForBaby(babyId: string) {
+export async function listVaccinationsForBaby(
+  babyId: string
+): Promise<BabyVaccinationWithSchedule[]> {
   const { data, error } = await supabase
     .from("baby_vaccinations")
     .select("*, vaccine_schedule(*)")
@@ -16,7 +21,7 @@ export async function listVaccinationsForBaby(babyId: string) {
     throw error;
   }
 
-  return data;
+  return data as unknown as BabyVaccinationWithSchedule[];
 }
 
 export async function markVaccinationDone(
@@ -41,6 +46,31 @@ export async function markVaccinationDone(
   }
 
   await trackEvent("vaccination_marked_done", {
+    vaccination_id: vaccinationId
+  });
+
+  return data;
+}
+
+export async function markVaccinationPending(vaccinationId: string) {
+  const update: TablesUpdate<"baby_vaccinations"> = {
+    completed: false,
+    completed_date: null,
+    updated_at: new Date().toISOString()
+  };
+
+  const { data, error } = await supabase
+    .from("baby_vaccinations")
+    .update(update)
+    .eq("id", vaccinationId)
+    .select()
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  await trackEvent("vaccination_marked_pending", {
     vaccination_id: vaccinationId
   });
 

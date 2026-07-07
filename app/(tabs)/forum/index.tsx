@@ -1,4 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Baby,
+  CalendarHeart,
+  Heart,
+  HeartPulse,
+  MessageCircle,
+  MessageCircleHeart,
+  MessagesSquare,
+  ShieldCheck,
+  Sparkles
+} from "lucide-react-native";
+import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -33,6 +45,7 @@ export default function ForumScreen() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>();
   const [activePostId, setActivePostId] = useState<string>();
   const [composerOpen, setComposerOpen] = useState(false);
+  const [commentComposerOpen, setCommentComposerOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [commentText, setCommentText] = useState("");
@@ -62,6 +75,11 @@ export default function ForumScreen() {
       setActivePostId(postsQuery.data[0].id);
     }
   }, [activePostId, postsQuery.data]);
+
+  useEffect(() => {
+    setCommentComposerOpen(false);
+    setCommentText("");
+  }, [activePostId]);
 
   const commentsQuery = useQuery({
     queryKey: ["forum-comments", activePostId],
@@ -104,9 +122,7 @@ export default function ForumScreen() {
       setActivePostId(post.id);
       await queryClient.invalidateQueries({ queryKey: ["forum-posts"] });
     },
-    onError: (error) => {
-      Alert.alert("Gonderi olusturulamadi", error.message);
-    }
+    onError: (error) => Alert.alert("Gonderi olusturulamadi", error.message)
   });
 
   const createCommentMutation = useMutation({
@@ -131,14 +147,13 @@ export default function ForumScreen() {
     },
     onSuccess: async () => {
       setCommentText("");
+      setCommentComposerOpen(false);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["forum-comments", activePostId] }),
         queryClient.invalidateQueries({ queryKey: ["forum-posts"] })
       ]);
     },
-    onError: (error) => {
-      Alert.alert("Yorum eklenemedi", error.message);
-    }
+    onError: (error) => Alert.alert("Yorum eklenemedi", error.message)
   });
 
   const postLikeMutation = useMutation({
@@ -164,6 +179,9 @@ export default function ForumScreen() {
     <Screen>
       <View style={styles.container}>
         <View style={styles.hero}>
+          <View style={styles.iconBubble}>
+            <MessageCircleHeart color={colors.primary} size={28} />
+          </View>
           <View style={{ gap: spacing.xs }}>
             <Text style={typography.eyebrow}>Anne toplulugu</Text>
             <Text style={typography.heading1}>Forum</Text>
@@ -182,6 +200,12 @@ export default function ForumScreen() {
         <View style={styles.categoryRow}>
           <Chip
             active={!selectedCategoryId}
+            icon={
+              <Sparkles
+                color={!selectedCategoryId ? colors.surface : colors.primary}
+                size={18}
+              />
+            }
             label="Tumu"
             onPress={() => {
               setSelectedCategoryId(undefined);
@@ -192,7 +216,14 @@ export default function ForumScreen() {
             <Chip
               key={category.id}
               active={selectedCategoryId === category.id}
-              label={`${category.icon ?? ""} ${category.name}`.trim()}
+              icon={getCategoryIcon(
+                category.name,
+                category.icon,
+                selectedCategoryId === category.id
+                  ? colors.surface
+                  : colors.primary
+              )}
+              label={category.name}
               onPress={() => {
                 setSelectedCategoryId(category.id);
                 setActivePostId(undefined);
@@ -264,11 +295,25 @@ export default function ForumScreen() {
                   </View>
 
                   <View style={styles.actionRow}>
-                    <ActionButton
+                    <LikeButton
                       active={activePost.liked_by_current_user}
-                      label={`${activePost.liked_by_current_user ? "♥" : "♡"} ${activePost.like_count}`}
-                      onPress={() => postLikeMutation.mutate(activePost)}
+                      count={activePost.like_count}
                       disabled={postLikeMutation.isPending}
+                      onPress={() => postLikeMutation.mutate(activePost)}
+                    />
+                    <ActionButton
+                      active={commentComposerOpen}
+                      icon={
+                        <MessageCircle
+                          color={
+                            commentComposerOpen ? colors.primary : colors.textMuted
+                          }
+                          size={16}
+                        />
+                      }
+                      label="Yorum yap"
+                      onPress={() => setCommentComposerOpen((value) => !value)}
+                      disabled={createCommentMutation.isPending}
                     />
                     <Text style={styles.metaText}>{activePost.comment_count} yorum</Text>
                   </View>
@@ -276,25 +321,36 @@ export default function ForumScreen() {
                   <View style={styles.divider} />
 
                   <Text style={typography.heading2}>Yorumlar</Text>
-                  <View style={{ gap: spacing.sm }}>
-                    <TextField
-                      label="Yorumun"
-                      value={commentText}
-                      onChangeText={setCommentText}
-                      placeholder="Destekleyici ve nazik bir yorum yaz."
-                      multiline
-                      style={styles.commentInput}
-                    />
-                    <Button
-                      label={
-                        createCommentMutation.isPending
-                          ? "Gonderiliyor..."
-                          : "Yorum gonder"
-                      }
-                      disabled={createCommentMutation.isPending}
-                      onPress={() => createCommentMutation.mutate()}
-                    />
-                  </View>
+                  {commentComposerOpen ? (
+                    <View style={styles.commentComposer}>
+                      <TextField
+                        label="Yorumun"
+                        value={commentText}
+                        onChangeText={setCommentText}
+                        placeholder="Destekleyici ve nazik bir yorum yaz."
+                        multiline
+                        style={styles.commentInput}
+                      />
+                      <View style={styles.composerActions}>
+                        <Button
+                          label="Vazgec"
+                          variant="ghost"
+                          style={styles.composerButton}
+                          onPress={() => setCommentComposerOpen(false)}
+                        />
+                        <Button
+                          label={
+                            createCommentMutation.isPending
+                              ? "Gonderiliyor..."
+                              : "Yorum gonder"
+                          }
+                          disabled={createCommentMutation.isPending}
+                          style={styles.composerButton}
+                          onPress={() => createCommentMutation.mutate()}
+                        />
+                      </View>
+                    </View>
+                  ) : null}
 
                   {commentsQuery.isLoading ? (
                     <ActivityIndicator color={colors.primary} />
@@ -324,20 +380,39 @@ export default function ForumScreen() {
 
 type ChipProps = {
   active: boolean;
+  icon: ReactNode;
   label: string;
   onPress: () => void;
 };
 
-function Chip({ active, label, onPress }: ChipProps) {
+function Chip({ active, icon, label, onPress }: ChipProps) {
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
       style={[styles.chip, active && styles.chipActive]}
     >
+      {icon}
       <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
     </Pressable>
   );
+}
+
+function getCategoryIcon(name: string, icon: string | null, color: string) {
+  const key = `${name} ${icon ?? ""}`.toLocaleLowerCase("tr-TR");
+  if (key.includes("hamile") || key.includes("gebelik")) {
+    return <CalendarHeart color={color} size={18} />;
+  }
+  if (key.includes("dogum") || key.includes("bebek")) {
+    return <Baby color={color} size={18} />;
+  }
+  if (key.includes("kayip") || key.includes("destek")) {
+    return <ShieldCheck color={color} size={18} />;
+  }
+  if (key.includes("sohbet") || key.includes("genel")) {
+    return <MessagesSquare color={color} size={18} />;
+  }
+  return <HeartPulse color={color} size={18} />;
 }
 
 type PostCardProps = {
@@ -360,11 +435,11 @@ function PostCard({ active, post, onPress, onLike, disabled }: PostCardProps) {
           {post.content}
         </Text>
         <View style={styles.actionRow}>
-          <ActionButton
+          <LikeButton
             active={post.liked_by_current_user}
-            label={`${post.liked_by_current_user ? "♥" : "♡"} ${post.like_count}`}
-            onPress={onLike}
+            count={post.like_count}
             disabled={disabled}
+            onPress={onLike}
           />
           <Text style={styles.metaText}>{post.comment_count} yorum</Text>
         </View>
@@ -382,16 +457,17 @@ type CommentRowProps = {
 function CommentRow({ comment, onLike, disabled }: CommentRowProps) {
   return (
     <View style={styles.commentRow}>
-      <View style={{ gap: spacing.xs }}>
+      <View style={styles.commentRail} />
+      <View style={styles.commentContent}>
         <AuthorLine nickname={comment.forum_nickname} badge={comment.author_badge} />
         <Text style={styles.commentText}>{comment.content}</Text>
+        <LikeButton
+          active={comment.liked_by_current_user}
+          count={comment.like_count}
+          disabled={disabled}
+          onPress={onLike}
+        />
       </View>
-      <ActionButton
-        active={comment.liked_by_current_user}
-        label={`${comment.liked_by_current_user ? "♥" : "♡"} ${comment.like_count}`}
-        onPress={onLike}
-        disabled={disabled}
-      />
     </View>
   );
 }
@@ -405,13 +481,43 @@ function AuthorLine({ nickname, badge }: { nickname: string; badge: string }) {
   );
 }
 
+function LikeButton({
+  active,
+  count,
+  disabled,
+  onPress
+}: {
+  active: boolean;
+  count: number;
+  disabled: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <ActionButton
+      active={active}
+      disabled={disabled}
+      icon={
+        <Heart
+          color={active ? colors.accent : colors.textMuted}
+          fill={active ? colors.accent : "transparent"}
+          size={16}
+        />
+      }
+      label={`${count}`}
+      onPress={onPress}
+    />
+  );
+}
+
 function ActionButton({
   active,
+  icon,
   label,
   onPress,
   disabled
 }: {
   active: boolean;
+  icon: ReactNode;
   label: string;
   onPress: () => void;
   disabled: boolean;
@@ -423,6 +529,7 @@ function ActionButton({
       onPress={onPress}
       style={[styles.actionButton, active && styles.actionButtonActive]}
     >
+      {icon}
       <Text style={[styles.actionText, active && styles.actionTextActive]}>{label}</Text>
     </Pressable>
   );
@@ -438,6 +545,14 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     padding: spacing.lg
   },
+  iconBubble: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderRadius: radii.pill,
+    height: 52,
+    justifyContent: "center",
+    width: 52
+  },
   heroText: {
     ...typography.body,
     color: colors.text
@@ -448,10 +563,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm
   },
   chip: {
+    alignItems: "center",
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderRadius: radii.pill,
     borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.xs,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm
   },
@@ -522,11 +640,15 @@ const styles = StyleSheet.create({
   actionRow: {
     alignItems: "center",
     flexDirection: "row",
-    gap: spacing.md
+    flexWrap: "wrap",
+    gap: spacing.sm
   },
   actionButton: {
+    alignItems: "center",
     backgroundColor: colors.surfaceMuted,
     borderRadius: radii.pill,
+    flexDirection: "row",
+    gap: spacing.xs,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm
   },
@@ -555,13 +677,36 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
     height: StyleSheet.hairlineWidth
   },
-  commentInput: {
-    minHeight: 72,
-    textAlignVertical: "top"
-  },
-  commentRow: {
+  commentComposer: {
     backgroundColor: colors.surfaceMuted,
     borderRadius: radii.md,
+    gap: spacing.md,
+    padding: spacing.md
+  },
+  commentInput: {
+    minHeight: 84,
+    textAlignVertical: "top"
+  },
+  composerActions: {
+    flexDirection: "row",
+    gap: spacing.sm
+  },
+  composerButton: {
+    flex: 1
+  },
+  commentRow: {
+    flexDirection: "row",
+    gap: spacing.md
+  },
+  commentRail: {
+    backgroundColor: colors.border,
+    borderRadius: radii.pill,
+    width: 3
+  },
+  commentContent: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.md,
+    flex: 1,
     gap: spacing.sm,
     padding: spacing.md
   },

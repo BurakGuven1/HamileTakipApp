@@ -38,6 +38,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg
+    paddingTop: spacing.lg,
+    paddingBottom: 112
   }
 });

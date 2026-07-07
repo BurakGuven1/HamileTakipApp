@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, router } from "expo-router";
+import { UserRound } from "lucide-react-native";
 import { Alert, StyleSheet, Switch, Text, View } from "react-native";
 
 import { getCurrentProfile, updateCurrentProfile, type ProfileUpdate } from "@/api/profiles";
@@ -59,6 +60,20 @@ export default function SettingsScreen() {
     onError: (error) => Alert.alert("Hesap silinemedi", error.message)
   });
 
+  const signOutMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.clear();
+      router.replace("/sign-in");
+    },
+    onError: (error) => Alert.alert("Cikis yapilamadi", error.message)
+  });
+
   const profile = profileQuery.data;
 
   function confirmDeleteAccount() {
@@ -80,7 +95,7 @@ export default function SettingsScreen() {
     <Screen>
       <View style={styles.container}>
         <View style={{ gap: spacing.sm }}>
-          <Text style={typography.heading1}>Ayarlar</Text>
+          <Text style={typography.heading1}>Profil</Text>
           <Text style={typography.body}>
             Profil, bildirim, abonelik ve hesap guvenligi tek yerde.
           </Text>
@@ -89,7 +104,10 @@ export default function SettingsScreen() {
         <Card style={styles.profileCard}>
           <View style={{ gap: spacing.md }}>
             <View style={{ gap: spacing.xs }}>
-              <Text style={typography.heading2}>Profil</Text>
+              <View style={styles.profileHeader}>
+                <Text style={typography.heading2}>Forum kimligin</Text>
+                <UserRound color={colors.primary} size={26} />
+              </View>
               <Text style={styles.profileName}>
                 {profile?.forum_nickname ?? "Forum takma adi bekleniyor"}
               </Text>
@@ -105,6 +123,12 @@ export default function SettingsScreen() {
                 value={isLoading ? "Kontrol" : isPremium ? "Aktif" : "Pasif"}
               />
             </View>
+            <Button
+              label={signOutMutation.isPending ? "Cikis yapiliyor..." : "Cikis yap"}
+              variant="secondary"
+              disabled={signOutMutation.isPending}
+              onPress={() => signOutMutation.mutate()}
+            />
           </View>
         </Card>
 
@@ -247,6 +271,11 @@ const styles = StyleSheet.create({
   },
   profileCard: {
     backgroundColor: colors.primarySoft
+  },
+  profileHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between"
   },
   profileName: {
     ...typography.heading2,

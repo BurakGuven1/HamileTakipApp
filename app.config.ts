@@ -53,6 +53,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     "expo-secure-store",
     "expo-notifications",
     "expo-apple-authentication",
+    "@react-native-community/datetimepicker",
     [
       "react-native-google-mobile-ads",
       {

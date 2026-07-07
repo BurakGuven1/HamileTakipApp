@@ -1,7 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
+import {
+  Baby,
+  Bell,
+  CalendarHeart,
+  Check,
+  Heart,
+  ShieldCheck,
+  Sparkles,
+  UserRound
+} from "lucide-react-native";
+import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type DimensionValue
+} from "react-native";
 
 import { createBaby } from "@/api/babies";
 import {
@@ -11,6 +29,7 @@ import {
 } from "@/api/profiles";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import { DatePickerField } from "@/components/DatePickerField";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
 import { registerAndSavePushToken } from "@/lib/notifications";
@@ -18,8 +37,14 @@ import { colors, radii, spacing, typography } from "@/theme";
 
 type OnboardingStep = "status" | "details" | "nickname" | "notifications";
 type ParentStatus = "pregnant" | "baby" | "skip";
+type BabyGender = "kiz" | "erkek" | "belirtilmemis";
 
-const steps: OnboardingStep[] = ["status", "details", "nickname", "notifications"];
+const steps: { id: OnboardingStep; label: string }[] = [
+  { id: "status", label: "Durum" },
+  { id: "details", label: "Bilgiler" },
+  { id: "nickname", label: "Forum" },
+  { id: "notifications", label: "Bildirim" }
+];
 
 export default function OnboardingScreen() {
   const queryClient = useQueryClient();
@@ -28,6 +53,7 @@ export default function OnboardingScreen() {
   const [dueDate, setDueDate] = useState("");
   const [babyName, setBabyName] = useState("");
   const [birthDate, setBirthDate] = useState("");
+  const [babyGender, setBabyGender] = useState<BabyGender>("belirtilmemis");
   const [nickname, setNickname] = useState("");
   const [nicknameAvailable, setNicknameAvailable] = useState<boolean | null>(null);
 
@@ -59,8 +85,11 @@ export default function OnboardingScreen() {
     return () => clearTimeout(handle);
   }, [nickname, step]);
 
-  const activeIndex = steps.indexOf(step);
-  const progress = useMemo(() => `${activeIndex + 1}/${steps.length}`, [activeIndex]);
+  const activeIndex = steps.findIndex((item) => item.id === step);
+  const progressPercent = useMemo(
+    () => `${((activeIndex + 1) / steps.length) * 100}%`,
+    [activeIndex]
+  );
 
   const updateStepMutation = useMutation({
     mutationFn: updateCurrentProfile,
@@ -104,8 +133,8 @@ export default function OnboardingScreen() {
     }
 
     if (status === "pregnant") {
-      if (!isIsoDate(dueDate)) {
-        Alert.alert("Tarih formati", "Tahmini dogum tarihini YYYY-AA-GG formatinda yaz.");
+      if (!dueDate) {
+        Alert.alert("Tarih sec", "Tahmini dogum tarihini secmelisin.");
         return;
       }
 
@@ -119,7 +148,7 @@ export default function OnboardingScreen() {
     }
 
     if (status === "baby") {
-      if (!babyName.trim() || !isIsoDate(birthDate)) {
+      if (!babyName.trim() || !birthDate) {
         Alert.alert("Bilgileri kontrol et", "Bebek adi ve dogum tarihi gerekli.");
         return;
       }
@@ -128,7 +157,7 @@ export default function OnboardingScreen() {
         parent_id: profile.id,
         name: babyName.trim(),
         birth_date: birthDate,
-        gender: "belirtilmemis"
+        gender: babyGender
       });
       await updateStepMutation.mutateAsync({ onboarding_step: "details_added" });
       setStep("nickname");
@@ -193,35 +222,67 @@ export default function OnboardingScreen() {
     <Screen>
       <View style={styles.container}>
         <View style={styles.topBar}>
-          <Text style={typography.eyebrow}>Baslangic</Text>
+          <Text style={typography.eyebrow}>Anne+ kurulum</Text>
           <Pressable accessibilityRole="button" onPress={skipCurrentStep}>
             <Text style={styles.skipText}>Simdilik gec</Text>
           </Pressable>
         </View>
 
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${((activeIndex + 1) / steps.length) * 100}%` }]} />
+        <View style={styles.progressWrap}>
+          <View style={styles.progressTrack}>
+            <View
+              style={[
+                styles.progressFill,
+                { width: progressPercent as DimensionValue }
+              ]}
+            />
+          </View>
+          <View style={styles.stepLabels}>
+            {steps.map((item, index) => (
+              <Text
+                key={item.id}
+                style={[
+                  styles.stepLabel,
+                  index <= activeIndex && styles.stepLabelActive
+                ]}
+              >
+                {item.label}
+              </Text>
+            ))}
+          </View>
         </View>
-        <Text style={styles.progressText}>{progress}</Text>
 
         {step === "status" ? (
           <Card style={styles.focusCard}>
             <View style={{ gap: spacing.lg }}>
-              <View style={{ gap: spacing.sm }}>
-                <Text style={typography.heading1}>Sen neredesin?</Text>
-                <Text style={typography.body}>
-                  Deneyimi haftana veya bebegine gore kisisellestirelim. Istersen
-                  simdilik atlayabilirsin.
-                </Text>
-              </View>
-              <View style={{ gap: spacing.sm }}>
-                <Button label="Hamileyim" onPress={() => chooseStatus("pregnant")} />
-                <Button
-                  label="Bebegim oldu"
-                  variant="secondary"
+              <HeaderBlock
+                icon={<Sparkles color={colors.primary} size={26} />}
+                title="Deneyimini nasil kisisellestirelim?"
+                body="Bu bilgiler gizli kalir. Ana sayfa, hatirlatmalar ve forum rozetin buna gore duzenlenir."
+              />
+
+              <View style={{ gap: spacing.md }}>
+                <ChoiceCard
+                  active={status === "pregnant"}
+                  icon={<CalendarHeart color={colors.primary} size={24} />}
+                  title="Hamileyim"
+                  body="Hafta hafta gebelik gelisimi ve doguma kalan sure gosterilir."
+                  onPress={() => chooseStatus("pregnant")}
+                />
+                <ChoiceCard
+                  active={status === "baby"}
+                  icon={<Baby color={colors.primary} size={24} />}
+                  title="Bebegim oldu"
+                  body="Asi takvimi, buyume kaydi ve fotograf zaman cizelgesi acilir."
                   onPress={() => chooseStatus("baby")}
                 />
-                <Button label="Simdilik atla" variant="ghost" onPress={() => chooseStatus("skip")} />
+                <ChoiceCard
+                  active={status === "skip"}
+                  icon={<ShieldCheck color={colors.primary} size={24} />}
+                  title="Simdilik bilgi vermek istemiyorum"
+                  body="Uygulamayi kesfet, bilgileri sonra Profil veya Bebek sekmesinden ekle."
+                  onPress={() => chooseStatus("skip")}
+                />
               </View>
             </View>
           </Card>
@@ -230,22 +291,25 @@ export default function OnboardingScreen() {
         {step === "details" ? (
           <Card style={styles.focusCard}>
             <View style={{ gap: spacing.lg }}>
-              <View style={{ gap: spacing.sm }}>
-                <Text style={typography.heading1}>
-                  {status === "pregnant" ? "Gebelik bilgisi" : "Bebek bilgisi"}
-                </Text>
-                <Text style={typography.body}>
-                  Bu tarihler forumda hicbir zaman acik gosterilmez; sadece anonim
-                  rozet hesaplamak icin kullanilir.
-                </Text>
-              </View>
+              <HeaderBlock
+                icon={
+                  status === "pregnant" ? (
+                    <CalendarHeart color={colors.primary} size={26} />
+                  ) : (
+                    <Baby color={colors.primary} size={26} />
+                  )
+                }
+                title={status === "pregnant" ? "Gebelik bilgisi" : "Bebek bilgisi"}
+                body="Tarihler forumda acik gosterilmez; sadece sana ozel akis ve anonim rozet icin kullanilir."
+              />
 
               {status === "pregnant" ? (
-                <TextField
+                <DatePickerField
                   label="Tahmini dogum tarihi"
-                  placeholder="2026-10-15"
+                  minimumDate={new Date()}
+                  placeholder="Dogum tarihini sec"
                   value={dueDate}
-                  onChangeText={setDueDate}
+                  onChange={setDueDate}
                 />
               ) : (
                 <View style={{ gap: spacing.md }}>
@@ -255,12 +319,33 @@ export default function OnboardingScreen() {
                     value={babyName}
                     onChangeText={setBabyName}
                   />
-                  <TextField
+                  <DatePickerField
                     label="Dogum tarihi"
-                    placeholder="2026-07-01"
+                    maximumDate={new Date()}
+                    placeholder="Dogum tarihini sec"
                     value={birthDate}
-                    onChangeText={setBirthDate}
+                    onChange={setBirthDate}
                   />
+                  <View style={{ gap: spacing.sm }}>
+                    <Text style={typography.label}>Cinsiyet</Text>
+                    <View style={styles.segmentRow}>
+                      <SegmentButton
+                        active={babyGender === "kiz"}
+                        label="Kiz"
+                        onPress={() => setBabyGender("kiz")}
+                      />
+                      <SegmentButton
+                        active={babyGender === "erkek"}
+                        label="Erkek"
+                        onPress={() => setBabyGender("erkek")}
+                      />
+                      <SegmentButton
+                        active={babyGender === "belirtilmemis"}
+                        label="Belirtmem"
+                        onPress={() => setBabyGender("belirtilmemis")}
+                      />
+                    </View>
+                  </View>
                 </View>
               )}
 
@@ -276,13 +361,11 @@ export default function OnboardingScreen() {
         {step === "nickname" ? (
           <Card style={styles.focusCard}>
             <View style={{ gap: spacing.lg }}>
-              <View style={{ gap: spacing.sm }}>
-                <Text style={typography.heading1}>Forum takma adin</Text>
-                <Text style={typography.body}>
-                  Baska kullanicilar profilini acamaz; forumda sadece bu ad ve anonim
-                  rozet gorunur.
-                </Text>
-              </View>
+              <HeaderBlock
+                icon={<UserRound color={colors.primary} size={26} />}
+                title="Forumda nasil gorunmek istersin?"
+                body="Gercek profilin acilmaz. Forumda sadece takma adin ve anonim rozetin gorunur."
+              />
               <View style={{ gap: spacing.sm }}>
                 <TextField
                   autoCapitalize="none"
@@ -315,15 +398,18 @@ export default function OnboardingScreen() {
         {step === "notifications" ? (
           <Card style={styles.focusCard}>
             <View style={{ gap: spacing.lg }}>
+              <HeaderBlock
+                icon={<Bell color={colors.primary} size={26} />}
+                title="Nazik hatirlatmalar ister misin?"
+                body="Asi takvimi, haftalik gebelik ozetleri ve forum etkilesimleri icin kaliteli bildirimler gondeririz."
+              />
               <View style={{ gap: spacing.sm }}>
-                <Text style={typography.heading1}>Bildirimleri acalim mi?</Text>
-                <Text style={typography.body}>
-                  Asi hatirlatmalari, haftalik gebelik ozetleri ve forum etkilesimleri
-                  icin nazik bildirimler gondeririz. Ayarlardan her zaman kapatabilirsin.
-                </Text>
+                <FeatureRow label="Asi ve kontrol hatirlatmalari" />
+                <FeatureRow label="Gebelik haftana uygun ozetler" />
+                <FeatureRow label="Forum yorum ve begeni bildirimleri" />
               </View>
               <Button
-                label="Bildirim izni ver ve basla"
+                label="Bildirimleri ac ve basla"
                 onPress={() => completeOnboarding(true)}
               />
               <Button
@@ -339,8 +425,84 @@ export default function OnboardingScreen() {
   );
 }
 
-function isIsoDate(value: string) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+function HeaderBlock({
+  icon,
+  title,
+  body
+}: {
+  icon: ReactNode;
+  title: string;
+  body: string;
+}) {
+  return (
+    <View style={{ gap: spacing.md }}>
+      <View style={styles.iconBubble}>{icon}</View>
+      <View style={{ gap: spacing.sm }}>
+        <Text style={typography.heading1}>{title}</Text>
+        <Text style={typography.body}>{body}</Text>
+      </View>
+    </View>
+  );
+}
+
+function ChoiceCard({
+  active,
+  icon,
+  title,
+  body,
+  onPress
+}: {
+  active: boolean;
+  icon: ReactNode;
+  title: string;
+  body: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={[styles.choiceCard, active && styles.choiceCardActive]}
+    >
+      <View style={styles.choiceIcon}>{icon}</View>
+      <View style={styles.choiceCopy}>
+        <Text style={styles.choiceTitle}>{title}</Text>
+        <Text style={styles.choiceBody}>{body}</Text>
+      </View>
+      {active ? <Check color={colors.primary} size={22} /> : null}
+    </Pressable>
+  );
+}
+
+function SegmentButton({
+  active,
+  label,
+  onPress
+}: {
+  active: boolean;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={[styles.segmentButton, active && styles.segmentButtonActive]}
+    >
+      <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function FeatureRow({ label }: { label: string }) {
+  return (
+    <View style={styles.featureRow}>
+      <Heart color={colors.accent} size={18} />
+      <Text style={styles.featureText}>{label}</Text>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -356,6 +518,9 @@ const styles = StyleSheet.create({
     ...typography.label,
     color: colors.primary
   },
+  progressWrap: {
+    gap: spacing.sm
+  },
   progressTrack: {
     backgroundColor: colors.surfaceMuted,
     borderRadius: radii.pill,
@@ -366,13 +531,88 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     height: "100%"
   },
-  progressText: {
+  stepLabels: {
+    flexDirection: "row",
+    justifyContent: "space-between"
+  },
+  stepLabel: {
     ...typography.label,
     color: colors.textMuted,
-    textAlign: "right"
+    fontSize: 12
+  },
+  stepLabelActive: {
+    color: colors.primary
   },
   focusCard: {
     backgroundColor: colors.surface
+  },
+  iconBubble: {
+    alignItems: "center",
+    backgroundColor: colors.primarySoft,
+    borderRadius: radii.pill,
+    height: 52,
+    justifyContent: "center",
+    width: 52
+  },
+  choiceCard: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.md,
+    padding: spacing.md
+  },
+  choiceCardActive: {
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary
+  },
+  choiceIcon: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderRadius: radii.pill,
+    height: 44,
+    justifyContent: "center",
+    width: 44
+  },
+  choiceCopy: {
+    flex: 1,
+    gap: spacing.xs
+  },
+  choiceTitle: {
+    ...typography.label,
+    color: colors.text
+  },
+  choiceBody: {
+    ...typography.body,
+    fontSize: 14,
+    lineHeight: 20
+  },
+  segmentRow: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.pill,
+    flexDirection: "row",
+    gap: spacing.xs,
+    padding: spacing.xs
+  },
+  segmentButton: {
+    alignItems: "center",
+    borderRadius: radii.pill,
+    flex: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm
+  },
+  segmentButtonActive: {
+    backgroundColor: colors.surface
+  },
+  segmentText: {
+    ...typography.label,
+    color: colors.textMuted,
+    fontSize: 13
+  },
+  segmentTextActive: {
+    color: colors.primary
   },
   nicknameHint: {
     ...typography.body,
@@ -381,5 +621,17 @@ const styles = StyleSheet.create({
   },
   nicknameBad: {
     color: colors.danger
+  },
+  featureRow: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.md,
+    flexDirection: "row",
+    gap: spacing.sm,
+    padding: spacing.md
+  },
+  featureText: {
+    ...typography.label,
+    color: colors.text
   }
 });

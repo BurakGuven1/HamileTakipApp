@@ -30,6 +30,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# local verification output
+.tmp*/
+.tmp_*/
+
 # OS / editors
 .DS_Store
 Thumbs.db

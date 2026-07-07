@@ -87,7 +87,22 @@ export type Database = {
           photo_url?: string | null;
           updated_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "baby_vaccinations_baby_id_fkey";
+            columns: ["baby_id"];
+            isOneToOne: false;
+            referencedRelation: "babies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "baby_vaccinations_vaccine_schedule_id_fkey";
+            columns: ["vaccine_schedule_id"];
+            isOneToOne: false;
+            referencedRelation: "vaccine_schedule";
+            referencedColumns: ["id"];
+          }
+        ];
       };
       vaccine_schedule: {
         Row: {
