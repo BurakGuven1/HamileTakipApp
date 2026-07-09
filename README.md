@@ -47,3 +47,43 @@ gh repo create HamileTakipApp --private --source=. --remote=origin --push
 ```
 
 `.env`, native credential dosyaları ve store imzalama dosyaları ignore edilir.
+
+## Yasal Sayfalar ve Vercel Deploy
+
+Yasal sayfalar `public/` klasöründe statik HTML olarak tutulur. Vercel import
+ekranında şu ayarlarla yayınlanır:
+
+- Application Preset: `Other`
+- Root Directory: `./`
+- Build Command: boş
+- Output Directory: `public`
+- Install Command: boş
+- Environment Variables: boş
+
+GitHub'a `main` branch'ine push edildiğinde Vercel bağlı projede otomatik yeni
+deployment başlatır. EAS build almak tek başına Vercel deploy tetiklemez; Vercel'i
+tetikleyen işlem GitHub'a push etmektir.
+
+Deploy sonrası kullanılacak URL'ler:
+
+- Gizlilik Politikası: `/gizlilik-politikasi/`
+- KVKK Aydınlatma Metni: `/kvkk-aydinlatma-metni/`
+- Açık Rıza Metni: `/acik-riza-metni/`
+- Kullanım Şartları: `/kullanim-sartlari/`
+- Hesap Silme: `/delete-account/`
+
+Mağaza ve servis kontrol listesi:
+
+- [ ] RevenueCat Paywall Editor > Şartlar linki -> `/kullanim-sartlari/`
+- [ ] RevenueCat Paywall Editor > Gizlilik linki -> `/gizlilik-politikasi/`
+- [ ] App Store Connect > App Information > Privacy Policy URL -> `/gizlilik-politikasi/`
+- [ ] Google Play Console > App content > Privacy Policy -> `/gizlilik-politikasi/`
+- [ ] Google Play Console > Data deletion URL -> `/delete-account/`
+- [ ] Uygulama içi Ayarlar ekranına Gizlilik, KVKK, Açık Rıza ve Kullanım Şartları linkleri ekle
+- [ ] Onboarding/kayıt ekranındaki açık rıza checkbox metinlerini `/acik-riza-metni/` ile aynı içerikte tut
+
+Yayından önce kontrol:
+
+- [ ] Veri sorumlusu resmi unvan/ad-soyad, adres ve başvuru e-postasını kontrol et
+- [ ] Yetkili mahkeme/şehir bilgisini kendi hukuki durumuna göre kontrol et
+- [ ] Özel nitelikli veri ve yurt dışı aktarım maddelerini hukukçuya kontrol ettir
