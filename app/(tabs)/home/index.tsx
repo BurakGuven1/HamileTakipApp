@@ -1,17 +1,37 @@
-import { useQuery } from "@tanstack/react-query";
-import { Link } from "expo-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Image } from "expo-image";
+import { Link, router } from "expo-router";
 import {
   Baby,
+  BookOpen,
   CalendarHeart,
-  Camera,
-  MessageCircleHeart,
+  ChevronRight,
+  Clock3,
+  Droplets,
+  HandHeart,
+  HeartPulse,
+  Images,
+  Music2,
+  Milk,
+  Moon,
+  Ruler,
   Sparkles,
   Syringe
 } from "lucide-react-native";
-import type { ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
+} from "react-native";
+import Animated, { Easing, FadeIn, FadeOut } from "react-native-reanimated";
 
 import { listBabies } from "@/api/babies";
+import { getCareHandoverSnapshot, getCurrentCareUserId, subscribeToCareCoordination, takeOverBabyCare, type CareJournalEntry } from "@/api/careJournal";
+import { getCurrentFamilyMembership } from "@/api/familyAccess";
+import { getFeaturedArticles } from "@/api/articles";
 import { getCurrentProfile } from "@/api/profiles";
 import {
   listVaccinationsForBaby,
@@ -21,19 +41,32 @@ import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { MetricCard } from "@/components/MetricCard";
 import { Screen } from "@/components/Screen";
+import { Thread } from "@/components/Thread";
+import { syncCareQuickWidget } from "@/features/care-journal/widgetSync";
+import type { Article } from "@/features/articles/articles";
+import { getPregnancyWeekInfo } from "@/features/pregnancy/weekInfo";
 import {
   formatDate,
   getBabyAgeLabel,
-  getPregnancyWeek,
+  getPregnancyProgress,
   getRelativeDayLabel
 } from "@/lib/dates";
+import { useAppTheme } from "@/providers/AppThemeProvider";
+import { useFeedback } from "@/providers/FeedbackProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
+let homeWelcomeToastShown = false;
+
 export default function HomeScreen() {
+  const queryClient = useQueryClient();
+  const { showError, showInfo } = useFeedback();
+  const [showDaysUntilDue, setShowDaysUntilDue] = useState(false);
   const profileQuery = useQuery({
     queryKey: ["current-profile"],
     queryFn: getCurrentProfile
   });
+  const membershipQuery = useQuery({ queryKey: ["current-family-membership"], queryFn: getCurrentFamilyMembership });
+  const currentUserQuery = useQuery({ queryKey: ["current-care-user-id"], queryFn: getCurrentCareUserId });
 
   const babiesQuery = useQuery({
     queryKey: ["babies"],
@@ -42,6 +75,12 @@ export default function HomeScreen() {
 
   const babies = babiesQuery.data ?? [];
   const firstBaby = babies[0];
+  const careHandoverQuery = useQuery({
+    queryKey: ["care-handover", firstBaby?.id],
+    queryFn: () => getCareHandoverSnapshot(firstBaby?.id as string),
+    enabled: Boolean(firstBaby?.id),
+    refetchInterval: 30_000
+  });
 
   const vaccinationsQuery = useQuery({
     queryKey: ["baby-vaccinations", firstBaby?.id],
@@ -50,81 +89,312 @@ export default function HomeScreen() {
   });
 
   const profile = profileQuery.data;
-  const week = getPregnancyWeek(profile?.due_date);
+  const accentColor = useAppTheme();
+  const appTheme = accentColor.theme;
+  const pregnancyProgress = getPregnancyProgress(profile?.due_date);
+  const week = pregnancyProgress?.week
+    ? Math.min(40, pregnancyProgress.week)
+    : null;
+  const weekInfo = getPregnancyWeekInfo(week);
+  const featuredArticlesQuery = useQuery({
+    queryKey: ["articles", "featured"],
+    queryFn: () => getFeaturedArticles(4)
+  });
+  const featuredArticles = featuredArticlesQuery.data ?? [];
   const vaccinations: BabyVaccinationWithSchedule[] = vaccinationsQuery.data ?? [];
   const nextVaccination = vaccinations.find((item) => !item.completed);
   const completedVaccines = vaccinations.filter((item) => item.completed).length;
+  const babyAge = firstBaby ? getBabyAgeLabel(firstBaby.birth_date) : null;
+  const displayName =
+    profile?.mother_name ||
+    profile?.display_name ||
+    profile?.forum_nickname ||
+    firstBaby?.name ||
+    "Anne";
+  const careGiverName = membershipQuery.data
+    ? profile?.father_name || "Baba"
+    : profile?.mother_name || profile?.display_name || "Anne";
+  const handoverMutation = useMutation({
+    mutationFn: async () => {
+      if (!firstBaby) throw new Error("Bebek profili bulunamadı.");
+      return takeOverBabyCare(firstBaby.id, careGiverName);
+    },
+    onSuccess: async (result) => {
+      showInfo(result.queued ? "Bağlantı gelince aileyle eşitlenecek." : "Bakım sende. Aile özeti güncellendi.", "Bakım devralındı");
+      await queryClient.invalidateQueries({ queryKey: ["care-handover", firstBaby?.id] });
+    },
+    onError: (error) => showError(error, "Bakım devralınamadı")
+  });
+  useEffect(() => {
+    if (!firstBaby?.id) return;
+    return subscribeToCareCoordination(firstBaby.id, () => {
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["care-handover", firstBaby.id] }),
+        queryClient.invalidateQueries({ queryKey: ["care-journal-home", firstBaby.id] })
+      ]).catch(() => undefined);
+    });
+  }, [firstBaby?.id, queryClient]);
+  useEffect(() => {
+    if (!firstBaby) return;
+
+    const entries = [
+      careHandoverQuery.data?.last_feed,
+      careHandoverQuery.data?.last_diaper,
+      careHandoverQuery.data?.last_sleep
+    ].filter((entry): entry is CareJournalEntry => Boolean(entry));
+
+    syncCareQuickWidget(firstBaby.name, entries).catch(() => undefined);
+  }, [
+    careHandoverQuery.data?.last_diaper?.id,
+    careHandoverQuery.data?.last_feed?.id,
+    careHandoverQuery.data?.last_sleep?.id,
+    firstBaby?.id,
+    firstBaby?.name
+  ]);
+  const heroTitle =
+    profile?.is_pregnant && week
+      ? `${week}. hafta`
+      : firstBaby && babyAge
+        ? `${firstBaby.name}, ${babyAge}`
+        : "Deneyimini kişiselleştir";
+  const heroBody =
+    profile?.is_pregnant && week
+      ? `Tahmini doğum: ${formatDate(profile.due_date)}`
+      : firstBaby && babyAge
+        ? `Doğum: ${formatDate(firstBaby.birth_date)}`
+        : "Gebelik veya bebek bilgisi eklediğinde ana sayfa sana göre hazırlanır.";
+
+  useEffect(() => {
+    if (homeWelcomeToastShown || !profile) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      let message =
+        profile.is_pregnant && weekInfo
+          ? `Hoş geldin anneciğim, bugün biraz daha büyüdüm. Şu an ${weekInfo.emoji} ${weekInfo.size}.`
+          : firstBaby
+            ? `Hoş geldin anneciğim, bugün de ${firstBaby.name} için güzel bir an biriktirelim.`
+            : "Hoş geldin anneciğim, bugün birlikte minik bir adım atalım.";
+
+      if (profile.is_pregnant && weekInfo) {
+        message = getPregnancySizeNotification(weekInfo.size);
+      }
+
+      showInfo(message, "Benden minik bir not");
+      homeWelcomeToastShown = true;
+    }, 650);
+
+    return () => clearTimeout(timer);
+  }, [firstBaby, profile, showInfo, weekInfo]);
+
+  useEffect(() => {
+    if (!profile?.is_pregnant || !pregnancyProgress) {
+      setShowDaysUntilDue(false);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setShowDaysUntilDue((current) => !current);
+    }, 4_000);
+
+    return () => clearInterval(interval);
+  }, [pregnancyProgress, profile?.is_pregnant]);
 
   return (
     <Screen>
       <View style={styles.container}>
-        <View style={styles.hero}>
-          <View style={styles.iconBubble}>
-            <Sparkles color={colors.primary} size={28} />
+        {!profile?.is_pregnant ? (
+          <View style={[styles.hero, { backgroundColor: appTheme.primarySoft }]}>
+            <View style={[styles.visualStage, { backgroundColor: appTheme.accentSoft }]}>
+              <View style={styles.visualThread}>
+                <Thread height={126} mutedColor={appTheme.accent} progress={0.84} variant="decorative" />
+              </View>
+              <View style={styles.sizeVisual}>
+                <View
+                  style={[
+                    styles.sizeEmojiOrb,
+                    { backgroundColor: appTheme.primarySoft }
+                  ]}
+                >
+                  <Text style={styles.heroSizeEmoji}>
+                    {firstBaby ? "👶" : "✨"}
+                  </Text>
+                </View>
+                <View style={styles.sizeVisualCopy}>
+                  <Text style={[styles.sizeVisualEyebrow, { color: appTheme.primary }]}>Bugün</Text>
+                  <Text style={styles.sizeVisualTitle}>
+                    {firstBaby ? `${firstBaby.name} ile takip` : "Kişisel takip alanın"}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.visualFooter}>
+                <View>
+                  <Text style={styles.heroTitle}>{heroTitle}</Text>
+                  <Text style={styles.heroText}>{heroBody}</Text>
+                </View>
+                <Link href="/articles" asChild>
+                  <Pressable accessibilityRole="button" style={styles.openArticlesButton}>
+                    <Text style={styles.openArticlesText}>Aç</Text>
+                    <ChevronRight color={colors.text} size={18} />
+                  </Pressable>
+                </Link>
+              </View>
+            </View>
           </View>
-          <View style={{ gap: spacing.xs }}>
-            <Text style={typography.eyebrow}>Bugun</Text>
-            <Text style={typography.heading1}>
-              {profile?.forum_nickname
-                ? `Merhaba ${profile.forum_nickname}`
-                : "Merhaba"}
-            </Text>
-            <Text style={styles.heroText}>
-              Anne+ bugunku bilgilerine gore akis, hatirlatma ve topluluk
-              onerilerini hazirlar.
-            </Text>
-          </View>
-        </View>
+        ) : null}
 
-        {profile?.is_pregnant && week ? (
-          <Card style={styles.primaryCard}>
-            <View style={styles.cardHeader}>
-              <View style={{ gap: spacing.xs }}>
-                <Text style={typography.heading2}>{week}. hafta hamilelik</Text>
-                <Text style={typography.body}>
-                  Tahmini dogum: {formatDate(profile.due_date)}
-                </Text>
+        {profile?.is_pregnant && weekInfo && week ? (
+          <Card style={[styles.weekCard, { borderColor: appTheme.primary }]}>
+            <View style={{ gap: spacing.lg }}>
+              <View style={styles.weekNavigator}>
+                <View style={styles.weekNavigatorCopy}>
+                  <Text style={[styles.weekNavigatorGreeting, { color: appTheme.primary }]}>
+                    İyi günler, {displayName}
+                  </Text>
+                  <Text style={styles.weekNavigatorTitle}>
+                    {week}. hafta / 40
+                  </Text>
+                  <Text style={styles.weekNavigatorText}>
+                    Güncel hamilelik özetin
+                  </Text>
+                </View>
               </View>
-              <CalendarHeart color={colors.primary} size={30} />
+
+              {pregnancyProgress ? (
+                <View
+                  accessibilityLiveRegion="polite"
+                  style={[styles.pregnancyStatusBox, { backgroundColor: appTheme.primarySoft }]}
+                >
+                  <Animated.Text
+                    key={showDaysUntilDue ? "days-until-due" : "pregnancy-day"}
+                    entering={FadeIn.duration(700).easing(Easing.out(Easing.cubic))}
+                    exiting={FadeOut.duration(500).easing(Easing.inOut(Easing.quad))}
+                    style={styles.pregnancyStatusText}
+                  >
+                    {showDaysUntilDue
+                      ? `${pregnancyProgress.daysUntilDue} gün kaldı`
+                      : `${pregnancyProgress.day}. günlük hamile`}
+                  </Animated.Text>
+                </View>
+              ) : null}
+
+              <View style={styles.cardHeader}>
+                <View style={{ flex: 1, gap: spacing.xs }}>
+                  <Text style={typography.eyebrow}>Bu hafta neler oluyor?</Text>
+                  <View style={styles.sizeTitleRow}>
+                    <Text style={styles.sizeEmoji}>{weekInfo.emoji}</Text>
+                    <Text style={[typography.heading2, styles.sizeTitle]}>
+                      Bebeğin yaklaşık {weekInfo.size}
+                    </Text>
+                  </View>
+                </View>
+                <Sparkles color={appTheme.primary} size={28} />
+              </View>
+              <View style={styles.weekStats}>
+                <MiniStat
+                  backgroundColor={colors.lengthTint}
+                  label="Boy"
+                  value={weekInfo.lengthCm}
+                />
+                <MiniStat
+                  backgroundColor={colors.weightTint}
+                  label="Kilo"
+                  value={weekInfo.weightG}
+                />
+                <MiniStat
+                  backgroundColor={accentColor.tint}
+                  label="Hafta"
+                  value={`${week}.`}
+                />
+              </View>
+              <View style={[styles.developmentBox, { backgroundColor: appTheme.primarySoft }]}>
+                <Text style={styles.developmentTitle}>
+                  {weekInfo.milestone}
+                </Text>
+                <Text style={styles.developmentText}>{weekInfo.note}</Text>
+              </View>
+              <Link href="/pregnancy-timeline" asChild>
+                <Button label="Hafta hafta yol haritasını aç" variant="secondary" />
+              </Link>
             </View>
           </Card>
-        ) : firstBaby ? (
-          <Card style={styles.primaryCard}>
-            <View style={styles.cardHeader}>
-              <View style={{ gap: spacing.xs }}>
-                <Text style={typography.heading2}>{firstBaby.name}</Text>
-                <Text style={typography.body}>
-                  {getBabyAgeLabel(firstBaby.birth_date)} / dogum{" "}
-                  {formatDate(firstBaby.birth_date)}
-                </Text>
+        ) : null}
+
+        {profile?.is_pregnant ? (
+          <Card style={[styles.toolsCard, { backgroundColor: appTheme.accentSoft }]}>
+            <View style={{ gap: spacing.md }}>
+              <View style={styles.cardHeader}>
+                <View style={{ flex: 1, gap: spacing.xs }}>
+                  <Text style={typography.heading2}>Hamilelik araçları</Text>
+                  <Text style={typography.body}>
+                    Kilo takibi, tekme sayacı, kasılma sayacı ve hamile egzersizi.
+                  </Text>
+                </View>
+                <HeartPulse color={appTheme.primary} size={30} />
               </View>
-              <Baby color={colors.primary} size={30} />
+              <Link href="/pregnancy-tools" asChild>
+                <Button label="Araçları aç" />
+              </Link>
             </View>
           </Card>
-        ) : (
-          <Card style={styles.primaryCard}>
+        ) : null}
+
+        {firstBaby ? (
+          <Card style={[styles.toolsCard, { backgroundColor: appTheme.primarySoft }]}>
+            <View style={{ gap: spacing.md }}>
+              <View style={styles.cardHeader}>
+                <View style={{ flex: 1, gap: spacing.xs }}>
+                  <Text style={typography.eyebrow}>Canlı aile vardiyası</Text>
+                  <Text style={typography.heading2}>{firstBaby.name} için bakımı devral</Text>
+                  <Text style={typography.body}>
+                    {careHandoverQuery.data?.handover
+                      ? `${careHandoverQuery.data.handover.caregiver_name} ${careHomeRelativeTimeValue(careHandoverQuery.data.handover.started_at)} bakımı devraldı.`
+                      : "Şu anda atanmış bir bakıcı yok."}
+                  </Text>
+                </View>
+                <HandHeart color={appTheme.primary} size={30} />
+              </View>
+              <View style={styles.latestCareList}>
+                <HomeCareRow icon={<Milk color={colors.dustyRose} size={17} />} label="Beslenme" value={formatHomeFeed(careHandoverQuery.data?.last_feed ?? null)} />
+                <HomeCareRow icon={<Droplets color={colors.sageGreen} size={17} />} label="Bez" value={careHandoverQuery.data?.last_diaper ? careHomeRelativeTime(careHandoverQuery.data.last_diaper) : "Kayıt yok"} />
+                <HomeCareRow icon={<Moon color={colors.nightPlum} size={17} />} label="Uyku" value={careHandoverQuery.data?.active_timer?.timer_type === "sleep" ? `Şu anda uyuyor · ${careHomeRelativeTimeValue(careHandoverQuery.data.active_timer.started_at, false)}` : careHandoverQuery.data?.last_sleep?.ended_at ? `${careHomeRelativeTimeValue(careHandoverQuery.data.last_sleep.ended_at)} uyandı` : "Aktif uyku yok"} />
+                <HomeCareRow icon={<Clock3 color={colors.highlight} size={17} />} label="Plan" value={`${careHandoverQuery.data?.active_reminder_count ?? 0} alarm · ${careHandoverQuery.data?.open_task_count ?? 0} görev`} />
+              </View>
+              {careHandoverQuery.data?.handover?.caregiver_id === currentUserQuery.data ? (
+                <Button testID="open-care-summary" label="Bakım sende · özeti aç" onPress={() => router.push("/care-journal")} />
+              ) : (
+                <Button disabled={handoverMutation.isPending} label={handoverMutation.isPending ? "Devralınıyor..." : "Bakımı devraldım"} onPress={() => handoverMutation.mutate()} />
+              )}
+              <Button testID="open-care-journal" label="Tüm bakım günlüğü" variant="ghost" onPress={() => router.push("/care-journal")} />
+            </View>
+          </Card>
+        ) : null}
+
+        {!profile?.is_pregnant && !firstBaby ? (
+          <Card style={[styles.primaryCard, { backgroundColor: appTheme.primarySoft }]}>
             <View style={{ gap: spacing.md }}>
               <View style={styles.cardHeader}>
                 <View style={{ gap: spacing.xs, flex: 1 }}>
-                  <Text style={typography.heading2}>Deneyimini kisisellestir</Text>
+                  <Text style={typography.heading2}>Deneyimini kişiselleştir</Text>
                   <Text style={typography.body}>
-                    Gebelik veya bebek bilgisi eklediginde ana ekran sana ozel
-                    hatirlatmalar ve gelisim ozeti gosterir.
+                    Gebelik veya bebek bilgisi eklediğinde ana ekran sana özel
+                    hatırlatmalar ve gelişim özeti gösterir.
                   </Text>
                 </View>
-                <Sparkles color={colors.primary} size={30} />
+                <Sparkles color={appTheme.primary} size={30} />
               </View>
               <Link href="/baby" asChild>
                 <Button label="Bebek bilgisi ekle" variant="secondary" />
               </Link>
             </View>
           </Card>
-        )}
+        ) : null}
 
         <View style={styles.metricRow}>
           <MetricCard label="Bebek profili" value={`${babies.length}`} />
           <MetricCard
-            label="Asi tamamlama"
+            label="Aşı tamamlama"
             value={
               vaccinations.length > 0
                 ? `${completedVaccines}/${vaccinations.length}`
@@ -137,43 +407,162 @@ export default function HomeScreen() {
           <View style={{ gap: spacing.md }}>
             <View style={styles.cardHeader}>
               <View style={{ gap: spacing.xs, flex: 1 }}>
-                <Text style={typography.heading2}>Siradaki hatirlatici</Text>
+                <Text style={typography.heading2}>Sıradaki hatırlatıcı</Text>
                 {nextVaccination ? (
                   <Text style={typography.body}>
-                    {nextVaccination.vaccine_schedule?.vaccine_name ?? "Asi"} /{" "}
+                    {nextVaccination.vaccine_schedule?.vaccine_name ?? "Aşı"} /{" "}
                     {getRelativeDayLabel(nextVaccination.scheduled_date)} /{" "}
                     {formatDate(nextVaccination.scheduled_date)}
                   </Text>
                 ) : (
                   <Text style={typography.body}>
-                    Su an yaklasan asi yok. Yeni kayit ekledikce burada gorunur.
+                    Şu an yaklaşan aşı yok. Yeni kayıt ekledikçe burada görünür.
                   </Text>
                 )}
               </View>
-              <Syringe color={colors.primary} size={28} />
+              <Syringe color={appTheme.primary} size={28} />
             </View>
             <Link href="/baby" asChild>
-              <Button label="Asi takvimini ac" variant="secondary" />
+              <Button label="Aşı takvimini aç" variant="secondary" />
             </Link>
           </View>
         </Card>
 
+        <View style={styles.sectionHeader}>
+          <View>
+            <Text style={typography.heading2}>Makaleler</Text>
+            <Text style={styles.sectionHint}>Hafta ve ay rehberleri</Text>
+          </View>
+          <Link href="/articles" asChild>
+            <Pressable accessibilityRole="button" style={styles.sectionLink}>
+              <Text style={[styles.sectionLinkText, { color: appTheme.primary }]}>
+                Tümünü gör
+              </Text>
+              <ChevronRight color={appTheme.primary} size={18} />
+            </Pressable>
+          </Link>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.articleRail}
+        >
+          {featuredArticles.map((article) => (
+            <ArticlePreview key={article.slug} article={article} />
+          ))}
+        </ScrollView>
+
         <View style={styles.quickGrid}>
           <QuickAction
-            href="/gallery"
-            icon={<Camera color={colors.accent} size={24} />}
-            title="Ani ekle"
-            body="Fotograf zaman cizelgesi"
+            href="/baby"
+            icon={<Syringe color={appTheme.accent} size={24} />}
+            title="Aşı"
+            body="Takvim ve hatırlatma"
           />
           <QuickAction
-            href="/forum"
-            icon={<MessageCircleHeart color={colors.accent} size={24} />}
-            title="Topluluga sor"
-            body="Anonim forum destegi"
+            href="/baby"
+            icon={<Ruler color={appTheme.accent} size={24} />}
+            title="Büyüme"
+            body="Ölçüm takibi"
+          />
+          <QuickAction
+            href="/gallery"
+            icon={<Images color={appTheme.accent} size={24} />}
+            title="Anı ekle"
+            body="Fotoğraf zaman çizelgesi"
+          />
+          <QuickAction
+            href="/lullaby"
+            icon={<Music2 color={appTheme.accent} size={24} />}
+            title="Ninni"
+            body="Sakin uyku akışı"
           />
         </View>
       </View>
     </Screen>
+  );
+}
+
+function HomeCareRow({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
+  return <View style={styles.latestCareRow}><View style={styles.homeCareLabelRow}>{icon}<Text style={styles.latestCareLabel}>{label}</Text></View><Text style={styles.latestCareValue}>{value}</Text></View>;
+}
+
+function formatHomeFeed(entry: CareJournalEntry | null) {
+  if (!entry) return "Kayıt yok";
+  if (entry.entry_type === "bottle") return `${entry.amount_ml ?? "—"} ml · ${careHomeRelativeTime(entry)}`;
+  return `${entry.breast_side === "left" ? "Sol" : entry.breast_side === "right" ? "Sağ" : "İki taraf"} · ${careHomeRelativeTime(entry)}`;
+}
+
+function careHomeRelativeTimeValue(value: string, usePastSuffix = true) {
+  const minutes = Math.max(0, Math.round((Date.now() - Date.parse(value)) / 60_000));
+  const suffix = usePastSuffix ? " önce" : "";
+  if (minutes < 1) return usePastSuffix ? "şimdi" : "şimdi";
+  if (minutes < 60) return `${minutes} dk${suffix}`;
+  const hours = Math.floor(minutes / 60);
+  return hours < 24 ? `${hours} sa${suffix}` : `${Math.floor(hours / 24)} gün${suffix}`;
+}
+
+function getPregnancySizeNotification(size: string) {
+  if (!size.endsWith(" kadar")) {
+    return "Bug\u00fcn hen\u00fcz haz\u0131rl\u0131k d\u00f6nemindeyim.";
+  }
+
+  const nounPhrase = size.replace(/\s+kadar$/u, "");
+  const adjectiveMatch = nounPhrase.match(/^(b\u00fcy\u00fck|k\u00fc\u00e7\u00fck)\s+(.+)$/u);
+  const naturalNounPhrase = adjectiveMatch
+    ? `${adjectiveMatch[1]} bir ${adjectiveMatch[2]}`
+    : `bir ${nounPhrase}`;
+
+  return `Bug\u00fcn ${naturalNounPhrase} kadar\u0131m.`;
+}
+
+function careHomeRelativeTime(entry: CareJournalEntry) {
+  return careHomeRelativeTimeValue(entry.occurred_at);
+}
+
+function MiniStat({
+  backgroundColor,
+  label,
+  value
+}: {
+  backgroundColor: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <View style={[styles.miniStat, { backgroundColor }]}>
+      <Text style={styles.miniStatLabel}>{label}</Text>
+      <Text style={styles.miniStatValue}>{value}</Text>
+    </View>
+  );
+}
+
+function ArticlePreview({ article }: { article: Article }) {
+  return (
+    <Link href={`/articles/${article.slug}`} asChild>
+      <Pressable accessibilityRole="button" style={styles.articlePressable}>
+        <View style={styles.articleCard}>
+          {article.imageUrl ? (
+            <Image
+              accessibilityLabel={`${article.period} makale görseli`}
+              contentFit="cover"
+              source={{ uri: article.imageUrl }}
+              style={styles.articleImage}
+            />
+          ) : (
+            <View style={[styles.articleImage, { backgroundColor: article.accent }]}>
+              <View style={styles.articleOrb} />
+              <BookOpen color={colors.surfaceStrong} size={24} />
+            </View>
+          )}
+          <View style={styles.articleCopy}>
+            <Text style={styles.articlePeriod}>{article.period}</Text>
+            <Text style={styles.articleTitle}>{article.title}</Text>
+          </View>
+        </View>
+      </Pressable>
+    </Link>
   );
 }
 
@@ -183,7 +572,7 @@ function QuickAction({
   title,
   body
 }: {
-  href: "/gallery" | "/forum";
+  href: "/baby" | "/gallery" | "/lullaby";
   icon: ReactNode;
   title: string;
   body: string;
@@ -204,29 +593,172 @@ function QuickAction({
 }
 
 const styles = StyleSheet.create({
+  latestCareList: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
+    gap: spacing.xs,
+    padding: spacing.md
+  },
+  latestCareRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    minHeight: 28
+  },
+  homeCareLabelRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    flexShrink: 0,
+    gap: spacing.sm
+  },
+  latestCareLabel: {
+    ...typography.label,
+    color: colors.textMuted
+  },
+  latestCareValue: {
+    ...typography.label,
+    color: colors.text,
+    flex: 1,
+    marginLeft: spacing.sm,
+    textAlign: "right"
+  },
   container: {
     gap: spacing.lg
   },
   hero: {
-    backgroundColor: colors.primarySoft,
-    borderRadius: radii.lg,
+    ...radii.cardLarge,
     gap: spacing.md,
+    overflow: "hidden",
     padding: spacing.lg
   },
-  iconBubble: {
+  heroTop: {
     alignItems: "center",
-    backgroundColor: colors.surface,
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between"
+  },
+  greeting: {
+    ...typography.label,
+    color: colors.textMuted
+  },
+  heroName: {
+    ...typography.heading2,
+    color: colors.text
+  },
+  heroIcon: {
+    alignItems: "center",
     borderRadius: radii.pill,
     height: 52,
     justifyContent: "center",
     width: 52
   },
+  visualStage: {
+    ...radii.cardLarge,
+    minHeight: 244,
+    overflow: "hidden",
+    padding: spacing.md
+  },
+  visualThread: {
+    bottom: 48,
+    left: -spacing.lg,
+    opacity: 0.36,
+    position: "absolute",
+    right: -spacing.lg
+  },
+  sizeVisual: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+    minHeight: 118,
+    paddingTop: spacing.sm
+  },
+  sizeEmojiOrb: {
+    alignItems: "center",
+    borderRadius: radii.pill,
+    height: 96,
+    justifyContent: "center",
+    width: 96
+  },
+  heroSizeEmoji: {
+    fontSize: 54,
+    lineHeight: 62
+  },
+  sizeVisualCopy: {
+    flex: 1,
+    gap: spacing.xs
+  },
+  sizeVisualEyebrow: {
+    ...typography.eyebrow
+  },
+  sizeVisualTitle: {
+    ...typography.heading2,
+    color: colors.text
+  },
+  sizeVisualText: {
+    ...typography.body,
+    color: colors.textMuted
+  },
+  visualFooter: {
+    alignItems: "flex-end",
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between",
+    marginTop: "auto"
+  },
+  heroTitle: {
+    ...typography.heading1,
+    fontSize: 32,
+    lineHeight: 38
+  },
   heroText: {
     ...typography.body,
+    color: colors.text,
+    maxWidth: 230
+  },
+  openArticlesButton: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderRadius: radii.pill,
+    flexDirection: "row",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm
+  },
+  openArticlesText: {
+    ...typography.label,
     color: colors.text
+  },
+  pregnancyStatusBox: {
+    ...radii.card,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 56,
+    overflow: "hidden",
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md
+  },
+  pregnancyStatusText: {
+    ...typography.heading2,
+    color: colors.text,
+    position: "absolute",
+    textAlign: "center"
+  },
+  weekCard: {
+    borderWidth: 1
   },
   primaryCard: {
     backgroundColor: colors.surface
+  },
+  offerCard: {
+    borderColor: colors.transparent
+  },
+  offerText: {
+    ...typography.body,
+    color: colors.text
+  },
+  toolsCard: {
+    borderColor: colors.transparent
   },
   cardHeader: {
     alignItems: "center",
@@ -234,19 +766,289 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     justifyContent: "space-between"
   },
+  weekNavigator: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md
+  },
+  weekNavButton: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    height: 44,
+    justifyContent: "center",
+    width: 44
+  },
+  weekNavButtonDisabled: {
+    opacity: 0.42
+  },
+  weekNavigatorCopy: {
+    alignItems: "center",
+    flex: 1,
+    gap: spacing.xs
+  },
+  weekNavigatorGreeting: {
+    ...typography.label,
+    textAlign: "center"
+  },
+  weekNavigatorTitle: {
+    ...typography.heading2,
+    color: colors.text,
+    textAlign: "center"
+  },
+  weekNavigatorText: {
+    ...typography.label,
+    color: colors.textMuted,
+    textAlign: "center"
+  },
+  sizeTitleRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm
+  },
+  sizeEmoji: {
+    fontSize: 34,
+    lineHeight: 40
+  },
+  sizeTitle: {
+    flex: 1
+  },
+  weekStats: {
+    flexDirection: "row",
+    gap: spacing.sm
+  },
+  miniStat: {
+    ...radii.card,
+    flex: 1,
+    gap: spacing.xs,
+    padding: spacing.md
+  },
+  miniStatLabel: {
+    ...typography.label,
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 19
+  },
+  miniStatValue: {
+    ...typography.label,
+    color: colors.text
+  },
+  developmentBox: {
+    ...radii.card,
+    gap: spacing.sm,
+    padding: spacing.md
+  },
+  developmentTitle: {
+    ...typography.heading3,
+    color: colors.text
+  },
+  developmentText: {
+    ...typography.body,
+    color: colors.text
+  },
+  shareStorySurface: {
+    aspectRatio: 9 / 16,
+    backgroundColor: colors.surfaceStrong,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    gap: spacing.lg,
+    justifyContent: "space-between",
+    overflow: "hidden",
+    padding: spacing.xl,
+    width: "100%"
+  },
+  shareStoryTop: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between"
+  },
+  shareBrand: {
+    ...typography.heading2,
+    color: colors.text
+  },
+  shareTag: {
+    ...typography.label,
+    color: colors.textMuted
+  },
+  shareWeekBadge: {
+    alignItems: "center",
+    borderRadius: radii.pill,
+    flexDirection: "row",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm
+  },
+  shareWeekBadgeText: {
+    ...typography.label
+  },
+  shareStoryBody: {
+    alignItems: "center",
+    gap: spacing.md
+  },
+  shareEmojiFrame: {
+    alignItems: "center",
+    borderRadius: radii.pill,
+    height: 112,
+    justifyContent: "center",
+    width: 112
+  },
+  shareStoryEmoji: {
+    fontSize: 62,
+    lineHeight: 70
+  },
+  shareStoryHeadline: {
+    ...typography.heading1,
+    color: colors.text,
+    fontSize: 30,
+    lineHeight: 36,
+    textAlign: "center"
+  },
+  shareStorySubhead: {
+    ...typography.label,
+    color: colors.textMuted,
+    textAlign: "center"
+  },
+  shareStoryStats: {
+    flexDirection: "row",
+    gap: spacing.sm
+  },
+  shareStoryStat: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.md,
+    flex: 1,
+    gap: spacing.xs,
+    padding: spacing.md
+  },
+  shareStoryStatLabel: {
+    ...typography.label,
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18
+  },
+  shareStoryStatValue: {
+    ...typography.label,
+    color: colors.text
+  },
+  shareStoryAccent: {
+    borderRadius: radii.pill,
+    height: 4,
+    width: "42%"
+  },
+  shareStoryMilestone: {
+    ...typography.heading3,
+    color: colors.text
+  },
+  shareStoryNote: {
+    ...typography.body,
+    color: colors.text,
+    fontSize: 15,
+    lineHeight: 22
+  },
+  shareStoryFooter: {
+    gap: spacing.xs
+  },
+  shareStoryFooterTitle: {
+    ...typography.label,
+    color: colors.text
+  },
+  shareStoryFooterText: {
+    ...typography.body,
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 20
+  },
+  shareWeekButton: {
+    alignItems: "center",
+    borderRadius: radii.pill,
+    flexDirection: "row",
+    gap: spacing.sm,
+    justifyContent: "center",
+    minHeight: 48,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md
+  },
+  shareWeekButtonText: {
+    ...typography.button,
+    color: colors.background
+  },
   metricRow: {
     flexDirection: "row",
     gap: spacing.sm
   },
+  sectionHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between"
+  },
+  sectionHint: {
+    ...typography.body,
+    fontSize: 15,
+    lineHeight: 21
+  },
+  sectionLink: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs
+  },
+  sectionLinkText: {
+    ...typography.label
+  },
+  articleRail: {
+    gap: spacing.md,
+    paddingRight: spacing.lg
+  },
+  articlePressable: {
+    width: 210
+  },
+  articleCard: {
+    ...radii.card,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden"
+  },
+  articleImage: {
+    height: 124,
+    justifyContent: "flex-end",
+    padding: spacing.md,
+    width: "100%"
+  },
+  articleOrb: {
+    backgroundColor: "rgba(255, 255, 255, 0.28)",
+    borderRadius: radii.pill,
+    height: 84,
+    position: "absolute",
+    right: -22,
+    top: -20,
+    width: 84
+  },
+  articleCopy: {
+    gap: spacing.xs,
+    minHeight: 96,
+    padding: spacing.md
+  },
+  articlePeriod: {
+    ...typography.eyebrow,
+    color: colors.accent
+  },
+  articleTitle: {
+    ...typography.label,
+    color: colors.text
+  },
   quickGrid: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing.sm
   },
   quickPressable: {
-    flex: 1
+    flexBasis: "48%",
+    flexGrow: 1
   },
   quickCard: {
-    minHeight: 132
+    minHeight: 128
   },
   quickTitle: {
     ...typography.label,
@@ -254,7 +1056,7 @@ const styles = StyleSheet.create({
   },
   quickBody: {
     ...typography.body,
-    fontSize: 13,
-    lineHeight: 18
+    fontSize: 15,
+    lineHeight: 21
   }
 });

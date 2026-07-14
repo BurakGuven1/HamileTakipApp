@@ -12,9 +12,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   slug: "hamileliktakipapp",
   scheme: "hamiletakip",
   version: "0.1.0",
+  icon: "./assets/branding/app-icon.png",
   orientation: "portrait",
   userInterfaceStyle: "light",
   ios: {
+    icon: "./assets/branding/app-icon.png",
     supportsTablet: false,
     bundleIdentifier:
       process.env.EXPO_PUBLIC_IOS_BUNDLE_IDENTIFIER ??
@@ -24,8 +26,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         "Bebek fotoğraflarını çekebilmek için kamera erişimi kullanılır.",
       NSPhotoLibraryUsageDescription:
         "Bebek fotoğraflarını galeriye eklemek için fotoğraf erişimi kullanılır.",
-      NSMicrophoneUsageDescription:
-        "İleride eklenecek sesli günlük özellikleri için mikrofon izni gerekebilir.",
       UIBackgroundModes: ["audio", "remote-notification"]
     },
     config: {
@@ -36,10 +36,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     package:
       process.env.EXPO_PUBLIC_ANDROID_PACKAGE ??
       "com.burakguven.hamiletakip",
+    adaptiveIcon: {
+      backgroundColor: "#FBF6EF",
+      foregroundImage: "./assets/branding/adaptive-icon.png"
+    },
     permissions: [
       "CAMERA",
       "READ_MEDIA_IMAGES",
       "POST_NOTIFICATIONS",
+      "SCHEDULE_EXACT_ALARM",
       "FOREGROUND_SERVICE",
       "WAKE_LOCK"
     ]
@@ -48,23 +53,72 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     "expo-router",
     "expo-status-bar",
     "expo-image",
-    "expo-audio",
+    [
+      "expo-audio",
+      {
+        enableBackgroundPlayback: true,
+        enableBackgroundRecording: false,
+        microphonePermission: false
+      }
+    ],
     "expo-asset",
     "expo-secure-store",
-    "expo-notifications",
-    "expo-apple-authentication",
-    "@react-native-community/datetimepicker",
+    "expo-sharing",
     [
-      "react-native-google-mobile-ads",
+      "expo-splash-screen",
       {
-        androidAppId:
-          process.env.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID ??
-          "ca-app-pub-3940256099942544~3347511713",
-        iosAppId:
-          process.env.EXPO_PUBLIC_ADMOB_IOS_APP_ID ??
-          "ca-app-pub-3940256099942544~1458002511"
+        backgroundColor: "#FBF6EF",
+        image: "./assets/branding/splash-icon.png",
+        imageWidth: 180,
+        resizeMode: "contain"
       }
-    ]
+    ],
+    [
+      "expo-notifications",
+      {
+        sounds: ["./assets/audio/baby_reminder.wav"],
+        defaultChannel: "care-reminders",
+        color: "#6E8F7C"
+      }
+    ],
+    [
+      "expo-widgets",
+      {
+        bundleIdentifier: `${process.env.EXPO_PUBLIC_IOS_BUNDLE_IDENTIFIER ?? "com.burakguven.hamiletakip"}.widgets`,
+        groupIdentifier: `group.${process.env.EXPO_PUBLIC_IOS_BUNDLE_IDENTIFIER ?? "com.burakguven.hamiletakip"}`,
+        enablePushNotifications: true,
+        widgets: [
+          {
+            name: "CareQuickWidget",
+            displayName: "Anne+ Hızlı Bakım",
+            description: "Son bakım durumunu gör ve emzirme, uyku veya bez kaydını hızla aç.",
+            supportedFamilies: ["systemSmall", "systemMedium"],
+            contentMarginsDisabled: true,
+            android: null
+          }
+        ]
+      }
+    ],
+    [
+      "react-native-android-widget",
+      {
+        widgets: [
+          {
+            name: "CareQuickWidget",
+            label: "Anne+ Hızlı Bakım",
+            description: "Emzirme, uyku ve bez kaydına hızlı ulaş.",
+            minWidth: "250dp",
+            minHeight: "110dp",
+            targetCellWidth: 4,
+            targetCellHeight: 2,
+            resizeMode: "horizontal|vertical",
+            updatePeriodMillis: 1800000
+          }
+        ]
+      }
+    ],
+    "expo-apple-authentication",
+    "@react-native-community/datetimepicker"
   ],
   experiments: {
     typedRoutes: true
@@ -75,6 +129,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
     revenueCatIosApiKey: process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY,
+    legalBaseUrl: process.env.EXPO_PUBLIC_LEGAL_BASE_URL,
     revenueCatAndroidApiKey:
       process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY
   }

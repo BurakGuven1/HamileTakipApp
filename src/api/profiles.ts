@@ -19,11 +19,7 @@ export async function getCurrentProfile() {
     return null;
   }
 
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc("get_active_profile");
 
   if (error) {
     throw error;
@@ -47,23 +43,16 @@ export async function upsertProfile(profile: ProfileInsert) {
 }
 
 export async function updateCurrentProfile(update: ProfileUpdate) {
-  const {
-    data: { user },
-    error: userError
-  } = await supabase.auth.getUser();
+  const profile = await getCurrentProfile();
 
-  if (userError) {
-    throw userError;
-  }
-
-  if (!user) {
-    throw new Error("Auth session is required");
+  if (!profile) {
+    throw new Error("Oturum gerekli.");
   }
 
   const { data, error } = await supabase
     .from("profiles")
     .update({ ...update, updated_at: new Date().toISOString() })
-    .eq("id", user.id)
+    .eq("id", profile.id)
     .select()
     .single();
 

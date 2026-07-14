@@ -1,0 +1,717 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Anne+ Makale Paneli</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #fbf6ef;
+        --surface: rgba(255, 252, 247, 0.92);
+        --text: #372f3d;
+        --muted: #8c8174;
+        --primary: #6e8f7c;
+        --accent: #d97895;
+        --border: rgba(167, 156, 142, 0.38);
+        --soft: rgba(110, 143, 124, 0.14);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        background:
+          radial-gradient(circle at top left, rgba(217, 120, 149, 0.18), transparent 34rem),
+          var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, Manrope, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        margin: 0;
+      }
+
+      main {
+        display: grid;
+        gap: 20px;
+        grid-template-columns: 380px minmax(0, 1fr);
+        margin: 0 auto;
+        max-width: 1280px;
+        padding: 28px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      .hero {
+        grid-column: 1 / -1;
+        background: var(--soft);
+        border: 1px solid var(--border);
+        border-radius: 28px 18px 18px 24px;
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 24px;
+      }
+
+      .hero h1 {
+        font-size: 34px;
+        letter-spacing: -0.02em;
+        line-height: 1.08;
+      }
+
+      .hero p,
+      .muted {
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .pill {
+        align-self: flex-start;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        color: var(--primary);
+        font-weight: 800;
+        padding: 10px 14px;
+        white-space: nowrap;
+      }
+
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 24px 14px 14px 20px;
+        box-shadow: 0 18px 45px rgba(55, 47, 61, 0.08);
+        padding: 18px;
+      }
+
+      .stack {
+        display: grid;
+        gap: 14px;
+      }
+
+      label {
+        color: var(--text);
+        display: grid;
+        font-size: 14px;
+        font-weight: 800;
+        gap: 7px;
+      }
+
+      input,
+      select,
+      textarea {
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        color: var(--text);
+        font: inherit;
+        min-height: 44px;
+        outline: none;
+        padding: 11px 12px;
+        width: 100%;
+      }
+
+      textarea {
+        min-height: 220px;
+        resize: vertical;
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px rgba(110, 143, 124, 0.14);
+      }
+
+      .grid2 {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .grid3 {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      button {
+        align-items: center;
+        background: var(--primary);
+        border: 1px solid var(--primary);
+        border-radius: 18px 10px 10px 16px;
+        color: #fffaf5;
+        cursor: pointer;
+        display: inline-flex;
+        font-weight: 900;
+        justify-content: center;
+        min-height: 46px;
+        padding: 11px 16px;
+      }
+
+      button.secondary {
+        background: transparent;
+        color: var(--primary);
+      }
+
+      button.danger {
+        background: transparent;
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.58;
+      }
+
+      .article-list {
+        display: grid;
+        gap: 10px;
+        max-height: 640px;
+        overflow: auto;
+        padding-right: 4px;
+      }
+
+      .article-item {
+        background: rgba(255, 255, 255, 0.58);
+        border: 1px solid var(--border);
+        border-radius: 18px 10px 10px 14px;
+        cursor: pointer;
+        display: grid;
+        gap: 6px;
+        padding: 12px;
+      }
+
+      .article-item strong {
+        color: var(--text);
+      }
+
+      .article-item small {
+        color: var(--muted);
+        line-height: 1.4;
+      }
+
+      .article-item.active {
+        border-color: var(--primary);
+        box-shadow: inset 0 0 0 1px var(--primary);
+      }
+
+      .preview {
+        border-radius: 18px;
+        max-height: 180px;
+        object-fit: cover;
+        width: 100%;
+      }
+
+      .status {
+        border-radius: 16px;
+        font-weight: 800;
+        line-height: 1.45;
+        padding: 12px;
+      }
+
+      .status.ok {
+        background: rgba(110, 143, 124, 0.14);
+        color: var(--primary);
+      }
+
+      .status.err {
+        background: rgba(217, 120, 149, 0.14);
+        color: var(--accent);
+      }
+
+      .hint {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.45;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      @media (max-width: 920px) {
+        main {
+          grid-template-columns: 1fr;
+          padding: 18px;
+        }
+
+        .hero {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <div class="stack">
+          <p class="muted">Anne+ içerik yönetimi</p>
+          <h1>Makale, görsel ve timeline hafta aralığını tek yerden kaydet.</h1>
+          <p>
+            Bu paneli lokal kullan. Service role key girme. Supabase anon key ve
+            makale admini olarak eklediğin kullanıcı hesabınla giriş yap.
+          </p>
+        </div>
+        <div class="pill">article-images + articles</div>
+      </section>
+
+      <aside class="panel stack">
+        <h2>Bağlantı</h2>
+        <label>
+          Supabase URL
+          <input id="supabaseUrl" placeholder="https://PROJECT_REF.supabase.co" />
+          <span class="hint">
+            Dashboard linki değil API URL olmalı. Örn:
+            https://shqnrshyaqlcpsjkdndl.supabase.co
+          </span>
+        </label>
+        <label>
+          Supabase anon key
+          <input id="supabaseAnonKey" placeholder="eyJ..." />
+        </label>
+        <div class="grid2">
+          <label>
+            E-posta
+            <input id="email" type="email" />
+          </label>
+          <label>
+            Şifre
+            <input id="password" type="password" />
+          </label>
+        </div>
+        <button id="connectButton">Giriş yap ve makaleleri getir</button>
+        <button id="newButton" class="secondary">Yeni makale formu</button>
+        <div id="status" class="status ok hidden"></div>
+
+        <h2>Makaleler</h2>
+        <div id="articleList" class="article-list"></div>
+      </aside>
+
+      <section class="panel stack">
+        <h2>Makale formu</h2>
+        <div class="grid2">
+          <label>
+            Slug
+            <input id="slug" placeholder="hamileligin-10-haftasi" />
+          </label>
+          <label>
+            Başlık
+            <input id="title" placeholder="Hamileliğin 10. Haftası" />
+          </label>
+        </div>
+        <div class="grid3">
+          <label>
+            Dönem etiketi
+            <input id="period" placeholder="Boş kalırsa kategoriye göre dolar" />
+          </label>
+          <label>
+            Kategori
+            <select id="category">
+              <option value="hafta">Hafta</option>
+              <option value="ay">Ay</option>
+              <option value="bebek">Bebek</option>
+              <option value="ipuclari">İpuçları</option>
+            </select>
+          </label>
+          <label>
+            Sıra
+            <input id="sortOrder" type="number" value="100" />
+            <span class="hint">
+              Küçük sayı önce görünür. Ana sayfa vitrini ilk 4 yayındaki makaleyi bu
+              sıraya göre gösterir.
+            </span>
+          </label>
+        </div>
+        <label>
+          Kısa açıklama
+          <input id="excerpt" placeholder="Kartlarda görünen kısa açıklama" />
+        </label>
+        <label>
+          Makale metni
+          <textarea
+            id="body"
+            placeholder="Paragrafları boş satırla ayır.&#10;&#10;İkinci paragraf burada başlar."
+          ></textarea>
+        </label>
+        <div class="grid3">
+          <label>
+            Timeline başlangıç haftası
+            <input id="timelineStartWeek" min="1" max="42" type="number" />
+          </label>
+          <label>
+            Timeline bitiş haftası
+            <input id="timelineEndWeek" min="1" max="42" type="number" />
+          </label>
+          <label>
+            Accent renk
+            <input id="accent" type="color" value="#6E8F7C" />
+          </label>
+        </div>
+        <div class="grid2">
+          <label>
+            Kapak görseli
+            <input id="imageFile" accept="image/jpeg,image/png,image/webp" type="file" />
+          </label>
+          <label>
+            Mevcut image_path
+            <input id="imagePath" placeholder="slug/cover.webp" />
+          </label>
+        </div>
+        <img id="preview" class="preview hidden" alt="Kapak önizlemesi" />
+        <label>
+          <span>
+            <input id="isPublished" type="checkbox" />
+            Yayında
+          </span>
+        </label>
+        <div class="grid2">
+          <button id="saveButton">Kaydet</button>
+          <button id="deleteButton" class="danger">Sil</button>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const bucketName = "article-images";
+      let client = null;
+      let selectedSlug = null;
+      let articles = [];
+
+      const $ = (id) => document.getElementById(id);
+
+      function showStatus(message, type = "ok") {
+        const el = $("status");
+        el.textContent = message;
+        el.className = `status ${type}`;
+      }
+
+      function slugify(value) {
+        return value
+          .toLocaleLowerCase("tr-TR")
+          .replaceAll("ğ", "g")
+          .replaceAll("ü", "u")
+          .replaceAll("ş", "s")
+          .replaceAll("ı", "i")
+          .replaceAll("ö", "o")
+          .replaceAll("ç", "c")
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "");
+      }
+
+      function getNumber(id) {
+        const value = $(id).value.trim();
+        if (!value) return null;
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+      }
+
+      function defaultPeriodLabel(category) {
+        switch (category) {
+          case "hafta":
+            return "Hafta";
+          case "ay":
+            return "Ay";
+          case "bebek":
+            return "Bebek";
+          case "ipuclari":
+            return "İpuçları";
+          default:
+            return "Makale";
+        }
+      }
+
+      function setLoading(loading) {
+        for (const id of ["connectButton", "saveButton", "deleteButton"]) {
+          $(id).disabled = loading;
+        }
+      }
+
+      function normalizeSupabaseUrl(value) {
+        const clean = value.trim();
+        if (!clean) throw new Error("Supabase URL gerekli.");
+
+        const dashboardMatch = clean.match(
+          /supabase\.com\/dashboard\/project\/([a-z0-9-]+)/i
+        );
+        if (dashboardMatch?.[1]) {
+          return `https://${dashboardMatch[1]}.supabase.co`;
+        }
+
+        if (/^[a-z0-9-]{15,}$/.test(clean) && !clean.includes(".")) {
+          return `https://${clean}.supabase.co`;
+        }
+
+        let url;
+        try {
+          url = new URL(clean.startsWith("http") ? clean : `https://${clean}`);
+        } catch {
+          throw new Error("Supabase URL geçersiz. Örn: https://PROJECT_REF.supabase.co");
+        }
+
+        if (!url.hostname.endsWith(".supabase.co")) {
+          throw new Error(
+            "Supabase URL dashboard linki değil API URL olmalı. Örn: https://PROJECT_REF.supabase.co"
+          );
+        }
+
+        return `${url.protocol}//${url.hostname}`;
+      }
+
+      function saveConnectionFields() {
+        localStorage.setItem("anneplus.supabaseUrl", $("supabaseUrl").value.trim());
+        localStorage.setItem(
+          "anneplus.supabaseAnonKey",
+          $("supabaseAnonKey").value.trim()
+        );
+        localStorage.setItem("anneplus.email", $("email").value.trim());
+      }
+
+      function restoreConnectionFields() {
+        $("supabaseUrl").value = localStorage.getItem("anneplus.supabaseUrl") ?? "";
+        $("supabaseAnonKey").value =
+          localStorage.getItem("anneplus.supabaseAnonKey") ?? "";
+        $("email").value = localStorage.getItem("anneplus.email") ?? "";
+      }
+
+      async function connect() {
+        setLoading(true);
+        try {
+          const url = normalizeSupabaseUrl($("supabaseUrl").value);
+          $("supabaseUrl").value = url;
+          saveConnectionFields();
+          const anonKey = $("supabaseAnonKey").value.trim();
+          if (!anonKey) throw new Error("Supabase anon key gerekli.");
+          client = supabase.createClient(url, anonKey);
+
+          const { error } = await client.auth.signInWithPassword({
+            email: $("email").value.trim(),
+            password: $("password").value
+          });
+          if (error) throw error;
+
+          showStatus("Giriş yapıldı. Makaleler getiriliyor.");
+          await loadArticles();
+        } catch (error) {
+          showStatus(error.message ?? String(error), "err");
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      async function loadArticles() {
+        if (!client) return;
+        const { data, error } = await client
+          .from("articles")
+          .select("*")
+          .order("sort_order", { ascending: true });
+        if (error) throw error;
+        articles = data ?? [];
+        renderList();
+        showStatus(`${articles.length} makale yüklendi.`);
+      }
+
+      function renderList() {
+        const list = $("articleList");
+        list.innerHTML = "";
+        for (const article of articles) {
+          const item = document.createElement("button");
+          item.type = "button";
+          item.className = `article-item ${article.slug === selectedSlug ? "active" : ""}`;
+          item.innerHTML = `
+            <strong>${article.title}</strong>
+            <small>${article.period} · ${article.category} · ${
+              article.timeline_start_week && article.timeline_end_week
+                ? `${article.timeline_start_week}-${article.timeline_end_week}. hafta`
+                : "timeline yok"
+            }</small>
+            <small>${article.is_published ? "Yayında" : "Taslak"}</small>
+          `;
+          item.addEventListener("click", () => fillForm(article));
+          list.appendChild(item);
+        }
+      }
+
+      function resetForm() {
+        selectedSlug = null;
+        for (const id of [
+          "slug",
+          "title",
+          "period",
+          "excerpt",
+          "body",
+          "imagePath",
+          "timelineStartWeek",
+          "timelineEndWeek"
+        ]) {
+          $(id).value = "";
+        }
+        $("category").value = "hafta";
+        $("sortOrder").value = "100";
+        $("accent").value = "#6E8F7C";
+        $("isPublished").checked = false;
+        $("imageFile").value = "";
+        $("preview").classList.add("hidden");
+        $("preview").removeAttribute("src");
+        renderList();
+      }
+
+      function fillForm(article) {
+        selectedSlug = article.slug;
+        $("slug").value = article.slug;
+        $("title").value = article.title;
+        $("period").value = article.period;
+        $("category").value = article.category;
+        $("sortOrder").value = article.sort_order;
+        $("excerpt").value = article.excerpt;
+        $("body").value = article.body;
+        $("accent").value = article.accent || "#6E8F7C";
+        $("timelineStartWeek").value = article.timeline_start_week ?? "";
+        $("timelineEndWeek").value = article.timeline_end_week ?? "";
+        $("imagePath").value = article.image_path ?? "";
+        $("isPublished").checked = article.is_published;
+
+        if (article.image_path) {
+          const { data } = client.storage.from(bucketName).getPublicUrl(article.image_path);
+          $("preview").src = data.publicUrl;
+          $("preview").classList.remove("hidden");
+        } else {
+          $("preview").classList.add("hidden");
+        }
+        renderList();
+      }
+
+      async function uploadImageIfNeeded(slug) {
+        const file = $("imageFile").files?.[0];
+        if (!file) return $("imagePath").value.trim() || null;
+
+        const ext =
+          file.type === "image/png"
+            ? "png"
+            : file.type === "image/jpeg"
+              ? "jpg"
+              : "webp";
+        const path = `${slug}/cover.${ext}`;
+        const { error } = await client.storage
+          .from(bucketName)
+          .upload(path, file, {
+            cacheControl: "3600",
+            contentType: file.type,
+            upsert: true
+          });
+        if (error) throw error;
+        return path;
+      }
+
+      async function saveArticle() {
+        if (!client) {
+          showStatus("Önce Supabase bağlantısı kur.", "err");
+          return;
+        }
+
+        setLoading(true);
+        try {
+          const slug = slugify($("slug").value || $("title").value);
+          const timelineStartWeek = getNumber("timelineStartWeek");
+          const timelineEndWeek = getNumber("timelineEndWeek");
+
+          if (!slug) throw new Error("Slug veya başlık gerekli.");
+          if (!$("title").value.trim()) throw new Error("Başlık gerekli.");
+          if (!$("excerpt").value.trim()) throw new Error("Kısa açıklama gerekli.");
+          if (!$("body").value.trim()) throw new Error("Makale metni gerekli.");
+          if ((timelineStartWeek && !timelineEndWeek) || (!timelineStartWeek && timelineEndWeek)) {
+            throw new Error("Timeline için başlangıç ve bitiş haftasını birlikte gir.");
+          }
+          if (
+            timelineStartWeek &&
+            timelineEndWeek &&
+            (timelineStartWeek < 1 ||
+              timelineEndWeek > 42 ||
+              timelineStartWeek > timelineEndWeek)
+          ) {
+            throw new Error("Timeline hafta aralığı 1-42 arasında ve sıralı olmalı.");
+          }
+
+          const imagePath = await uploadImageIfNeeded(slug);
+          const payload = {
+            slug,
+            title: $("title").value.trim(),
+            period: $("period").value.trim() || defaultPeriodLabel($("category").value),
+            category: $("category").value,
+            sort_order: Number($("sortOrder").value || 1000),
+            excerpt: $("excerpt").value.trim(),
+            body: $("body").value.trim(),
+            image_path: imagePath,
+            accent: $("accent").value,
+            timeline_start_week: timelineStartWeek,
+            timeline_end_week: timelineEndWeek,
+            is_published: $("isPublished").checked,
+            published_at: $("isPublished").checked ? new Date().toISOString() : null
+          };
+
+          const { error } = await client.from("articles").upsert(payload, {
+            onConflict: "slug"
+          });
+          if (error) throw error;
+
+          showStatus("Makale kaydedildi.");
+          selectedSlug = slug;
+          await loadArticles();
+          const saved = articles.find((article) => article.slug === slug);
+          if (saved) fillForm(saved);
+        } catch (error) {
+          showStatus(error.message ?? String(error), "err");
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      async function deleteArticle() {
+        if (!client || !selectedSlug) {
+          showStatus("Silmek için listeden makale seç.", "err");
+          return;
+        }
+
+        if (!confirm(`${selectedSlug} silinsin mi?`)) return;
+
+        setLoading(true);
+        try {
+          const { error } = await client.from("articles").delete().eq("slug", selectedSlug);
+          if (error) throw error;
+          showStatus("Makale silindi.");
+          resetForm();
+          await loadArticles();
+        } catch (error) {
+          showStatus(error.message ?? String(error), "err");
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      $("connectButton").addEventListener("click", connect);
+      $("newButton").addEventListener("click", resetForm);
+      $("saveButton").addEventListener("click", saveArticle);
+      $("deleteButton").addEventListener("click", deleteArticle);
+      $("title").addEventListener("blur", () => {
+        if (!$("slug").value.trim()) $("slug").value = slugify($("title").value);
+      });
+      $("imageFile").addEventListener("change", () => {
+        const file = $("imageFile").files?.[0];
+        if (!file) return;
+        $("preview").src = URL.createObjectURL(file);
+        $("preview").classList.remove("hidden");
+      });
+
+      restoreConnectionFields();
+    </script>
+  </body>
+</html>

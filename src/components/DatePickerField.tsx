@@ -6,13 +6,12 @@ import { useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { formatDate, parseDateOnly, toDateOnly } from "@/lib/dates";
-import { colors, radii, spacing, typography } from "@/theme";
+import { useAppTheme } from "@/providers/AppThemeProvider";
+import { colors, spacing, typography } from "@/theme";
 
 type DatePickerFieldProps = {
   label: string;
   value?: string | null;
-  maximumDate?: Date;
-  minimumDate?: Date;
   placeholder?: string;
   onChange: (value: string) => void;
 };
@@ -20,11 +19,10 @@ type DatePickerFieldProps = {
 export function DatePickerField({
   label,
   value,
-  maximumDate,
-  minimumDate,
-  placeholder = "Tarih sec",
+  placeholder = "Tarih seç",
   onChange
 }: DatePickerFieldProps) {
+  const appTheme = useAppTheme();
   const [open, setOpen] = useState(false);
   const selectedDate = parseDateOnly(value) ?? new Date();
 
@@ -54,14 +52,12 @@ export function DatePickerField({
           </Text>
           <Text style={styles.isoText}>{value ?? "YYYY-AA-GG"}</Text>
         </View>
-        <CalendarDays color={colors.primary} size={22} />
+        <CalendarDays color={appTheme.primary} size={22} />
       </Pressable>
 
       {open && (
         <DateTimePicker
           display={Platform.OS === "ios" ? "compact" : "default"}
-          maximumDate={maximumDate}
-          minimumDate={minimumDate}
           mode="date"
           value={selectedDate}
           onChange={handleChange}
@@ -77,10 +73,9 @@ const styles = StyleSheet.create({
   },
   trigger: {
     alignItems: "center",
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    borderWidth: 1,
+    backgroundColor: colors.transparent,
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
     flexDirection: "row",
     gap: spacing.md,
     justifyContent: "space-between",
@@ -100,9 +95,9 @@ const styles = StyleSheet.create({
     color: colors.textMuted
   },
   isoText: {
-    ...typography.body,
+    ...typography.data,
     color: colors.textMuted,
-    fontSize: 12,
-    lineHeight: 16
+    fontSize: 14,
+    lineHeight: 19
   }
 });

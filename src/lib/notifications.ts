@@ -4,18 +4,28 @@ import { Platform } from "react-native";
 import { supabase } from "@/lib/supabase";
 
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldPlaySound: false,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true
-  })
+  handleNotification: async (notification) => {
+    const notificationType = notification.request.content.data?.type;
+    const isSpokenCareAlert =
+      notificationType === "care_reminder" ||
+      notificationType === "sleep_prediction";
+    return {
+      // Bakım alarmı ön plandaysa useCareReminderVoice Türkçe metni okur.
+      // Diğer bildirimlerde ve arka planda normal/custom ses davranışı korunur.
+      shouldPlaySound: !isSpokenCareAlert,
+      shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true
+    };
+  }
 });
 
 export async function registerForPushNotifications() {
   if (Platform.OS === "web") {
     return null;
   }
+
+  await ensureCareReminderChannel();
 
   const existingPermission = await Notifications.getPermissionsAsync();
   const finalPermission =
@@ -29,6 +39,51 @@ export async function registerForPushNotifications() {
 
   const token = await Notifications.getExpoPushTokenAsync();
   return token.data;
+}
+
+export async function ensureCareReminderChannel() {
+  if (Platform.OS !== "android") return;
+  await Promise.all([
+    Notifications.setNotificationChannelAsync("care-reminders", {
+      name: "Bakım alarmları",
+      description: "Kullanıcının kurduğu beslenme, uyku, bez ve bakım alarmları.",
+      importance: Notifications.AndroidImportance.HIGH,
+      sound: "baby_reminder.wav",
+      vibrationPattern: [0, 250, 180, 250],
+      lightColor: "#6E8F7C"
+    }),
+    Notifications.setNotificationChannelAsync("sleep-insights", {
+      name: "Uyku tahminleri",
+      description: "Kayıt örüntüsüne göre yaklaşan uyku penceresi bildirimleri.",
+      importance: Notifications.AndroidImportance.HIGH,
+      sound: "baby_reminder.wav",
+      vibrationPattern: [0, 220, 160, 220],
+      lightColor: "#6E8F7C"
+    }),
+    Notifications.setNotificationChannelAsync("care-safety", {
+      name: "İlaç ve vitamin güvenliği",
+      description: "Ailede başka bir bakıcı doz kaydettiğinde gelen güvenlik uyarıları.",
+      importance: Notifications.AndroidImportance.MAX,
+      sound: "default",
+      vibrationPattern: [0, 300, 150, 300, 150, 300],
+      lightColor: "#C98A93"
+    }),
+    Notifications.setNotificationChannelAsync("development-insights", {
+      name: "Gelişim dönemi notları",
+      description: "Bebeğin yaşına göre empatik gelişim dönemi hatırlatmaları.",
+      importance: Notifications.AndroidImportance.DEFAULT,
+      sound: "default",
+      lightColor: "#E3B873"
+    }),
+    Notifications.setNotificationChannelAsync("milk-inventory", {
+      name: "Anne sütü stoğu",
+      description: "Yaklaşan süt son kullanım ve çözündürme süresi hatırlatmaları.",
+      importance: Notifications.AndroidImportance.HIGH,
+      sound: "default",
+      vibrationPattern: [0, 220, 160, 220],
+      lightColor: "#6E8F7C"
+    })
+  ]);
 }
 
 export async function savePushTokenForCurrentUser(expoPushToken: string) {

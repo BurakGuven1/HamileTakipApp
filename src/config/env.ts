@@ -8,27 +8,13 @@ export const env = {
     process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY,
   revenueCatEntitlementId:
     process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID ?? "premium",
-  admobInterstitialAndroidId:
-    process.env.EXPO_PUBLIC_ADMOB_INTERSTITIAL_ANDROID_ID,
-  admobInterstitialIosId: process.env.EXPO_PUBLIC_ADMOB_INTERSTITIAL_IOS_ID
+  legalBaseUrl: process.env.EXPO_PUBLIC_LEGAL_BASE_URL
 } as const;
 
 export function getRevenueCatApiKey() {
   return Platform.select({
     ios: env.revenueCatIosApiKey,
     android: env.revenueCatAndroidApiKey,
-    default: undefined
-  });
-}
-
-export function getInterstitialAdUnitId() {
-  return Platform.select({
-    ios:
-      env.admobInterstitialIosId ??
-      "ca-app-pub-3940256099942544/4411468910",
-    android:
-      env.admobInterstitialAndroidId ??
-      "ca-app-pub-3940256099942544/1033173712",
     default: undefined
   });
 }

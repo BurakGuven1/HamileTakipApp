@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { Tabs } from "expo-router";
 import {
   Baby,
@@ -9,6 +10,8 @@ import {
 } from "lucide-react-native";
 import type { ColorValue } from "react-native";
 
+import { isCurrentUserFamilyFather } from "@/api/familyAccess";
+import { useAppTheme } from "@/providers/AppThemeProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
 type TabIconProps = {
@@ -17,17 +20,25 @@ type TabIconProps = {
 };
 
 export default function TabsLayout() {
+  const accentColor = useAppTheme();
+  const fatherRoleQuery = useQuery({
+    queryKey: ["current-user-is-family-father"],
+    queryFn: isCurrentUserFamilyFather
+  });
+  const hideWomensForum =
+    fatherRoleQuery.isPending || fatherRoleQuery.isError || fatherRoleQuery.data === true;
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.primary,
+        tabBarActiveTintColor: accentColor.primary,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: typography.tabLabel,
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderColor: colors.border,
-          borderRadius: radii.lg,
+          ...radii.card,
           borderTopWidth: 1,
           bottom: spacing.sm,
           height: 72,
@@ -75,6 +86,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="forum"
         options={{
+          href: hideWomensForum ? null : undefined,
           title: "Forum",
           tabBarIcon: (props) => <ForumIcon {...props} />
         }}
@@ -85,6 +97,35 @@ export default function TabsLayout() {
           title: "Profil",
           tabBarIcon: (props) => <ProfileIcon {...props} />
         }}
+      />
+      <Tabs.Screen
+        name="pregnancy-tools"
+        options={{
+          href: null,
+          title: "Hamilelik Araçları"
+        }}
+      />
+      <Tabs.Screen
+        name="pregnancy-exercise"
+        options={{
+          href: null,
+          title: "Hamile Egzersizi"
+        }}
+      />
+      <Tabs.Screen
+        name="pregnancy-timeline"
+        options={{
+          href: null,
+          title: "Hamilelik Çizelgesi"
+        }}
+      />
+      <Tabs.Screen
+        name="care-journal"
+        options={{ href: null, title: "Akıllı bakım günlüğü" }}
+      />
+      <Tabs.Screen
+        name="birth-preparation"
+        options={{ href: null, title: "Doğuma hazırlık" }}
       />
     </Tabs>
   );

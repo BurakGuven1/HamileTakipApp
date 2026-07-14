@@ -89,21 +89,21 @@ begin
        + date_part('month', age(current_date, v_latest_birth_date)))::int;
 
     if v_age_months < 1 then
-      return 'Yeni dogum yapti';
+      return 'Yeni doğum yaptı';
     elsif v_age_months < 12 then
-      return v_age_months || ' aylik bebek annesi';
+      return v_age_months || ' aylık bebek annesi';
     else
       v_years := v_age_months / 12;
       v_remaining_months := v_age_months % 12;
       if v_remaining_months = 0 then
-        return v_years || ' yasinda cocuk annesi';
+        return v_years || ' yaşında çocuk annesi';
       else
-        return v_years || ' yas ' || v_remaining_months || ' aylik cocuk annesi';
+        return v_years || ' yaş ' || v_remaining_months || ' aylık çocuk annesi';
       end if;
     end if;
   end if;
 
-  return 'Topluluk uyesi';
+  return 'Topluluk üyesi';
 end;
 $$;
 

@@ -6,20 +6,14 @@ import {
   CalendarHeart,
   Check,
   Heart,
+  Milk,
   ShieldCheck,
   Sparkles,
   UserRound
 } from "lucide-react-native";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
-import {
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  type DimensionValue
-} from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { createBaby } from "@/api/babies";
 import {
@@ -32,28 +26,54 @@ import { Card } from "@/components/Card";
 import { DatePickerField } from "@/components/DatePickerField";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
+import { Thread } from "@/components/Thread";
 import { registerAndSavePushToken } from "@/lib/notifications";
-import { colors, radii, spacing, typography } from "@/theme";
+import { useFeedback } from "@/providers/FeedbackProvider";
+import {
+  colors,
+  getSuggestedThemeForGender,
+  radii,
+  spacing,
+  themeOptions,
+  typography
+} from "@/theme";
+import type { ThemePreference } from "@/theme";
 
-type OnboardingStep = "status" | "details" | "nickname" | "notifications";
+type OnboardingStep =
+  | "family"
+  | "status"
+  | "details"
+  | "feeding"
+  | "theme"
+  | "nickname"
+  | "notifications";
 type ParentStatus = "pregnant" | "baby" | "skip";
 type BabyGender = "kiz" | "erkek" | "belirtilmemis";
+type FeedingMode = "breastfeeding" | "pumping" | "mixed" | "formula";
 
 const steps: { id: OnboardingStep; label: string }[] = [
+  { id: "family", label: "Aile" },
   { id: "status", label: "Durum" },
   { id: "details", label: "Bilgiler" },
+  { id: "feeding", label: "Beslenme" },
+  { id: "theme", label: "Tema" },
   { id: "nickname", label: "Forum" },
   { id: "notifications", label: "Bildirim" }
 ];
 
 export default function OnboardingScreen() {
   const queryClient = useQueryClient();
-  const [step, setStep] = useState<OnboardingStep>("status");
+  const { showError, showInfo } = useFeedback();
+  const [step, setStep] = useState<OnboardingStep>("family");
   const [status, setStatus] = useState<ParentStatus>();
+  const [motherName, setMotherName] = useState("");
+  const [fatherName, setFatherName] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [babyName, setBabyName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [babyGender, setBabyGender] = useState<BabyGender>("belirtilmemis");
+  const [feedingMode, setFeedingMode] = useState<FeedingMode>("mixed");
+  const [themePreference, setThemePreference] = useState<ThemePreference>("auto");
   const [nickname, setNickname] = useState("");
   const [nicknameAvailable, setNicknameAvailable] = useState<boolean | null>(null);
 
@@ -71,6 +91,30 @@ export default function OnboardingScreen() {
   }, [nickname, profile?.forum_nickname]);
 
   useEffect(() => {
+    if (!profile) return;
+
+    setMotherName((current) => {
+      if (current.trim()) return current;
+      if (profile.mother_name && profile.mother_name !== "Anne") {
+        return profile.mother_name;
+      }
+      return profile.display_name ?? "";
+    });
+    setFatherName((current) => {
+      if (current.trim()) return current;
+      return profile.father_name && profile.father_name !== "Baba"
+        ? profile.father_name
+        : "";
+    });
+  }, [profile]);
+
+  useEffect(() => {
+    if (profile?.theme_preference) {
+      setThemePreference(profile.theme_preference);
+    }
+  }, [profile?.theme_preference]);
+
+  useEffect(() => {
     if (step !== "nickname" || nickname.trim().length < 3) {
       setNicknameAvailable(null);
       return;
@@ -86,126 +130,212 @@ export default function OnboardingScreen() {
   }, [nickname, step]);
 
   const activeIndex = steps.findIndex((item) => item.id === step);
-  const progressPercent = useMemo(
-    () => `${((activeIndex + 1) / steps.length) * 100}%`,
+  const progressValue = useMemo(
+    () => (activeIndex + 1) / steps.length,
     [activeIndex]
   );
+  const suggestedThemeId =
+    status === "baby" ? getSuggestedThemeForGender(babyGender) : "sage";
+  const suggestedTheme = themeOptions.find((item) => item.id === suggestedThemeId);
 
   const updateStepMutation = useMutation({
     mutationFn: updateCurrentProfile,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["current-profile"] });
-    },
-    onError: (error) => Alert.alert("Kaydedilemedi", error.message)
+    }
   });
 
+  async function saveFamilyNames() {
+    try {
+      const cleanMotherName = motherName.trim();
+      const cleanFatherName = fatherName.trim();
+
+      if (cleanMotherName.length < 2 || cleanFatherName.length < 2) {
+        showInfo("Anne ve baba adını en az 2 karakter olacak şekilde yazmalısın.", "İsimler gerekli");
+        return;
+      }
+
+      await updateStepMutation.mutateAsync({
+        mother_name: cleanMotherName,
+        father_name: cleanFatherName,
+        display_name: cleanMotherName,
+        onboarding_step: "family_names_added"
+      });
+
+      if (profile?.onboarding_completed) {
+        router.replace("/home");
+        return;
+      }
+
+      setStep("status");
+    } catch (error) {
+      showError(error, "Aile bilgileri kaydedilemedi");
+    }
+  }
+
   async function chooseStatus(nextStatus: ParentStatus) {
-    setStatus(nextStatus);
+    try {
+      setStatus(nextStatus);
 
-    if (nextStatus === "pregnant") {
-      await updateStepMutation.mutateAsync({
-        is_pregnant: true,
-        onboarding_step: "status_selected"
-      });
-      setStep("details");
-      return;
+      if (nextStatus === "pregnant") {
+        await updateStepMutation.mutateAsync({
+          is_pregnant: true,
+          onboarding_step: "status_selected"
+        });
+        setStep("details");
+        return;
+      }
+
+      if (nextStatus === "baby") {
+        await updateStepMutation.mutateAsync({
+          is_pregnant: false,
+          due_date: null,
+          onboarding_step: "status_selected"
+        });
+        setStep("details");
+        return;
+      }
+
+      await updateStepMutation.mutateAsync({ onboarding_step: "status_selected" });
+      setStep("feeding");
+    } catch (error) {
+      showError(error, "Seçim kaydedilemedi");
     }
-
-    if (nextStatus === "baby") {
-      await updateStepMutation.mutateAsync({
-        is_pregnant: false,
-        due_date: null,
-        onboarding_step: "status_selected"
-      });
-      setStep("details");
-      return;
-    }
-
-    await updateStepMutation.mutateAsync({ onboarding_step: "status_selected" });
-    setStep("nickname");
   }
 
   async function saveDetails() {
-    if (!profile) {
-      Alert.alert("Oturum gerekli", "Onboarding icin tekrar giris yap.");
-      router.replace("/sign-in");
-      return;
-    }
+    try {
+      if (!profile) {
+        showInfo("Kurulum için tekrar giriş yap.", "Oturum gerekli");
+        router.replace("/sign-in");
+        return;
+      }
 
-    if (status === "pregnant") {
-      if (!dueDate) {
-        Alert.alert("Tarih sec", "Tahmini dogum tarihini secmelisin.");
+      if (status === "pregnant") {
+        if (!dueDate) {
+          showInfo("Tahmini doğum tarihini seçmelisin.", "Tarih seç");
+          return;
+        }
+
+        await updateStepMutation.mutateAsync({
+          is_pregnant: true,
+          due_date: dueDate,
+          onboarding_step: "details_added"
+        });
+        setStep("feeding");
+        return;
+      }
+
+      if (status === "baby") {
+        if (!babyName.trim() || !birthDate) {
+          showInfo("Bebek adı ve doğum tarihi gerekli.", "Bilgileri kontrol et");
+          return;
+        }
+
+        await createBaby({
+          parent_id: profile.id,
+          name: babyName.trim(),
+          birth_date: birthDate,
+          gender: babyGender
+        });
+        setThemePreference("auto");
+        await updateStepMutation.mutateAsync({ onboarding_step: "details_added" });
+        setStep("feeding");
+        return;
+      }
+
+      setStep("feeding");
+    } catch (error) {
+      showError(error, "Bilgiler kaydedilemedi");
+    }
+  }
+
+  async function saveFeedingMode() {
+    try {
+      await updateStepMutation.mutateAsync({
+        feeding_mode: feedingMode,
+        onboarding_step: "feeding_mode_selected"
+      });
+      setStep("theme");
+    } catch (error) {
+      showError(error, "Beslenme tercihi kaydedilemedi");
+    }
+  }
+
+  async function saveTheme() {
+    try {
+      await updateStepMutation.mutateAsync({
+        theme_preference: themePreference,
+        onboarding_step: "theme_selected"
+      });
+      setStep("nickname");
+    } catch (error) {
+      showError(error, "Tema kaydedilemedi");
+    }
+  }
+
+  async function saveNickname() {
+    try {
+      const cleanNickname = nickname.trim();
+
+      if (cleanNickname.length < 3) {
+        showInfo("Forum takma adı en az 3 karakter olmalı.", "Takma ad kısa");
+        return;
+      }
+
+      if (nicknameAvailable === false) {
+        showInfo("Başka bir takma ad dene.", "Takma ad kullanılıyor");
         return;
       }
 
       await updateStepMutation.mutateAsync({
-        is_pregnant: true,
-        due_date: dueDate,
-        onboarding_step: "details_added"
+        forum_nickname: cleanNickname,
+        onboarding_step: "nickname_set"
       });
-      setStep("nickname");
-      return;
+      setStep("notifications");
+    } catch (error) {
+      showError(error, "Takma ad kaydedilemedi");
     }
-
-    if (status === "baby") {
-      if (!babyName.trim() || !birthDate) {
-        Alert.alert("Bilgileri kontrol et", "Bebek adi ve dogum tarihi gerekli.");
-        return;
-      }
-
-      await createBaby({
-        parent_id: profile.id,
-        name: babyName.trim(),
-        birth_date: birthDate,
-        gender: babyGender
-      });
-      await updateStepMutation.mutateAsync({ onboarding_step: "details_added" });
-      setStep("nickname");
-      return;
-    }
-
-    setStep("nickname");
-  }
-
-  async function saveNickname() {
-    const cleanNickname = nickname.trim();
-
-    if (cleanNickname.length < 3) {
-      Alert.alert("Takma ad kisa", "Forum takma adi en az 3 karakter olmali.");
-      return;
-    }
-
-    if (nicknameAvailable === false) {
-      Alert.alert("Takma ad kullaniliyor", "Baska bir takma ad dene.");
-      return;
-    }
-
-    await updateStepMutation.mutateAsync({
-      forum_nickname: cleanNickname,
-      onboarding_step: "nickname_set"
-    });
-    setStep("notifications");
   }
 
   async function completeOnboarding(requestNotifications: boolean) {
-    if (requestNotifications) {
-      await registerAndSavePushToken();
-    }
+    try {
+      if (requestNotifications) {
+        await registerAndSavePushToken();
+      }
 
-    await updateStepMutation.mutateAsync({
-      onboarding_completed: true,
-      onboarding_step: "completed"
-    });
-    router.replace("/home");
+      await updateStepMutation.mutateAsync({
+        onboarding_completed: true,
+        onboarding_step: "completed"
+      });
+      router.replace("/home");
+    } catch (error) {
+      showError(error, "Kurulum tamamlanamadı");
+    }
   }
 
   function skipCurrentStep() {
+    if (step === "family") {
+      showInfo("Devam etmek için anne ve baba adını girmelisin.", "İsimler zorunlu");
+      return;
+    }
+
     if (step === "status") {
-      chooseStatus("skip").catch((error) => Alert.alert("Gecilemedi", error.message));
+      void chooseStatus("skip");
       return;
     }
 
     if (step === "details") {
+      setStep("feeding");
+      return;
+    }
+
+    if (step === "feeding") {
+      setStep("theme");
+      return;
+    }
+
+    if (step === "theme") {
       setStep("nickname");
       return;
     }
@@ -215,7 +345,7 @@ export default function OnboardingScreen() {
       return;
     }
 
-    completeOnboarding(false).catch((error) => Alert.alert("Tamamlanamadi", error.message));
+    void completeOnboarding(false);
   }
 
   return (
@@ -224,18 +354,29 @@ export default function OnboardingScreen() {
         <View style={styles.topBar}>
           <Text style={typography.eyebrow}>Anne+ kurulum</Text>
           <Pressable accessibilityRole="button" onPress={skipCurrentStep}>
-            <Text style={styles.skipText}>Simdilik gec</Text>
+            <Text style={styles.skipText}>Şimdilik geç</Text>
           </Pressable>
         </View>
 
         <View style={styles.progressWrap}>
-          <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: progressPercent as DimensionValue }
-              ]}
+          <View style={styles.threadProgress}>
+            <Thread
+              height={42}
+              mutedColor={colors.border}
+              progress={progressValue}
+              variant="progress"
             />
+            <View style={styles.stepDots}>
+              {steps.map((item, index) => (
+                <View
+                  key={item.id}
+                  style={[
+                    styles.stepDot,
+                    index <= activeIndex && styles.stepDotActive
+                  ]}
+                />
+              ))}
+            </View>
           </View>
           <View style={styles.stepLabels}>
             {steps.map((item, index) => (
@@ -252,13 +393,53 @@ export default function OnboardingScreen() {
           </View>
         </View>
 
+        {step === "family" ? (
+          <Card style={styles.focusCard}>
+            <View style={{ gap: spacing.lg }}>
+              <HeaderBlock
+                icon={<UserRound color={colors.primary} size={26} />}
+                title="Anne ve baba adını ekleyelim"
+                body="Uygulama içindeki karşılama metinleri, hatırlatmalar ve aileye özel akışlar bu adlarla daha doğal hale gelir."
+              />
+
+              <View style={{ gap: spacing.md }}>
+                <TextField
+                  autoCapitalize="words"
+                  label="Anne adı"
+                  placeholder="Örn. Elif"
+                  value={motherName}
+                  onChangeText={setMotherName}
+                />
+                <TextField
+                  autoCapitalize="words"
+                  label="Baba adı"
+                  placeholder="Örn. Burak"
+                  value={fatherName}
+                  onChangeText={setFatherName}
+                />
+              </View>
+
+              <Button
+                breathing
+                label={
+                  updateStepMutation.isPending
+                    ? "Kaydediliyor..."
+                    : "Aile bilgilerini kaydet"
+                }
+                disabled={updateStepMutation.isPending}
+                onPress={saveFamilyNames}
+              />
+            </View>
+          </Card>
+        ) : null}
+
         {step === "status" ? (
           <Card style={styles.focusCard}>
             <View style={{ gap: spacing.lg }}>
               <HeaderBlock
                 icon={<Sparkles color={colors.primary} size={26} />}
-                title="Deneyimini nasil kisisellestirelim?"
-                body="Bu bilgiler gizli kalir. Ana sayfa, hatirlatmalar ve forum rozetin buna gore duzenlenir."
+                title="Deneyimini nasıl kişiselleştirelim?"
+                body="Bu bilgiler gizli kalır. Ana sayfa, hatırlatmalar ve forum rozetin buna göre düzenlenir."
               />
 
               <View style={{ gap: spacing.md }}>
@@ -266,21 +447,21 @@ export default function OnboardingScreen() {
                   active={status === "pregnant"}
                   icon={<CalendarHeart color={colors.primary} size={24} />}
                   title="Hamileyim"
-                  body="Hafta hafta gebelik gelisimi ve doguma kalan sure gosterilir."
+                  body="Hafta hafta gebelik gelişimi ve doğuma kalan süre gösterilir."
                   onPress={() => chooseStatus("pregnant")}
                 />
                 <ChoiceCard
                   active={status === "baby"}
                   icon={<Baby color={colors.primary} size={24} />}
-                  title="Bebegim oldu"
-                  body="Asi takvimi, buyume kaydi ve fotograf zaman cizelgesi acilir."
+                  title="Bebeğim oldu"
+                  body="Aşı takvimi, büyüme kaydı ve fotoğraf zaman çizelgesi açılır."
                   onPress={() => chooseStatus("baby")}
                 />
                 <ChoiceCard
                   active={status === "skip"}
                   icon={<ShieldCheck color={colors.primary} size={24} />}
-                  title="Simdilik bilgi vermek istemiyorum"
-                  body="Uygulamayi kesfet, bilgileri sonra Profil veya Bebek sekmesinden ekle."
+                  title="Şimdilik bilgi vermek istemiyorum"
+                  body="Uygulamayı keşfet, bilgileri sonra Profil veya Bebek sekmesinden ekle."
                   onPress={() => chooseStatus("skip")}
                 />
               </View>
@@ -300,29 +481,27 @@ export default function OnboardingScreen() {
                   )
                 }
                 title={status === "pregnant" ? "Gebelik bilgisi" : "Bebek bilgisi"}
-                body="Tarihler forumda acik gosterilmez; sadece sana ozel akis ve anonim rozet icin kullanilir."
+                body="Tarihler forumda açık gösterilmez; sadece sana özel akış ve anonim rozet için kullanılır."
               />
 
               {status === "pregnant" ? (
                 <DatePickerField
-                  label="Tahmini dogum tarihi"
-                  minimumDate={new Date()}
-                  placeholder="Dogum tarihini sec"
+                  label="Tahmini doğum tarihi"
+                  placeholder="Doğum tarihini seç"
                   value={dueDate}
                   onChange={setDueDate}
                 />
               ) : (
                 <View style={{ gap: spacing.md }}>
                   <TextField
-                    label="Bebek adi"
-                    placeholder="Orn. Deniz"
+                    label="Bebek adı"
+                    placeholder="Örn. Deniz"
                     value={babyName}
                     onChangeText={setBabyName}
                   />
                   <DatePickerField
-                    label="Dogum tarihi"
-                    maximumDate={new Date()}
-                    placeholder="Dogum tarihini sec"
+                    label="Doğum tarihi"
+                    placeholder="Doğum tarihini seç"
                     value={birthDate}
                     onChange={setBirthDate}
                   />
@@ -331,7 +510,7 @@ export default function OnboardingScreen() {
                     <View style={styles.segmentRow}>
                       <SegmentButton
                         active={babyGender === "kiz"}
-                        label="Kiz"
+                        label="Kız"
                         onPress={() => setBabyGender("kiz")}
                       />
                       <SegmentButton
@@ -350,9 +529,65 @@ export default function OnboardingScreen() {
               )}
 
               <Button
+                breathing
                 label={updateStepMutation.isPending ? "Kaydediliyor..." : "Devam et"}
                 disabled={updateStepMutation.isPending}
                 onPress={saveDetails}
+              />
+            </View>
+          </Card>
+        ) : null}
+
+        {step === "feeding" ? (
+          <Card style={styles.focusCard}>
+            <View style={{ gap: spacing.lg }}>
+              <HeaderBlock
+                icon={<Milk color={colors.primary} size={26} />}
+                title="Beslenme akışını sana göre sadeleştirelim"
+                body="Bu bir sağlık tercihi değildir; yalnızca bakım günlüğünde en sık kullandığın kayıtları öne çıkarır. Ayarlardan değiştirebilirsin."
+              />
+              <View style={{ gap: spacing.md }}>
+                <ChoiceCard active={feedingMode === "breastfeeding"} icon={<Heart color={colors.primary} size={23} />} title="Emzirme" body="Emzirme tarafı ve süre takibini öne çıkarır." onPress={() => setFeedingMode("breastfeeding")} />
+                <ChoiceCard active={feedingMode === "pumping"} icon={<Milk color={colors.primary} size={23} />} title="Sağım" body="Çift taraflı zamanlayıcı ve süt stoğu ana akışta görünür." onPress={() => setFeedingMode("pumping")} />
+                <ChoiceCard active={feedingMode === "mixed"} icon={<Sparkles color={colors.primary} size={23} />} title="Karma beslenme" body="Emzirme, sağım ve biberon kısayollarını birlikte gösterir." onPress={() => setFeedingMode("mixed")} />
+                <ChoiceCard active={feedingMode === "formula"} icon={<Baby color={colors.primary} size={23} />} title="Mama" body="Biberon miktarı ve mama hatırlatmalarını öne çıkarır." onPress={() => setFeedingMode("formula")} />
+              </View>
+              <Button breathing label={updateStepMutation.isPending ? "Kaydediliyor..." : "Akışımı kişiselleştir"} disabled={updateStepMutation.isPending} onPress={saveFeedingMode} />
+            </View>
+          </Card>
+        ) : null}
+
+        {step === "theme" ? (
+          <Card style={styles.focusCard}>
+            <View style={{ gap: spacing.lg }}>
+              <HeaderBlock
+                icon={<Sparkles color={colors.primary} size={26} />}
+                title="Uygulamanın rengini seç"
+                body={
+                  status === "baby" && suggestedTheme
+                    ? `Cinsiyet bilgine göre ${suggestedTheme.label} önerdik. İstersen temel rengi şimdi değiştirebilirsin.`
+                    : "Ana ekran, profil ve menü vurguları bu renge göre canlanır. İstersen sonra Profil'den değiştirebilirsin."
+                }
+              />
+
+              <View style={styles.themeGrid}>
+                {themeOptions.map((item) => (
+                  <ThemeChoice
+                    key={item.id}
+                    active={themePreference === item.id}
+                    color={item.primary}
+                    isSuggested={status === "baby" && item.id === suggestedThemeId}
+                    label={item.label}
+                    onPress={() => setThemePreference(item.id)}
+                  />
+                ))}
+              </View>
+
+              <Button
+                breathing
+                label={updateStepMutation.isPending ? "Kaydediliyor..." : "Temamı kaydet"}
+                disabled={updateStepMutation.isPending}
+                onPress={saveTheme}
               />
             </View>
           </Card>
@@ -363,8 +598,8 @@ export default function OnboardingScreen() {
             <View style={{ gap: spacing.lg }}>
               <HeaderBlock
                 icon={<UserRound color={colors.primary} size={26} />}
-                title="Forumda nasil gorunmek istersin?"
-                body="Gercek profilin acilmaz. Forumda sadece takma adin ve anonim rozetin gorunur."
+                title="Forumda nasıl görünmek istersin?"
+                body="Gerçek profilin açılmaz. Forumda sadece takma adın ve anonim rozetin görünür."
               />
               <View style={{ gap: spacing.sm }}>
                 <TextField
@@ -383,11 +618,12 @@ export default function OnboardingScreen() {
                     ? "En az 3 karakter yaz."
                     : nicknameAvailable
                       ? "Bu takma ad uygun."
-                      : "Bu takma ad kullaniliyor."}
+                      : "Bu takma ad kullanılıyor."}
                 </Text>
               </View>
               <Button
-                label="Takma adimi kaydet"
+                breathing
+                label="Takma adımı kaydet"
                 disabled={updateStepMutation.isPending}
                 onPress={saveNickname}
               />
@@ -400,20 +636,21 @@ export default function OnboardingScreen() {
             <View style={{ gap: spacing.lg }}>
               <HeaderBlock
                 icon={<Bell color={colors.primary} size={26} />}
-                title="Nazik hatirlatmalar ister misin?"
-                body="Asi takvimi, haftalik gebelik ozetleri ve forum etkilesimleri icin kaliteli bildirimler gondeririz."
+                title="Nazik hatırlatmalar ister misin?"
+                body="Aşı takvimi, haftalık gebelik özetleri ve forum etkileşimleri için kaliteli bildirimler göndeririz."
               />
               <View style={{ gap: spacing.sm }}>
-                <FeatureRow label="Asi ve kontrol hatirlatmalari" />
-                <FeatureRow label="Gebelik haftana uygun ozetler" />
-                <FeatureRow label="Forum yorum ve begeni bildirimleri" />
+                <FeatureRow label="Aşı ve kontrol hatırlatmaları" />
+                <FeatureRow label="Gebelik haftana uygun özetler" />
+                <FeatureRow label="Forum yorum ve beğeni bildirimleri" />
               </View>
               <Button
-                label="Bildirimleri ac ve basla"
+                breathing
+                label="Bildirimleri aç ve başla"
                 onPress={() => completeOnboarding(true)}
               />
               <Button
-                label="Simdilik bildirim alma"
+                label="Şimdilik bildirim alma"
                 variant="ghost"
                 onPress={() => completeOnboarding(false)}
               />
@@ -474,6 +711,34 @@ function ChoiceCard({
   );
 }
 
+function ThemeChoice({
+  active,
+  color,
+  isSuggested,
+  label,
+  onPress
+}: {
+  active: boolean;
+  color: string;
+  isSuggested: boolean;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={[styles.themeChoice, active && styles.themeChoiceActive]}
+    >
+      <View style={[styles.themeSwatch, { backgroundColor: color }]}>
+        {active ? <Check color={colors.surfaceStrong} size={20} /> : null}
+      </View>
+      <Text style={styles.themeLabel}>{label}</Text>
+      {isSuggested ? <Text style={styles.themeSuggested}>Önerilen</Text> : null}
+    </Pressable>
+  );
+}
+
 function SegmentButton({
   active,
   label,
@@ -521,15 +786,28 @@ const styles = StyleSheet.create({
   progressWrap: {
     gap: spacing.sm
   },
-  progressTrack: {
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: radii.pill,
-    height: 8,
-    overflow: "hidden"
+  threadProgress: {
+    justifyContent: "center"
   },
-  progressFill: {
+  stepDots: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    left: 0,
+    position: "absolute",
+    right: 0
+  },
+  stepDot: {
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    borderWidth: 2,
+    height: 14,
+    width: 14
+  },
+  stepDotActive: {
     backgroundColor: colors.primary,
-    height: "100%"
+    borderColor: colors.primary
   },
   stepLabels: {
     flexDirection: "row",
@@ -538,7 +816,7 @@ const styles = StyleSheet.create({
   stepLabel: {
     ...typography.label,
     color: colors.textMuted,
-    fontSize: 12
+    fontSize: 14
   },
   stepLabelActive: {
     color: colors.primary
@@ -558,7 +836,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: radii.md,
+    ...radii.card,
     borderWidth: 1,
     flexDirection: "row",
     gap: spacing.md,
@@ -586,8 +864,48 @@ const styles = StyleSheet.create({
   },
   choiceBody: {
     ...typography.body,
+    fontSize: 15,
+    lineHeight: 21
+  },
+  themeGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm
+  },
+  themeChoice: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.border,
+    ...radii.card,
+    borderWidth: 1,
+    flexBasis: "48%",
+    flexGrow: 1,
+    gap: spacing.sm,
+    minHeight: 126,
+    padding: spacing.md
+  },
+  themeChoiceActive: {
+    backgroundColor: colors.surface,
+    borderColor: colors.primary
+  },
+  themeSwatch: {
+    alignItems: "center",
+    borderRadius: radii.pill,
+    height: 44,
+    justifyContent: "center",
+    width: 44
+  },
+  themeLabel: {
+    ...typography.label,
+    color: colors.text,
+    textAlign: "center"
+  },
+  themeSuggested: {
+    ...typography.label,
+    color: colors.primary,
     fontSize: 14,
-    lineHeight: 20
+    lineHeight: 19,
+    textAlign: "center"
   },
   segmentRow: {
     backgroundColor: colors.surfaceMuted,
@@ -609,7 +927,7 @@ const styles = StyleSheet.create({
   segmentText: {
     ...typography.label,
     color: colors.textMuted,
-    fontSize: 13
+    fontSize: 14
   },
   segmentTextActive: {
     color: colors.primary
@@ -625,7 +943,7 @@ const styles = StyleSheet.create({
   featureRow: {
     alignItems: "center",
     backgroundColor: colors.surfaceMuted,
-    borderRadius: radii.md,
+    ...radii.card,
     flexDirection: "row",
     gap: spacing.sm,
     padding: spacing.md

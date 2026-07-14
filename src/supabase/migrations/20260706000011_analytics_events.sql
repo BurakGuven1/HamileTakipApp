@@ -5,7 +5,7 @@
 create table if not exists public.analytics_events (
   id                 uuid primary key default gen_random_uuid(),
   user_id            uuid references public.profiles(id) on delete set null,
-  event_name         text not null,             -- örn: 'paywall_viewed', 'ad_completed'
+  event_name         text not null,             -- örn: 'paywall_viewed', 'purchase_completed'
   event_properties   jsonb not null default '{}'::jsonb,
   session_id         text,
   created_at         timestamptz not null default now()

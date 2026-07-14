@@ -2,9 +2,10 @@ import * as ImageManipulator from "expo-image-manipulator";
 
 import { supabase } from "@/lib/supabase";
 import { trackEvent } from "@/lib/analytics";
-import type { Tables, TablesInsert } from "@/types/database";
+import type { Tables, TablesInsert, TablesUpdate } from "@/types/database";
 
 export type BabyPhoto = Tables<"baby_photos">;
+export type BabyPhotoUpdate = TablesUpdate<"baby_photos">;
 
 const bucketName = "baby-photos";
 
@@ -38,7 +39,7 @@ export async function uploadBabyPhoto(input: {
   }
 
   if (!user) {
-    throw new Error("Auth session is required");
+    throw new Error("Oturum gerekli.");
   }
 
   const compressed = await ImageManipulator.manipulateAsync(
@@ -97,4 +98,37 @@ export async function getBabyPhotoSignedUrl(path: string) {
   }
 
   return data.signedUrl;
+}
+
+export async function updateBabyPhoto(id: string, input: BabyPhotoUpdate) {
+  const { data, error } = await supabase
+    .from("baby_photos")
+    .update(input)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+export async function deleteBabyPhoto(photo: BabyPhoto) {
+  const { error: storageError } = await supabase.storage
+    .from(bucketName)
+    .remove([photo.storage_path]);
+
+  if (storageError) {
+    throw storageError;
+  }
+
+  const { error } = await supabase.from("baby_photos").delete().eq("id", photo.id);
+
+  if (error) {
+    throw error;
+  }
+
+  await trackEvent("photo_deleted", { baby_id: photo.baby_id });
 }

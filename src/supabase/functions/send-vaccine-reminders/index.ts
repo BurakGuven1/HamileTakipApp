@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
     const parentIds = [...new Set(rows.map((r) => r.parent_id))];
     const { data: parentProfiles, error: profileError } = await supabase
       .from("profiles")
-      .select("id, notify_vaccine_reminders")
+      .select("id, mother_name, notify_vaccine_reminders")
       .in("id", parentIds);
 
     if (profileError) {
@@ -102,6 +102,12 @@ Deno.serve(async (req) => {
       (parentProfiles ?? [])
         .filter((profile) => profile.notify_vaccine_reminders)
         .map((profile) => profile.id),
+    );
+    const parentNameById = new Map(
+      (parentProfiles ?? []).map((profile) => [
+        profile.id,
+        profile.mother_name || "Anne",
+      ]),
     );
 
     if (enabledParentIds.size === 0) {
@@ -140,11 +146,12 @@ Deno.serve(async (req) => {
     for (const row of rows) {
       if (!enabledParentIds.has(row.parent_id)) continue;
       const userTokens = tokensByUser.get(row.parent_id) ?? [];
+      const motherName = parentNameById.get(row.parent_id) ?? "Anne";
       for (const token of userTokens) {
         messages.push({
           to: token,
           sound: "default",
-          title: "Aşı Hatırlatması 💉",
+          title: `${motherName}, aşı hatırlatması`,
           body: `${row.vaccine_name} için önerilen tarih yaklaşıyor (${row.scheduled_date}).`,
           data: { type: "vaccine_reminder", baby_id: row.baby_id },
         });

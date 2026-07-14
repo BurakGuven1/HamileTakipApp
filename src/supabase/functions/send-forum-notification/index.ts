@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
     if (payload.table === "forum_comments") {
       const postId = asString(payload.record.post_id);
       const actorId = asString(payload.record.author_id);
-      const actorName = asString(payload.record.forum_nickname) ?? "Bir uye";
+      const actorName = asString(payload.record.forum_nickname) ?? "Bir üye";
       const content = asString(payload.record.content) ?? "";
 
       if (!postId || !actorId) {
@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
         target = {
           userId: post.author_id,
           preference: "notify_forum_comments",
-          title: "Gonderine yeni yorum geldi",
+          title: "Gönderine yeni yorum geldi",
           body: `${actorName}: ${snippet(content)}`,
           data: { type: "forum_comment", post_id: postId },
         };
@@ -142,8 +142,8 @@ Deno.serve(async (req) => {
         target = {
           userId: post.author_id,
           preference: "notify_forum_likes",
-          title: "Gonderin begenildi",
-          body: `${actor?.forum_nickname ?? "Bir uye"} gonderini begendi: ${snippet(post.title)}`,
+          title: "Gönderin beğenildi",
+          body: `${actor?.forum_nickname ?? "Bir üye"} gönderini beğendi: ${snippet(post.title)}`,
           data: { type: "forum_post_like", post_id: postId },
         };
       }
@@ -172,8 +172,8 @@ Deno.serve(async (req) => {
         target = {
           userId: comment.author_id,
           preference: "notify_forum_likes",
-          title: "Yorumun begenildi",
-          body: `${actor?.forum_nickname ?? "Bir uye"} yorumunu begendi: ${snippet(comment.content)}`,
+          title: "Yorumun beğenildi",
+          body: `${actor?.forum_nickname ?? "Bir üye"} yorumunu beğendi: ${snippet(comment.content)}`,
           data: {
             type: "forum_comment_like",
             post_id: comment.post_id,

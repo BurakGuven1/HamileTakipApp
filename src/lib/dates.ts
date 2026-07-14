@@ -18,6 +18,17 @@ export function parseDateOnly(value?: string | null) {
   return new Date(year, month - 1, day);
 }
 
+const dayInMs = 1000 * 60 * 60 * 24;
+
+function getDateOnlyDiffDays(target: Date, base = new Date()) {
+  const targetDate = new Date(target);
+  const baseDate = new Date(base);
+  targetDate.setHours(0, 0, 0, 0);
+  baseDate.setHours(0, 0, 0, 0);
+
+  return Math.round((targetDate.getTime() - baseDate.getTime()) / dayInMs);
+}
+
 export function formatDate(value?: string | null) {
   const date = parseDateOnly(value);
   if (!date) {
@@ -31,25 +42,34 @@ export function formatDate(value?: string | null) {
   }).format(date);
 }
 
-export function getPregnancyWeek(dueDate?: string | null) {
-  const date = parseDateOnly(dueDate);
-  if (!date) {
+export function getPregnancyProgress(dueDate?: string | null) {
+  const due = parseDateOnly(dueDate);
+  if (!due) {
     return null;
   }
 
   const totalDays = 280;
-  const today = new Date();
-  const daysUntilDue = Math.round(
-    (date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-  );
-  const pregnantDays = totalDays - daysUntilDue;
-  return Math.max(1, Math.min(42, Math.floor(pregnantDays / 7)));
+  const maxTrackedDays = 294;
+  const daysUntilDue = getDateOnlyDiffDays(due);
+  const day = Math.max(1, Math.min(maxTrackedDays, totalDays - daysUntilDue));
+  const week = Math.max(1, Math.min(42, Math.floor(day / 7)));
+
+  return {
+    day,
+    daysUntilDue: Math.max(0, daysUntilDue),
+    totalDays,
+    week
+  };
+}
+
+export function getPregnancyWeek(dueDate?: string | null) {
+  return getPregnancyProgress(dueDate)?.week ?? null;
 }
 
 export function getBabyAgeLabel(birthDate?: string | null) {
   const birth = parseDateOnly(birthDate);
   if (!birth) {
-    return "Yas bilgisi yok";
+    return "Yaş bilgisi yok";
   }
 
   const today = new Date();
@@ -65,20 +85,20 @@ export function getBabyAgeLabel(birthDate?: string | null) {
   if (months < 1) {
     const days = Math.max(
       0,
-      Math.floor((today.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24))
+      Math.floor((today.getTime() - birth.getTime()) / dayInMs)
     );
-    return `${days} gunluk`;
+    return `${days} günlük`;
   }
 
   if (months < 12) {
-    return `${months} aylik`;
+    return `${months} aylık`;
   }
 
   const years = Math.floor(months / 12);
   const remainingMonths = months % 12;
   return remainingMonths > 0
-    ? `${years} yas ${remainingMonths} aylik`
-    : `${years} yasinda`;
+    ? `${years} yaş ${remainingMonths} aylık`
+    : `${years} yaşında`;
 }
 
 export function getRelativeDayLabel(value?: string | null) {
@@ -92,12 +112,12 @@ export function getRelativeDayLabel(value?: string | null) {
   date.setHours(0, 0, 0, 0);
 
   const diffDays = Math.round(
-    (date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+    (date.getTime() - today.getTime()) / dayInMs
   );
 
-  if (diffDays === 0) return "Bugun";
-  if (diffDays === 1) return "Yarin";
-  if (diffDays > 1) return `${diffDays} gun sonra`;
-  if (diffDays === -1) return "Dun";
-  return `${Math.abs(diffDays)} gun once`;
+  if (diffDays === 0) return "Bugün";
+  if (diffDays === 1) return "Yarın";
+  if (diffDays > 1) return `${diffDays} gün sonra`;
+  if (diffDays === -1) return "Dün";
+  return `${Math.abs(diffDays)} gün önce`;
 }

@@ -99,7 +99,7 @@ async function getCurrentUserId() {
   }
 
   if (!user) {
-    throw new Error("Oturum acman gerekiyor.");
+    throw new Error("Oturum açman gerekiyor.");
   }
 
   return user.id;

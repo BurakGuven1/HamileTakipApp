@@ -1,6 +1,8 @@
 import { Platform } from "react-native";
 import Purchases, {
+  LOG_LEVEL,
   type CustomerInfo,
+  type MakePurchaseResult,
   type PurchasesPackage
 } from "react-native-purchases";
 
@@ -8,19 +10,71 @@ import { env, getRevenueCatApiKey } from "@/config/env";
 import { trackEvent } from "@/lib/analytics";
 
 let configured = false;
+let currentRevenueCatUserId: string | null = null;
 
-export function configureRevenueCat(userId?: string) {
+export const SUBSCRIPTION_STATUS_QUERY_KEY = ["subscription-status"] as const;
+
+export type PremiumSubscriptionStatus = {
+  accessSource: "family_trial" | "none" | "own";
+  customerInfo: CustomerInfo | null;
+  expirationDate: string | null;
+  familyTrialExpirationDate: string | null;
+  familyTrialStartedAt: string | null;
+  isLifetime: boolean;
+  isPremium: boolean;
+  productIdentifier: string | null;
+  willRenew: boolean;
+};
+
+export function configureRevenueCat() {
   const apiKey = getRevenueCatApiKey();
 
   if (!apiKey || configured || Platform.OS === "web") {
     return;
   }
 
+  if (__DEV__) {
+    Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+  }
+
   Purchases.configure({
-    apiKey,
-    appUserID: userId
+    apiKey
   });
   configured = true;
+}
+
+export const initializeRevenueCat = configureRevenueCat;
+
+export function isRevenueCatConfigured() {
+  return configured;
+}
+
+export async function logInRevenueCat(userId: string) {
+  configureRevenueCat();
+
+  if (!configured) {
+    return null;
+  }
+
+  if (currentRevenueCatUserId === userId) {
+    return Purchases.getCustomerInfo();
+  }
+
+  const result = await Purchases.logIn(userId);
+  currentRevenueCatUserId = userId;
+  return result.customerInfo;
+}
+
+export async function logOutRevenueCat() {
+  configureRevenueCat();
+
+  if (!configured) {
+    currentRevenueCatUserId = null;
+    return null;
+  }
+
+  currentRevenueCatUserId = null;
+  return Purchases.logOut();
 }
 
 export async function getCustomerInfo(): Promise<CustomerInfo | null> {
@@ -41,6 +95,28 @@ export function hasPremiumEntitlement(customerInfo: CustomerInfo | null) {
   );
 }
 
+export function getPremiumEntitlement(customerInfo: CustomerInfo | null) {
+  return customerInfo?.entitlements.active[env.revenueCatEntitlementId] ?? null;
+}
+
+export function getSubscriptionStatusFromCustomerInfo(
+  customerInfo: CustomerInfo | null
+): PremiumSubscriptionStatus {
+  const entitlement = getPremiumEntitlement(customerInfo);
+
+  return {
+    accessSource: entitlement ? "own" : "none",
+    customerInfo,
+    expirationDate: entitlement?.expirationDate ?? null,
+    familyTrialExpirationDate: null,
+    familyTrialStartedAt: null,
+    isLifetime: Boolean(entitlement && !entitlement.expirationDate),
+    isPremium: Boolean(entitlement),
+    productIdentifier: entitlement?.productIdentifier ?? null,
+    willRenew: entitlement?.willRenew ?? false
+  };
+}
+
 export async function getPaywallPackages(): Promise<PurchasesPackage[]> {
   if (!configured) {
     configureRevenueCat();
@@ -54,7 +130,9 @@ export async function getPaywallPackages(): Promise<PurchasesPackage[]> {
   return offerings.current?.availablePackages ?? [];
 }
 
-export async function purchasePremiumPackage(identifier: string) {
+export async function purchasePremiumPackage(
+  identifier: string
+): Promise<MakePurchaseResult | null> {
   await trackEvent("purchase_started", { product_id: identifier });
 
   const packages = await getPaywallPackages();
@@ -72,10 +150,42 @@ export async function purchasePremiumPackage(identifier: string) {
 
   try {
     const result = await Purchases.purchasePackage(selectedPackage);
-    await trackEvent("purchase_completed", { product_id: identifier });
+    await trackEvent("purchase_completed", {
+      product_id: result.productIdentifier
+    });
     return result;
-  } catch (error) {
-    await trackEvent("purchase_cancelled", { product_id: identifier });
+  } catch (error: unknown) {
+    await trackEvent("purchase_cancelled", {
+      product_id: identifier,
+      user_cancelled: isPurchaseUserCancelled(error)
+    });
     throw error;
   }
+}
+
+export async function restorePremiumPurchases() {
+  if (!configured) {
+    configureRevenueCat();
+  }
+
+  if (!configured) {
+    return null;
+  }
+
+  await trackEvent("restore_purchases_attempted");
+  const customerInfo = await Purchases.restorePurchases();
+  await trackEvent("restore_purchases_succeeded", {
+    premium_active: hasPremiumEntitlement(customerInfo)
+  });
+
+  return customerInfo;
+}
+
+export function isPurchaseUserCancelled(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "userCancelled" in error &&
+    Boolean((error as { userCancelled?: boolean }).userCancelled)
+  );
 }

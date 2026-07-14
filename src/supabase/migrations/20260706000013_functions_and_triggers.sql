@@ -62,7 +62,7 @@ as $$
 $$;
 
 comment on function public.get_upcoming_vaccinations(int) is
-  'Push bildirim gönderecek Edge Function tarafından çağrılır. RevenueCat/AdMob ile ilgisi yoktur, sadece aşı hatırlatma amaçlıdır.';
+  'Push bildirim gönderecek Edge Function tarafından çağrılır; yalnızca aşı hatırlatma amaçlıdır.';
 
 -- ------------------------------------------------------------
 -- GÜNLÜK CRON JOB ÖRNEĞİ (opsiyonel — pg_cron + pg_net gerektirir)

@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import * as Haptics from "expo-haptics";
 import {
   Baby,
   CalendarHeart,
@@ -14,7 +15,6 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   StyleSheet,
   Text,
@@ -27,25 +27,87 @@ import {
   listForumCategories,
   listPublicForumComments,
   listPublicForumPosts,
+  reportForumContent,
   toggleForumCommentLike,
   toggleForumPostLike,
   type PublicForumComment,
   type PublicForumPost
 } from "@/api/forum";
+import { isCurrentUserFamilyFather } from "@/api/familyAccess";
 import { getCurrentProfile } from "@/api/profiles";
+import { Badge } from "@/components/Badge";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
+import { PremiumFeatureBoundary } from "@/features/subscription/PremiumFeatureBoundary";
+import {
+  blockForumNickname,
+  getBlockedForumNicknames,
+  unblockForumNickname
+} from "@/lib/forumBlocks";
+import { trackEvent } from "@/lib/analytics";
+import { useFeedback } from "@/providers/FeedbackProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
 export default function ForumScreen() {
+  const fatherRoleQuery = useQuery({
+    queryKey: ["current-user-is-family-father"],
+    queryFn: isCurrentUserFamilyFather
+  });
+
+  if (fatherRoleQuery.isPending) {
+    return (
+      <Screen scroll={false}>
+        <View style={styles.roleGateLoading}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      </Screen>
+    );
+  }
+
+  if (fatherRoleQuery.isError) {
+    return (
+      <Screen scroll={false}>
+        <EmptyState
+          title="Erişim doğrulanamadı"
+          description="Anne forumuna erişim bilgisi şu anda doğrulanamıyor. Lütfen bağlantını kontrol edip tekrar dene."
+        />
+      </Screen>
+    );
+  }
+
+  if (fatherRoleQuery.data) {
+    return (
+      <Screen scroll={false}>
+        <EmptyState
+          title="Bu alan yalnızca annelere özel"
+          description="Anne forumu, kadınların hassas deneyimlerini güvenle paylaşabilmesi için baba hesaplarına kapalıdır."
+        />
+      </Screen>
+    );
+  }
+
+  return (
+    <PremiumFeatureBoundary
+      description="Anonim anne topluluğunda soru sormak, yorum yapmak ve güvenli forum akışına katılmak Premium ile açılır."
+      featureKey="mother_forum"
+      title="Anne forumu"
+    >
+      <ForumContent />
+    </PremiumFeatureBoundary>
+  );
+}
+
+function ForumContent() {
   const queryClient = useQueryClient();
+  const { showError, showSuccess } = useFeedback();
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>();
   const [activePostId, setActivePostId] = useState<string>();
   const [composerOpen, setComposerOpen] = useState(false);
   const [commentComposerOpen, setCommentComposerOpen] = useState(false);
+  const [blockedNicknames, setBlockedNicknames] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [commentText, setCommentText] = useState("");
@@ -81,6 +143,14 @@ export default function ForumScreen() {
     setCommentText("");
   }, [activePostId]);
 
+  useEffect(() => {
+    getBlockedForumNicknames().then(setBlockedNicknames).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    trackEvent("forum_viewed").catch(() => undefined);
+  }, []);
+
   const commentsQuery = useQuery({
     queryKey: ["forum-comments", activePostId],
     queryFn: () => listPublicForumComments(activePostId as string),
@@ -93,18 +163,18 @@ export default function ForumScreen() {
       const categoryId = selectedCategoryId ?? categoriesQuery.data?.[0]?.id;
 
       if (!profile) {
-        throw new Error("Gonderi olusturmak icin giris yapmalisin.");
+        throw new Error("Gönderi oluşturmak için giriş yapmalısın.");
       }
 
       if (!categoryId) {
-        throw new Error("Once bir kategori sec.");
+        throw new Error("Önce bir kategori seç.");
       }
 
       const cleanTitle = title.trim();
       const cleanContent = content.trim();
 
       if (cleanTitle.length < 4 || cleanContent.length < 8) {
-        throw new Error("Baslik ve icerik biraz daha acik olmali.");
+        throw new Error("Başlık ve içerik biraz daha açık olmalı.");
       }
 
       return createForumPost({
@@ -120,9 +190,12 @@ export default function ForumScreen() {
       setContent("");
       setComposerOpen(false);
       setActivePostId(post.id);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+        () => undefined
+      );
       await queryClient.invalidateQueries({ queryKey: ["forum-posts"] });
     },
-    onError: (error) => Alert.alert("Gonderi olusturulamadi", error.message)
+    onError: (error) => showError(error, "Gönderi oluşturulamadı")
   });
 
   const createCommentMutation = useMutation({
@@ -131,11 +204,11 @@ export default function ForumScreen() {
       const cleanComment = commentText.trim();
 
       if (!profile || !activePost) {
-        throw new Error("Yorum yazmak icin giris yapmalisin.");
+        throw new Error("Yorum yazmak için giriş yapmalısın.");
       }
 
       if (cleanComment.length < 2) {
-        throw new Error("Yorum cok kisa.");
+        throw new Error("Yorum çok kısa.");
       }
 
       return createForumComment({
@@ -153,7 +226,7 @@ export default function ForumScreen() {
         queryClient.invalidateQueries({ queryKey: ["forum-posts"] })
       ]);
     },
-    onError: (error) => Alert.alert("Yorum eklenemedi", error.message)
+    onError: (error) => showError(error, "Yorum eklenemedi")
   });
 
   const postLikeMutation = useMutation({
@@ -161,7 +234,7 @@ export default function ForumScreen() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["forum-posts"] });
     },
-    onError: (error) => Alert.alert("Begeni guncellenemedi", error.message)
+    onError: (error) => showError(error, "Beğeni güncellenemedi")
   });
 
   const commentLikeMutation = useMutation({
@@ -169,11 +242,62 @@ export default function ForumScreen() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["forum-comments", activePostId] });
     },
-    onError: (error) => Alert.alert("Begeni guncellenemedi", error.message)
+    onError: (error) => showError(error, "Beğeni güncellenemedi")
   });
 
-  const posts = postsQuery.data ?? [];
+  const reportMutation = useMutation({
+    mutationFn: async ({
+      reason,
+      targetId,
+      targetType
+    }: {
+      reason: string;
+      targetId: string;
+      targetType: "post" | "comment";
+    }) => {
+      const profile = profileQuery.data;
+      if (!profile) {
+        throw new Error("Raporlamak için giriş yapmalısın.");
+      }
+
+      return reportForumContent({
+        reporter_id: profile.id,
+        target_id: targetId,
+        target_type: targetType,
+        reason
+      });
+    },
+    onSuccess: () => showSuccess("Raporun moderasyon kuyruğuna iletildi."),
+    onError: (error) => showError(error, "Rapor gönderilemedi")
+  });
+
+  async function blockNickname(nickname: string) {
+    try {
+      const next = await blockForumNickname(nickname);
+      setBlockedNicknames(next);
+      showSuccess(`${nickname} artık forum akışında gizlenecek.`);
+    } catch (error) {
+      showError(error, "Kullanıcı engellenemedi");
+    }
+  }
+
+  async function unblockNickname(nickname: string) {
+    try {
+      const next = await unblockForumNickname(nickname);
+      setBlockedNicknames(next);
+      showSuccess(`${nickname} engeli kaldırıldı.`);
+    } catch (error) {
+      showError(error, "Engel kaldırılamadı");
+    }
+  }
+
+  const posts = (postsQuery.data ?? []).filter(
+    (post) => !blockedNicknames.includes(post.forum_nickname)
+  );
   const categories = categoriesQuery.data ?? [];
+  const comments = (commentsQuery.data ?? []).filter(
+    (comment) => !blockedNicknames.includes(comment.forum_nickname)
+  );
 
   return (
     <Screen>
@@ -183,15 +307,15 @@ export default function ForumScreen() {
             <MessageCircleHeart color={colors.primary} size={28} />
           </View>
           <View style={{ gap: spacing.xs }}>
-            <Text style={typography.eyebrow}>Anne toplulugu</Text>
+            <Text style={typography.eyebrow}>Anne topluluğu</Text>
             <Text style={typography.heading1}>Forum</Text>
             <Text style={styles.heroText}>
-              Gercek profil bilgileri gizli kalir; sadece takma ad ve anonim rozet
-              gorunur.
+              Gerçek profil bilgileri gizli kalır; sadece takma ad ve anonim rozet
+              görünür.
             </Text>
           </View>
           <Button
-            label={composerOpen ? "Vazgec" : "Yeni gonderi"}
+            label={composerOpen ? "Vazgeç" : "Yeni gönderi"}
             variant={composerOpen ? "ghost" : "secondary"}
             onPress={() => setComposerOpen((value) => !value)}
           />
@@ -206,7 +330,7 @@ export default function ForumScreen() {
                 size={18}
               />
             }
-            label="Tumu"
+            label="Tümü"
             onPress={() => {
               setSelectedCategoryId(undefined);
               setActivePostId(undefined);
@@ -235,24 +359,24 @@ export default function ForumScreen() {
         {composerOpen ? (
           <Card style={styles.composer}>
             <View style={{ gap: spacing.md }}>
-              <Text style={typography.heading2}>Deneyimini paylas</Text>
+              <Text style={typography.heading2}>Deneyimini paylaş</Text>
               <TextField
-                label="Baslik"
+                label="Başlık"
                 value={title}
                 onChangeText={setTitle}
-                placeholder="Orn. 12. haftada mide bulantisi"
+                placeholder="Örn. 12. haftada mide bulantısı"
               />
               <TextField
-                label="Icerik"
+                label="İçerik"
                 value={content}
                 onChangeText={setContent}
                 multiline
                 numberOfLines={5}
-                placeholder="Sorunu, deneyimini veya destek istedigin konuyu yaz."
+                placeholder="Sorunu, deneyimini veya destek istediğin konuyu yaz."
                 style={styles.multiline}
               />
               <Button
-                label={createPostMutation.isPending ? "Paylasiliyor..." : "Paylas"}
+                label={createPostMutation.isPending ? "Paylaşılıyor..." : "Paylaş"}
                 disabled={createPostMutation.isPending}
                 onPress={() => createPostMutation.mutate()}
               />
@@ -265,7 +389,7 @@ export default function ForumScreen() {
         ) : posts.length === 0 ? (
           <EmptyState
             title="Bu kategoride ilk sen yaz"
-            description="Sorular, kucuk zaferler ve destek mesajlari burada birikir."
+            description="Sorular, küçük zaferler ve destek mesajları burada birikir."
           />
         ) : (
           <View style={styles.layout}>
@@ -277,6 +401,14 @@ export default function ForumScreen() {
                   post={post}
                   onPress={() => setActivePostId(post.id)}
                   onLike={() => postLikeMutation.mutate(post)}
+                  onReport={() =>
+                    reportMutation.mutate({
+                      reason: "Kullanıcı tarafından uygunsuz içerik olarak raporlandı.",
+                      targetId: post.id,
+                      targetType: "post"
+                    })
+                  }
+                  onBlock={() => blockNickname(post.forum_nickname)}
                   disabled={postLikeMutation.isPending}
                 />
               ))}
@@ -315,6 +447,26 @@ export default function ForumScreen() {
                       onPress={() => setCommentComposerOpen((value) => !value)}
                       disabled={createCommentMutation.isPending}
                     />
+                    <ActionButton
+                      active={false}
+                      disabled={reportMutation.isPending}
+                      icon={<ShieldCheck color={colors.textMuted} size={16} />}
+                      label="Raporla"
+                      onPress={() =>
+                        reportMutation.mutate({
+                          reason: "Kullanıcı tarafından uygunsuz gönderi olarak raporlandı.",
+                          targetId: activePost.id,
+                          targetType: "post"
+                        })
+                      }
+                    />
+                    <ActionButton
+                      active={false}
+                      disabled={blockedNicknames.includes(activePost.forum_nickname)}
+                      icon={<ShieldCheck color={colors.textMuted} size={16} />}
+                      label="Engelle"
+                      onPress={() => blockNickname(activePost.forum_nickname)}
+                    />
                     <Text style={styles.metaText}>{activePost.comment_count} yorum</Text>
                   </View>
 
@@ -333,7 +485,7 @@ export default function ForumScreen() {
                       />
                       <View style={styles.composerActions}>
                         <Button
-                          label="Vazgec"
+                          label="Vazgeç"
                           variant="ghost"
                           style={styles.composerButton}
                           onPress={() => setCommentComposerOpen(false)}
@@ -341,8 +493,8 @@ export default function ForumScreen() {
                         <Button
                           label={
                             createCommentMutation.isPending
-                              ? "Gonderiliyor..."
-                              : "Yorum gonder"
+                              ? "Gönderiliyor..."
+                              : "Yorum gönder"
                           }
                           disabled={createCommentMutation.isPending}
                           style={styles.composerButton}
@@ -354,15 +506,24 @@ export default function ForumScreen() {
 
                   {commentsQuery.isLoading ? (
                     <ActivityIndicator color={colors.primary} />
-                  ) : (commentsQuery.data ?? []).length === 0 ? (
-                    <Text style={styles.metaText}>Henuz yorum yok.</Text>
+                  ) : comments.length === 0 ? (
+                    <Text style={styles.metaText}>Henüz yorum yok.</Text>
                   ) : (
                     <View style={{ gap: spacing.sm }}>
-                      {(commentsQuery.data ?? []).map((comment) => (
+                      {comments.map((comment) => (
                         <CommentRow
                           key={comment.id}
                           comment={comment}
                           onLike={() => commentLikeMutation.mutate(comment)}
+                          onReport={() =>
+                            reportMutation.mutate({
+                              reason:
+                                "Kullanıcı tarafından uygunsuz yorum olarak raporlandı.",
+                              targetId: comment.id,
+                              targetType: "comment"
+                            })
+                          }
+                          onBlock={() => blockNickname(comment.forum_nickname)}
                           disabled={commentLikeMutation.isPending}
                         />
                       ))}
@@ -373,6 +534,23 @@ export default function ForumScreen() {
             ) : null}
           </View>
         )}
+        {blockedNicknames.length > 0 ? (
+          <Card>
+            <View style={{ gap: spacing.sm }}>
+              <Text style={typography.heading2}>Gizlenen takma adlar</Text>
+              {blockedNicknames.map((nickname) => (
+                <View key={nickname} style={styles.blockedRow}>
+                  <Text style={typography.label}>{nickname}</Text>
+                  <Button
+                    label="Engeli kaldır"
+                    variant="secondary"
+                    onPress={() => unblockNickname(nickname)}
+                  />
+                </View>
+              ))}
+            </View>
+          </Card>
+        ) : null}
       </View>
     </Screen>
   );
@@ -403,10 +581,10 @@ function getCategoryIcon(name: string, icon: string | null, color: string) {
   if (key.includes("hamile") || key.includes("gebelik")) {
     return <CalendarHeart color={color} size={18} />;
   }
-  if (key.includes("dogum") || key.includes("bebek")) {
+  if (key.includes("doğum") || key.includes("bebek")) {
     return <Baby color={color} size={18} />;
   }
-  if (key.includes("kayip") || key.includes("destek")) {
+  if (key.includes("kayıp") || key.includes("destek")) {
     return <ShieldCheck color={color} size={18} />;
   }
   if (key.includes("sohbet") || key.includes("genel")) {
@@ -420,10 +598,20 @@ type PostCardProps = {
   post: PublicForumPost;
   onPress: () => void;
   onLike: () => void;
+  onBlock: () => void;
   disabled: boolean;
+  onReport: () => void;
 };
 
-function PostCard({ active, post, onPress, onLike, disabled }: PostCardProps) {
+function PostCard({
+  active,
+  disabled,
+  onBlock,
+  onLike,
+  onPress,
+  onReport,
+  post
+}: PostCardProps) {
   return (
     <Pressable onPress={onPress} style={[styles.postCard, active && styles.postCardActive]}>
       <View style={{ gap: spacing.sm }}>
@@ -441,6 +629,20 @@ function PostCard({ active, post, onPress, onLike, disabled }: PostCardProps) {
             disabled={disabled}
             onPress={onLike}
           />
+          <ActionButton
+            active={false}
+            disabled={disabled}
+            icon={<ShieldCheck color={colors.textMuted} size={16} />}
+            label="Raporla"
+            onPress={onReport}
+          />
+          <ActionButton
+            active={false}
+            disabled={disabled}
+            icon={<ShieldCheck color={colors.textMuted} size={16} />}
+            label="Engelle"
+            onPress={onBlock}
+          />
           <Text style={styles.metaText}>{post.comment_count} yorum</Text>
         </View>
       </View>
@@ -451,10 +653,18 @@ function PostCard({ active, post, onPress, onLike, disabled }: PostCardProps) {
 type CommentRowProps = {
   comment: PublicForumComment;
   onLike: () => void;
+  onBlock: () => void;
+  onReport: () => void;
   disabled: boolean;
 };
 
-function CommentRow({ comment, onLike, disabled }: CommentRowProps) {
+function CommentRow({
+  comment,
+  disabled,
+  onBlock,
+  onLike,
+  onReport
+}: CommentRowProps) {
   return (
     <View style={styles.commentRow}>
       <View style={styles.commentRail} />
@@ -467,6 +677,22 @@ function CommentRow({ comment, onLike, disabled }: CommentRowProps) {
           disabled={disabled}
           onPress={onLike}
         />
+        <View style={styles.actionRow}>
+          <ActionButton
+            active={false}
+            disabled={disabled}
+            icon={<ShieldCheck color={colors.textMuted} size={16} />}
+            label="Raporla"
+            onPress={onReport}
+          />
+          <ActionButton
+            active={false}
+            disabled={disabled}
+            icon={<ShieldCheck color={colors.textMuted} size={16} />}
+            label="Engelle"
+            onPress={onBlock}
+          />
+        </View>
       </View>
     </View>
   );
@@ -476,7 +702,7 @@ function AuthorLine({ nickname, badge }: { nickname: string; badge: string }) {
   return (
     <View style={styles.authorLine}>
       <Text style={styles.nickname}>{nickname}</Text>
-      <Text style={styles.badge}>{badge}</Text>
+      <Badge label={badge} />
     </View>
   );
 }
@@ -536,12 +762,17 @@ function ActionButton({
 }
 
 const styles = StyleSheet.create({
+  roleGateLoading: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center"
+  },
   container: {
     gap: spacing.lg
   },
   hero: {
     backgroundColor: colors.primarySoft,
-    borderRadius: radii.lg,
+    ...radii.cardLarge,
     gap: spacing.md,
     padding: spacing.lg
   },
@@ -601,13 +832,13 @@ const styles = StyleSheet.create({
   postCard: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderRadius: radii.md,
+    ...radii.card,
     borderWidth: 1,
     padding: spacing.md
   },
   postCardActive: {
     borderColor: colors.primary,
-    backgroundColor: "#FBFFFD"
+    backgroundColor: colors.primarySoft
   },
   postTitle: {
     ...typography.heading2,
@@ -623,15 +854,6 @@ const styles = StyleSheet.create({
   nickname: {
     ...typography.label,
     color: colors.text
-  },
-  badge: {
-    ...typography.label,
-    backgroundColor: colors.accentSoft,
-    borderRadius: radii.pill,
-    color: colors.accent,
-    overflow: "hidden",
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs
   },
   previewText: {
     ...typography.body,
@@ -679,7 +901,7 @@ const styles = StyleSheet.create({
   },
   commentComposer: {
     backgroundColor: colors.surfaceMuted,
-    borderRadius: radii.md,
+    ...radii.card,
     gap: spacing.md,
     padding: spacing.md
   },
@@ -705,7 +927,7 @@ const styles = StyleSheet.create({
   },
   commentContent: {
     backgroundColor: colors.surfaceMuted,
-    borderRadius: radii.md,
+    ...radii.card,
     flex: 1,
     gap: spacing.sm,
     padding: spacing.md
@@ -713,5 +935,11 @@ const styles = StyleSheet.create({
   commentText: {
     ...typography.body,
     color: colors.text
+  },
+  blockedRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+    justifyContent: "space-between"
   }
 });

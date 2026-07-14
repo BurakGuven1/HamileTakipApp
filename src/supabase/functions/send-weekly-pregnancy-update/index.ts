@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
 
     const { data: pregnantUsers, error } = await supabase
       .from("profiles")
-      .select("id, due_date")
+      .select("id, due_date, mother_name")
       .eq("is_pregnant", true)
       .eq("notify_weekly_pregnancy_updates", true)
       .not("due_date", "is", null);
@@ -100,12 +100,13 @@ Deno.serve(async (req) => {
     const messages = [];
     for (const user of pregnantUsers) {
       const week = calculatePregnancyWeek(user.due_date as string);
+      const motherName = user.mother_name || "Anne";
       const userTokens = tokensByUser.get(user.id) ?? [];
       for (const token of userTokens) {
         messages.push({
           to: token,
           sound: "default",
-          title: `${week}. Hafta 🤰`,
+          title: `${motherName}, ${week}. hafta güncellemen hazır`,
           body: "Bu hafta bebeğinde ve sende neler değişiyor? Görmek için dokun.",
           data: { type: "weekly_pregnancy_update", week },
         });

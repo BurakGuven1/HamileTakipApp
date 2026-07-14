@@ -11,16 +11,15 @@
 //    göndermez, kendi Authorization header'ını gönderir)
 //
 // 2) Secret'ları ayarla:
-//      supabase secrets set REVENUECAT_WEBHOOK_AUTH_HEADER=<kendi-belirlediğin-gizli-deger>
+//      supabase secrets set REVENUECAT_WEBHOOK_AUTH_HEADER=<kendi-belirlediğin-gizli-değer>
 //
 // 3) RevenueCat Dashboard > Project Settings > Integrations > Webhooks:
 //      URL: https://<PROJECT_REF>.supabase.co/functions/v1/revenuecat-webhook
-//      Authorization header value: (2. adımdaki ile AYNI değer)
+//      Authorization header value: Bearer <2. adımdaki gizli değer>
 //
-// 4) RevenueCat'te ürün ID'lerini şu isimlerle eşleştir (veya kendi isimlerinle
-//    değiştirip aşağıdaki LIFETIME_PRODUCT_IDS listesini güncelle):
-//      - premium_monthly   (149 TL/ay)
-//      - premium_lifetime  (999 TL tek seferlik)
+// 4) RevenueCat'te ürün ID'leri:
+//      - com.burakguven.hamiletakip.premium.monthly
+//      - com.burakguven.hamiletakip.premium.yearly
 // ============================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -37,10 +36,17 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const WEBHOOK_AUTH_HEADER = Deno.env.get("REVENUECAT_WEBHOOK_AUTH_HEADER")!;
 
 // Lifetime (ömür boyu, tek seferlik) olarak kabul edilecek ürün ID'leri.
-const LIFETIME_PRODUCT_IDS = ["premium_lifetime"];
+// Şu an monthly/yearly abonelik kullanıldığı için boş.
+const LIFETIME_PRODUCT_IDS: string[] = [];
 
 // RevenueCat event.type değerlerine göre subscriptions.status eşlemesi
-function mapEventTypeToStatus(eventType: string): string {
+function mapEventTypeToStatus(
+  eventType: string,
+  expirationAtMs: number | null,
+): string {
+  const expiresInFuture =
+    typeof expirationAtMs === "number" && expirationAtMs > Date.now();
+
   switch (eventType) {
     case "INITIAL_PURCHASE":
     case "RENEWAL":
@@ -49,10 +55,9 @@ function mapEventTypeToStatus(eventType: string): string {
     case "PRODUCT_CHANGE":
       return "active";
     case "CANCELLATION":
-      // Kullanıcı iptal etti ama süre dolana kadar hâlâ aktif olabilir.
-      // RevenueCat "expiration_at_ms" ileri bir tarihse yine de "active"
-      // kabul edip expires_at'e göre client tarafında kontrol edilebilir.
-      return "cancelled";
+      // Kullanıcı yenilemeyi iptal etmiş olsa bile süre dolana kadar entitlement
+      // aktif kalır. Supabase cache de bu dönemde active tutulur.
+      return expiresInFuture ? "active" : "cancelled";
     case "EXPIRATION":
       return "expired";
     case "BILLING_ISSUE":
@@ -87,25 +92,33 @@ Deno.serve(async (req) => {
       });
     }
 
+    const eventType: string = event.type;
+
+    if (eventType === "TEST") {
+      return new Response(JSON.stringify({ success: true, ignored: "test" }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // app_user_id, RevenueCat'e client tarafında Supabase auth.uid() olarak
     // set edilmelidir (Purchases.logIn(supabaseUserId)). Bu şekilde eşleşme sağlanır.
     const userId: string | undefined = event.app_user_id;
     const productId: string | undefined = event.product_id;
-    const eventType: string = event.type;
     const expirationAtMs: number | null = event.expiration_at_ms ?? null;
 
     if (!userId || !productId) {
       return new Response(
-        JSON.stringify({ error: "app_user_id veya product_id eksik" }),
+        JSON.stringify({ success: true, ignored: "missing_app_user_id_or_product_id" }),
         {
-          status: 400,
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
       );
     }
 
     const isLifetime = LIFETIME_PRODUCT_IDS.includes(productId);
-    const status = mapEventTypeToStatus(eventType);
+    const status = mapEventTypeToStatus(eventType, expirationAtMs);
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
       auth: { persistSession: false },

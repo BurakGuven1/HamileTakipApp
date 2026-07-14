@@ -1,14 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import { Camera, Images, Plus, Sparkles } from "lucide-react-native";
+import * as Haptics from "expo-haptics";
+import { Camera, Images, Plus } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { listBabies } from "@/api/babies";
 import {
+  deleteBabyPhoto,
   getBabyPhotoSignedUrl,
   listBabyPhotos,
+  updateBabyPhoto,
   uploadBabyPhoto,
   type BabyPhoto
 } from "@/api/gallery";
@@ -16,11 +19,28 @@ import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { Screen } from "@/components/Screen";
+import { TextField } from "@/components/TextField";
+import { PremiumFeatureBoundary } from "@/features/subscription/PremiumFeatureBoundary";
 import { formatDate } from "@/lib/dates";
+import { resolveAccentColor } from "@/hooks/useAccentColor";
+import { useFeedback } from "@/providers/FeedbackProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
 export default function GalleryScreen() {
+  return (
+    <PremiumFeatureBoundary
+      description="Bebeğinin anı fotoğraflarını güvenli bir zaman çizgisinde saklamak Premium ile açılır."
+      featureKey="baby_memory_gallery"
+      title="Anı galerisi"
+    >
+      <GalleryContent />
+    </PremiumFeatureBoundary>
+  );
+}
+
+function GalleryContent() {
   const queryClient = useQueryClient();
+  const { showError, showSuccess } = useFeedback();
   const [selectedBabyId, setSelectedBabyId] = useState<string>();
 
   const babiesQuery = useQuery({
@@ -32,6 +52,10 @@ export default function GalleryScreen() {
   const selectedBaby = useMemo(
     () => babies.find((baby) => baby.id === selectedBabyId) ?? babies[0],
     [babies, selectedBabyId]
+  );
+  const accentColor = useMemo(
+    () => resolveAccentColor({ babies: selectedBaby ? [selectedBaby] : babies }),
+    [babies, selectedBaby]
   );
 
   useEffect(() => {
@@ -47,21 +71,34 @@ export default function GalleryScreen() {
   });
 
   const uploadMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (source: "camera" | "library") => {
       if (!selectedBaby) {
-        throw new Error("Once bebek profili eklemelisin.");
+        throw new Error("Önce bebek profili eklemelisin.");
       }
 
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permission =
+        source === "camera"
+          ? await ImagePicker.requestCameraPermissionsAsync()
+          : await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        throw new Error("Fotograf secmek icin galeri izni gerekli.");
+        throw new Error(
+          source === "camera"
+            ? "Fotoğraf çekmek için kamera izni gerekli."
+            : "Fotoğraf seçmek için galeri izni gerekli."
+        );
       }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        allowsEditing: false,
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.9
-      });
+      const result =
+        source === "camera"
+          ? await ImagePicker.launchCameraAsync({
+              allowsEditing: false,
+              quality: 0.9
+            })
+          : await ImagePicker.launchImageLibraryAsync({
+              allowsEditing: false,
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              quality: 0.9
+            });
 
       if (result.canceled || !result.assets[0]) {
         return null;
@@ -77,9 +114,32 @@ export default function GalleryScreen() {
     },
     onSuccess: async (photo) => {
       if (!photo) return;
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+        () => undefined
+      );
+      showSuccess("Fotoğraf galeriye eklendi.");
       await queryClient.invalidateQueries({ queryKey: ["baby-photos", selectedBaby?.id] });
     },
-    onError: (error) => Alert.alert("Fotograf eklenemedi", error.message)
+    onError: (error) => showError(error, "Fotoğraf eklenemedi")
+  });
+
+  const updatePhotoMutation = useMutation({
+    mutationFn: ({ caption, id }: { caption: string; id: string }) =>
+      updateBabyPhoto(id, { caption: caption.trim() || null }),
+    onSuccess: async () => {
+      showSuccess("Fotoğraf açıklaması güncellendi.");
+      await queryClient.invalidateQueries({ queryKey: ["baby-photos", selectedBaby?.id] });
+    },
+    onError: (error) => showError(error, "Açıklama kaydedilemedi")
+  });
+
+  const deletePhotoMutation = useMutation({
+    mutationFn: deleteBabyPhoto,
+    onSuccess: async () => {
+      showSuccess("Fotoğraf silindi.");
+      await queryClient.invalidateQueries({ queryKey: ["baby-photos", selectedBaby?.id] });
+    },
+    onError: (error) => showError(error, "Fotoğraf silinemedi")
   });
 
   const photos = photosQuery.data ?? [];
@@ -87,16 +147,16 @@ export default function GalleryScreen() {
   return (
     <Screen>
       <View style={styles.container}>
-        <View style={styles.hero}>
-          <View style={styles.iconBubble}>
-            <Images color={colors.primary} size={28} />
+        <View style={[styles.hero, { backgroundColor: accentColor.accentSoft }]}>
+          <View style={[styles.iconBubble, { backgroundColor: colors.surface }]}>
+            <Images color={accentColor.primary} size={28} />
           </View>
           <View style={{ gap: spacing.xs }}>
-            <Text style={typography.eyebrow}>Anilar</Text>
-            <Text style={typography.heading1}>Fotograf galerisi</Text>
+            <Text style={typography.eyebrow}>Anılar</Text>
+            <Text style={typography.heading1}>Fotoğraf galerisi</Text>
             <Text style={styles.heroText}>
-              Fotograflari tarihe gore sakla; bebeginin yolculugunu zaman cizgisi
-              uzerinde gor.
+              Fotoğrafları tarihe göre sakla; bebeğinin yolculuğunu zaman çizgisi
+              üzerinde gör.
             </Text>
           </View>
         </View>
@@ -110,7 +170,10 @@ export default function GalleryScreen() {
                 onPress={() => setSelectedBabyId(baby.id)}
                 style={[
                   styles.babyChip,
-                  baby.id === selectedBaby?.id && styles.babyChipActive
+                  baby.id === selectedBaby?.id && {
+                    backgroundColor: accentColor.primary,
+                    borderColor: accentColor.primary
+                  }
                 ]}
               >
                 <Text
@@ -128,37 +191,50 @@ export default function GalleryScreen() {
 
         {!selectedBaby ? (
           <EmptyState
-            title="Galeri icin bebek profili gerekli"
-            description="Once Bebek sekmesinden bebek profilini olustur."
+            title="Galeri için bebek profili gerekli"
+            description="Önce Bebek sekmesinden bebek profilini oluştur."
           />
         ) : (
           <>
-            <Button
-              label={uploadMutation.isPending ? "Yukleniyor..." : "Fotograf ekle"}
-              disabled={uploadMutation.isPending}
-              onPress={() => uploadMutation.mutate()}
-            />
+            <View style={styles.actionRow}>
+              <Button
+                label={uploadMutation.isPending ? "Yükleniyor..." : "Galeriden seç"}
+                disabled={uploadMutation.isPending}
+                style={styles.actionButton}
+                onPress={() => uploadMutation.mutate("library")}
+              />
+              <Button
+                label="Kamera"
+                disabled={uploadMutation.isPending}
+                style={styles.actionButton}
+                variant="secondary"
+                onPress={() => uploadMutation.mutate("camera")}
+              />
+            </View>
 
             {photos.length === 0 ? (
-              <Card style={styles.emptyCard}>
-                <View style={{ gap: spacing.md }}>
-                  <Sparkles color={colors.accent} size={28} />
-                  <View style={{ gap: spacing.xs }}>
-                    <Text style={typography.heading2}>Ilk aniyi ekle</Text>
-                    <Text style={typography.body}>
-                      Fotograflar burada tarihe gore bir yol cizgisi uzerinde
-                      listelenecek.
-                    </Text>
-                  </View>
-                </View>
-              </Card>
+              <EmptyState
+                actionLabel="Fotoğraf seç"
+                description="Fotoğraflar burada tarihe göre bir yol çizgisi üzerinde listelenecek."
+                title="İlk anıyı ekle"
+                onActionPress={() => uploadMutation.mutate("library")}
+              />
             ) : (
               <View style={styles.timeline}>
                 {photos.map((photo, index) => (
                   <PhotoTimelineItem
                     key={photo.id}
+                    disabled={
+                      updatePhotoMutation.isPending || deletePhotoMutation.isPending
+                    }
                     last={index === photos.length - 1}
                     photo={photo}
+                    primaryColor={accentColor.primary}
+                    tintColor={accentColor.tint}
+                    onDelete={() => deletePhotoMutation.mutate(photo)}
+                    onUpdateCaption={(caption) =>
+                      updatePhotoMutation.mutate({ caption, id: photo.id })
+                    }
                   />
                 ))}
               </View>
@@ -170,17 +246,38 @@ export default function GalleryScreen() {
   );
 }
 
-function PhotoTimelineItem({ photo, last }: { photo: BabyPhoto; last: boolean }) {
+function PhotoTimelineItem({
+  disabled,
+  last,
+  onDelete,
+  onUpdateCaption,
+  photo,
+  primaryColor,
+  tintColor
+}: {
+  disabled: boolean;
+  last: boolean;
+  onDelete: () => void;
+  onUpdateCaption: (caption: string) => void;
+  photo: BabyPhoto;
+  primaryColor: string;
+  tintColor: string;
+}) {
+  const [caption, setCaption] = useState(photo.caption ?? "");
   const signedUrlQuery = useQuery({
     queryKey: ["baby-photo-url", photo.storage_path],
     queryFn: () => getBabyPhotoSignedUrl(photo.storage_path)
   });
 
+  useEffect(() => {
+    setCaption(photo.caption ?? "");
+  }, [photo.caption]);
+
   return (
     <View style={styles.timelineRow}>
       <View style={styles.timelineRail}>
-        <View style={styles.timelineDot}>
-          <Camera color={colors.primary} size={16} />
+        <View style={[styles.timelineDot, { backgroundColor: tintColor }]}>
+          <Camera color={primaryColor} size={16} />
         </View>
         {!last ? <View style={styles.timelineLine} /> : null}
       </View>
@@ -195,11 +292,31 @@ function PhotoTimelineItem({ photo, last }: { photo: BabyPhoto; last: boolean })
             />
           ) : (
             <View style={styles.photoPlaceholder}>
-              <Plus color={colors.primary} size={24} />
+              <Plus color={primaryColor} size={24} />
             </View>
           )}
           <Text style={styles.photoDate}>{formatDate(photo.taken_at)}</Text>
-          {photo.caption ? <Text style={typography.body}>{photo.caption}</Text> : null}
+          <TextField
+            label="Açıklama"
+            value={caption}
+            onChangeText={setCaption}
+          />
+          <View style={styles.photoActions}>
+            <Button
+              disabled={disabled || caption.trim() === (photo.caption ?? "")}
+              label="Açıklamayı kaydet"
+              style={styles.photoActionButton}
+              variant="secondary"
+              onPress={() => onUpdateCaption(caption)}
+            />
+            <Button
+              disabled={disabled}
+              label="Sil"
+              style={styles.photoActionButton}
+              variant="ghost"
+              onPress={onDelete}
+            />
+          </View>
         </View>
       </Card>
     </View>
@@ -212,7 +329,7 @@ const styles = StyleSheet.create({
   },
   hero: {
     backgroundColor: colors.accentSoft,
-    borderRadius: radii.lg,
+    ...radii.cardLarge,
     gap: spacing.md,
     padding: spacing.lg
   },
@@ -252,8 +369,12 @@ const styles = StyleSheet.create({
   babyChipTextActive: {
     color: colors.surface
   },
-  emptyCard: {
-    backgroundColor: colors.surface
+  actionRow: {
+    flexDirection: "row",
+    gap: spacing.sm
+  },
+  actionButton: {
+    flex: 1
   },
   timeline: {
     gap: spacing.md
@@ -285,7 +406,7 @@ const styles = StyleSheet.create({
   },
   photo: {
     aspectRatio: 1.35,
-    borderRadius: radii.sm,
+    ...radii.card,
     backgroundColor: colors.surfaceMuted,
     width: "100%"
   },
@@ -293,12 +414,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     aspectRatio: 1.35,
     backgroundColor: colors.surfaceMuted,
-    borderRadius: radii.sm,
+    ...radii.card,
     justifyContent: "center",
     width: "100%"
   },
   photoDate: {
     ...typography.label,
     color: colors.text
+  },
+  photoActions: {
+    flexDirection: "row",
+    gap: spacing.sm
+  },
+  photoActionButton: {
+    flex: 1
   }
 });

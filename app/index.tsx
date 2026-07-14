@@ -29,7 +29,10 @@ export default function IndexRoute() {
       const profile = await getCurrentProfile();
       if (!mounted) return;
 
-      setRoute(profile?.onboarding_completed ? "/home" : "/onboarding");
+      const hasParentNames =
+        Boolean(profile?.mother_name?.trim()) &&
+        Boolean(profile?.father_name?.trim());
+      setRoute(profile?.onboarding_completed && hasParentNames ? "/home" : "/onboarding");
     }
 
     resolveRoute().catch(() => {

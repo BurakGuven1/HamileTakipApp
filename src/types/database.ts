@@ -14,6 +14,10 @@ export type Database = {
           id: string;
           display_name: string | null;
           forum_nickname: string | null;
+          family_referral_code: string;
+          theme_preference: "auto" | "sage" | "rose" | "blue" | "pink" | "lavender";
+          mother_name: string;
+          father_name: string;
           avatar_url: string | null;
           is_pregnant: boolean;
           due_date: string | null;
@@ -23,6 +27,11 @@ export type Database = {
           notify_forum_likes: boolean;
           notify_vaccine_reminders: boolean;
           notify_weekly_pregnancy_updates: boolean;
+          notify_sleep_predictions: boolean;
+          notify_medicine_safety: boolean;
+          notify_development_periods: boolean;
+          notify_milk_inventory: boolean;
+          feeding_mode: "breastfeeding" | "pumping" | "mixed" | "formula";
           created_at: string;
           updated_at: string;
         };
@@ -30,6 +39,10 @@ export type Database = {
           id: string;
           display_name?: string | null;
           forum_nickname?: string | null;
+          family_referral_code?: string;
+          theme_preference?: "auto" | "sage" | "rose" | "blue" | "pink" | "lavender";
+          mother_name?: string;
+          father_name?: string;
           avatar_url?: string | null;
           is_pregnant?: boolean;
           due_date?: string | null;
@@ -39,12 +52,21 @@ export type Database = {
           notify_forum_likes?: boolean;
           notify_vaccine_reminders?: boolean;
           notify_weekly_pregnancy_updates?: boolean;
+          notify_sleep_predictions?: boolean;
+          notify_medicine_safety?: boolean;
+          notify_development_periods?: boolean;
+          notify_milk_inventory?: boolean;
+          feeding_mode?: "breastfeeding" | "pumping" | "mixed" | "formula";
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           display_name?: string | null;
           forum_nickname?: string | null;
+          family_referral_code?: string;
+          theme_preference?: "auto" | "sage" | "rose" | "blue" | "pink" | "lavender";
+          mother_name?: string;
+          father_name?: string;
           avatar_url?: string | null;
           is_pregnant?: boolean;
           due_date?: string | null;
@@ -54,6 +76,244 @@ export type Database = {
           notify_forum_likes?: boolean;
           notify_vaccine_reminders?: boolean;
           notify_weekly_pregnancy_updates?: boolean;
+          notify_sleep_predictions?: boolean;
+          notify_medicine_safety?: boolean;
+          notify_development_periods?: boolean;
+          notify_milk_inventory?: boolean;
+          feeding_mode?: "breastfeeding" | "pumping" | "mixed" | "formula";
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      family_members: {
+        Row: {
+          id: string;
+          owner_id: string;
+          member_id: string;
+          role: "father";
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          member_id: string;
+          role?: "father";
+          created_at?: string;
+        };
+        Update: {
+          owner_id?: string;
+          member_id?: string;
+          role?: "father";
+        };
+        Relationships: [
+          {
+            foreignKeyName: "family_members_owner_id_fkey";
+            columns: ["owner_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "family_members_member_id_fkey";
+            columns: ["member_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      family_premium_trials: {
+        Row: {
+          owner_id: string;
+          activated_by: string | null;
+          starts_at: string;
+          expires_at: string;
+          created_at: string;
+        };
+        Insert: {
+          owner_id: string;
+          activated_by?: string | null;
+          starts_at: string;
+          expires_at: string;
+          created_at?: string;
+        };
+        Update: {
+          activated_by?: string | null;
+          starts_at?: string;
+          expires_at?: string;
+        };
+        Relationships: [];
+      };
+      pregnancy_weight_records: {
+        Row: {
+          id: string;
+          profile_id: string;
+          record_date: string;
+          weight_kg: number;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          record_date?: string;
+          weight_kg: number;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          profile_id?: string;
+          record_date?: string;
+          weight_kg?: number;
+          notes?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "pregnancy_weight_records_profile_id_fkey";
+            columns: ["profile_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      pregnancy_daily_counters: {
+        Row: {
+          id: string;
+          profile_id: string;
+          counter_date: string;
+          kick_count: number;
+          contraction_count: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          counter_date?: string;
+          kick_count?: number;
+          contraction_count?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          profile_id?: string;
+          counter_date?: string;
+          kick_count?: number;
+          contraction_count?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "pregnancy_daily_counters_profile_id_fkey";
+            columns: ["profile_id"];
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      birth_preparation_items: {
+        Row: {
+          id: string;
+          profile_id: string;
+          kind: "bag" | "plan";
+          category: string;
+          template_key: string | null;
+          title: string;
+          description: string | null;
+          is_custom: boolean;
+          is_completed: boolean;
+          completed_by: string | null;
+          completed_by_name: string | null;
+          completed_at: string | null;
+          created_by: string;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          kind: "bag" | "plan";
+          category: string;
+          template_key?: string | null;
+          title: string;
+          description?: string | null;
+          is_custom?: boolean;
+          is_completed?: boolean;
+          completed_by?: string | null;
+          completed_by_name?: string | null;
+          completed_at?: string | null;
+          created_by: string;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          kind?: "bag" | "plan";
+          category?: string;
+          title?: string;
+          description?: string | null;
+          is_completed?: boolean;
+          completed_by?: string | null;
+          completed_by_name?: string | null;
+          completed_at?: string | null;
+          sort_order?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      articles: {
+        Row: {
+          id: string;
+          slug: string;
+          title: string;
+          period: string;
+          category: "hafta" | "ay" | "bebek" | "ipuclari";
+          excerpt: string;
+          body: string;
+          image_path: string | null;
+          accent: string;
+          sort_order: number;
+          timeline_start_week: number | null;
+          timeline_end_week: number | null;
+          is_published: boolean;
+          published_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          title: string;
+          period: string;
+          category: "hafta" | "ay" | "bebek" | "ipuclari";
+          excerpt: string;
+          body: string;
+          image_path?: string | null;
+          accent?: string;
+          sort_order?: number;
+          timeline_start_week?: number | null;
+          timeline_end_week?: number | null;
+          is_published?: boolean;
+          published_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          slug?: string;
+          title?: string;
+          period?: string;
+          category?: "hafta" | "ay" | "bebek" | "ipuclari";
+          excerpt?: string;
+          body?: string;
+          image_path?: string | null;
+          accent?: string;
+          sort_order?: number;
+          timeline_start_week?: number | null;
+          timeline_end_week?: number | null;
+          is_published?: boolean;
+          published_at?: string | null;
           updated_at?: string;
         };
         Relationships: [];
@@ -103,6 +363,278 @@ export type Database = {
             referencedColumns: ["id"];
           }
         ];
+      };
+      care_journal_entries: {
+        Row: {
+          id: string;
+          baby_id: string;
+          created_by: string;
+          caregiver_name: string | null;
+          entry_type: "breastfeeding" | "bottle" | "sleep" | "diaper" | "pumping" | "medicine" | "solid_food" | "temperature";
+          occurred_at: string;
+          ended_at: string | null;
+          amount_ml: number | null;
+          feeding_content: "breast_milk" | "formula" | "water" | null;
+          breast_side: "left" | "right" | "both" | null;
+          diaper_type: "wet" | "dirty" | "both" | null;
+          medicine_name: string | null;
+          medicine_dose: string | null;
+          food_name: string | null;
+          food_amount: string | null;
+          is_first_try: boolean;
+          sleep_kind: "day" | "night" | null;
+          notes: string | null;
+          client_operation_id: string;
+          created_device_id: string | null;
+          created_device_label: string | null;
+          updated_by: string | null;
+          updated_by_name: string | null;
+          updated_device_id: string | null;
+          updated_device_label: string | null;
+          deleted_at: string | null;
+          deleted_by: string | null;
+          deleted_by_name: string | null;
+          deleted_device_id: string | null;
+          deleted_device_label: string | null;
+          version: number;
+          temperature_c: number | null;
+          temperature_site: "armpit" | "forehead" | "ear" | "oral" | "rectal" | "other" | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          baby_id: string;
+          created_by?: string;
+          caregiver_name?: string | null;
+          entry_type: "breastfeeding" | "bottle" | "sleep" | "diaper" | "pumping" | "medicine" | "solid_food" | "temperature";
+          occurred_at?: string;
+          ended_at?: string | null;
+          amount_ml?: number | null;
+          feeding_content?: "breast_milk" | "formula" | "water" | null;
+          breast_side?: "left" | "right" | "both" | null;
+          diaper_type?: "wet" | "dirty" | "both" | null;
+          medicine_name?: string | null;
+          medicine_dose?: string | null;
+          food_name?: string | null;
+          food_amount?: string | null;
+          is_first_try?: boolean;
+          sleep_kind?: "day" | "night" | null;
+          notes?: string | null;
+          client_operation_id?: string;
+          created_device_id?: string | null;
+          created_device_label?: string | null;
+          updated_by?: string | null;
+          updated_by_name?: string | null;
+          updated_device_id?: string | null;
+          updated_device_label?: string | null;
+          deleted_at?: string | null;
+          deleted_by?: string | null;
+          deleted_by_name?: string | null;
+          deleted_device_id?: string | null;
+          deleted_device_label?: string | null;
+          version?: number;
+          temperature_c?: number | null;
+          temperature_site?: "armpit" | "forehead" | "ear" | "oral" | "rectal" | "other" | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          entry_type?: "breastfeeding" | "bottle" | "sleep" | "diaper" | "pumping" | "medicine" | "solid_food" | "temperature";
+          caregiver_name?: string | null;
+          occurred_at?: string;
+          ended_at?: string | null;
+          amount_ml?: number | null;
+          feeding_content?: "breast_milk" | "formula" | "water" | null;
+          breast_side?: "left" | "right" | "both" | null;
+          diaper_type?: "wet" | "dirty" | "both" | null;
+          medicine_name?: string | null;
+          medicine_dose?: string | null;
+          food_name?: string | null;
+          food_amount?: string | null;
+          is_first_try?: boolean;
+          sleep_kind?: "day" | "night" | null;
+          notes?: string | null;
+          updated_by?: string | null;
+          updated_by_name?: string | null;
+          updated_device_id?: string | null;
+          updated_device_label?: string | null;
+          deleted_at?: string | null;
+          deleted_by?: string | null;
+          deleted_by_name?: string | null;
+          deleted_device_id?: string | null;
+          deleted_device_label?: string | null;
+          version?: number;
+          temperature_c?: number | null;
+          temperature_site?: "armpit" | "forehead" | "ear" | "oral" | "rectal" | "other" | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      care_journal_entry_events: {
+        Row: {
+          id: number;
+          entry_id: string;
+          baby_id: string;
+          operation_id: string | null;
+          action: "created" | "updated" | "deleted" | "restored";
+          actor_id: string | null;
+          actor_name: string | null;
+          device_id: string | null;
+          device_label: string | null;
+          entry_version: number;
+          before_data: Json | null;
+          after_data: Json | null;
+          occurred_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      care_active_timers: {
+        Row: {
+          id: string;
+          baby_id: string;
+          timer_type: "breastfeeding" | "sleep" | "pumping";
+          breast_side: "left" | "right" | "both" | null;
+          sleep_kind: "day" | "night" | null;
+          started_at: string;
+          started_by: string;
+          started_by_name: string | null;
+          started_device_id: string;
+          started_device_label: string | null;
+          ended_at: string | null;
+          ended_by: string | null;
+          ended_by_name: string | null;
+          ended_device_id: string | null;
+          ended_device_label: string | null;
+          journal_entry_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      care_handover_sessions: {
+        Row: {
+          id: string;
+          baby_id: string;
+          caregiver_id: string;
+          caregiver_name: string;
+          caregiver_role: string;
+          started_at: string;
+          ended_at: string | null;
+          ended_reason: string | null;
+          device_id: string;
+          device_label: string | null;
+          created_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      milk_inventory: {
+        Row: { id: string; baby_id: string; amount_ml: number; movement_type: "stored" | "used"; occurred_at: string; notes: string | null; created_by: string; created_at: string };
+        Insert: { id?: string; baby_id: string; amount_ml: number; movement_type: "stored" | "used"; occurred_at?: string; notes?: string | null; created_by?: string; created_at?: string };
+        Update: { amount_ml?: number; movement_type?: "stored" | "used"; occurred_at?: string; notes?: string | null };
+        Relationships: [];
+      };
+      milk_storage_containers: {
+        Row: {
+          id: string; baby_id: string; created_by: string; label: string;
+          sequence_number: number; pumped_at: string; initial_amount_ml: number;
+          remaining_amount_ml: number; storage_location: "refrigerator" | "freezer" | "thawed";
+          expires_at: string; thawed_at: string | null; thaw_expires_at: string | null;
+          status: "available" | "consumed" | "discarded" | "expired";
+          notes: string | null; created_device_id: string | null; created_device_label: string | null;
+          updated_by: string | null; updated_by_name: string | null; updated_device_id: string | null;
+          updated_device_label: string | null; version: number; deleted_at: string | null;
+          created_at: string; updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      milk_storage_events: {
+        Row: {
+          id: number; container_id: string; baby_id: string; operation_id: string;
+          action: "stored" | "thawed" | "consumed" | "discarded" | "expired" | "restored";
+          amount_ml: number | null; remaining_after_ml: number; actor_id: string | null;
+          actor_name: string | null; device_id: string | null; device_label: string | null;
+          metadata: Json; occurred_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      care_tasks: {
+        Row: { id: string; baby_id: string; title: string; due_at: string | null; completed_at: string | null; assigned_to_name: string | null; created_by: string; created_at: string };
+        Insert: { id?: string; baby_id: string; title: string; due_at?: string | null; completed_at?: string | null; assigned_to_name?: string | null; created_by?: string; created_at?: string };
+        Update: { title?: string; due_at?: string | null; completed_at?: string | null; assigned_to_name?: string | null };
+        Relationships: [];
+      };
+      mother_wellbeing_checkins: {
+        Row: { id: string; profile_id: string; mood: number; rest: number; self_care_note: string | null; checkin_date: string; created_at: string };
+        Insert: { id?: string; profile_id: string; mood: number; rest: number; self_care_note?: string | null; checkin_date?: string; created_at?: string };
+        Update: { mood?: number; rest?: number; self_care_note?: string | null; checkin_date?: string };
+        Relationships: [];
+      };
+      care_reminders: {
+        Row: { id: string; baby_id: string; created_by: string; entry_type: "breastfeeding" | "bottle" | "sleep" | "diaper" | "pumping" | "medicine" | "solid_food" | "temperature"; scheduled_for: string; title: string; body: string; local_notification_id: string | null; creator_push_token: string | null; status: "scheduled" | "sent" | "cancelled"; sent_at: string | null; cancelled_at: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; baby_id: string; created_by?: string; entry_type: "breastfeeding" | "bottle" | "sleep" | "diaper" | "pumping" | "medicine" | "solid_food" | "temperature"; scheduled_for: string; title: string; body: string; local_notification_id?: string | null; creator_push_token?: string | null; status?: "scheduled" | "sent" | "cancelled"; sent_at?: string | null; cancelled_at?: string | null; created_at?: string; updated_at?: string };
+        Update: { scheduled_for?: string; title?: string; body?: string; local_notification_id?: string | null; creator_push_token?: string | null; status?: "scheduled" | "sent" | "cancelled"; sent_at?: string | null; cancelled_at?: string | null; updated_at?: string };
+        Relationships: [];
+      };
+      sleep_predictions: {
+        Row: {
+          baby_id: string;
+          status: "insufficient" | "active" | "expired";
+          last_sleep_entry_id: string | null;
+          last_wake_at: string | null;
+          predicted_sleep_at: string | null;
+          window_start: string | null;
+          window_end: string | null;
+          notify_at: string | null;
+          sample_count: number;
+          confidence_score: number | null;
+          predicted_wake_minutes: number | null;
+          algorithm_version: string;
+          calculated_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          baby_id: string;
+          status: "insufficient" | "active" | "expired";
+          last_sleep_entry_id?: string | null;
+          last_wake_at?: string | null;
+          predicted_sleep_at?: string | null;
+          window_start?: string | null;
+          window_end?: string | null;
+          notify_at?: string | null;
+          sample_count?: number;
+          confidence_score?: number | null;
+          predicted_wake_minutes?: number | null;
+          algorithm_version?: string;
+          calculated_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          status?: "insufficient" | "active" | "expired";
+          last_sleep_entry_id?: string | null;
+          last_wake_at?: string | null;
+          predicted_sleep_at?: string | null;
+          window_start?: string | null;
+          window_end?: string | null;
+          notify_at?: string | null;
+          sample_count?: number;
+          confidence_score?: number | null;
+          predicted_wake_minutes?: number | null;
+          algorithm_version?: string;
+          calculated_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
       };
       vaccine_schedule: {
         Row: {
@@ -499,10 +1031,233 @@ export type Database = {
       };
     };
     Functions: {
+      add_pregnancy_counter_delta: {
+        Args: {
+          p_counter_date: string;
+          p_kick_delta?: number;
+          p_contraction_delta?: number;
+        };
+        Returns: Database["public"]["Tables"]["pregnancy_daily_counters"]["Row"];
+      };
+      can_access_baby: {
+        Args: {
+          p_baby_id: string;
+        };
+        Returns: boolean;
+      };
+      can_access_baby_path: {
+        Args: {
+          p_baby_id: string;
+        };
+        Returns: boolean;
+      };
+      can_access_profile: {
+        Args: {
+          p_profile_id: string;
+        };
+        Returns: boolean;
+      };
+      get_active_profile: {
+        Args: Record<PropertyKey, never>;
+        Returns: Database["public"]["Tables"]["profiles"]["Row"];
+      };
+      get_active_profile_id: {
+        Args: Record<PropertyKey, never>;
+        Returns: string;
+      };
+      get_effective_premium_access: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          is_premium: boolean;
+          access_source: string;
+          access_expires_at: string | null;
+          is_lifetime: boolean;
+          family_trial_started_at: string | null;
+          family_trial_expires_at: string | null;
+        }[];
+      };
+      has_effective_premium_access: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
+      ensure_birth_preparation_defaults: {
+        Args: Record<PropertyKey, never>;
+        Returns: undefined;
+      };
+      set_birth_preparation_item_completed: {
+        Args: {
+          p_item_id: string;
+          p_completed: boolean;
+        };
+        Returns: Database["public"]["Tables"]["birth_preparation_items"]["Row"];
+      };
+      create_medicine_care_entry_safely: {
+        Args: {
+          p_baby_id: string;
+          p_medicine_name: string;
+          p_medicine_dose: string | null;
+          p_notes: string | null;
+          p_occurred_at: string;
+          p_caregiver_name: string | null;
+          p_override_recent?: boolean;
+        };
+        Returns: Database["public"]["Tables"]["care_journal_entries"]["Row"];
+      };
+      apply_care_sync_operation: {
+        Args: {
+          p_operation_id: string;
+          p_device_id: string;
+          p_device_label: string;
+          p_action: string;
+          p_entry_id: string;
+          p_base_version?: number | null;
+          p_payload?: Json;
+          p_actor_name?: string | null;
+        };
+        Returns: Json;
+      };
+      undo_care_sync_operation: {
+        Args: {
+          p_original_operation_id: string;
+          p_undo_operation_id: string;
+          p_device_id: string;
+          p_device_label: string;
+          p_actor_name?: string | null;
+        };
+        Returns: Json;
+      };
+      start_shared_care_timer: {
+        Args: {
+          p_operation_id: string;
+          p_timer_id: string;
+          p_baby_id: string;
+          p_timer_type: string;
+          p_breast_side: string;
+          p_sleep_kind: string;
+          p_device_id: string;
+          p_device_label: string;
+          p_actor_name: string | null;
+        };
+        Returns: Json;
+      };
+      stop_shared_care_timer: {
+        Args: {
+          p_operation_id: string;
+          p_timer_id: string;
+          p_device_id: string;
+          p_device_label: string;
+          p_actor_name: string | null;
+        };
+        Returns: Json;
+      };
+      stop_shared_care_timer_v2: {
+        Args: {
+          p_operation_id: string;
+          p_timer_id: string;
+          p_device_id: string;
+          p_device_label: string;
+          p_actor_name: string | null;
+          p_amount_ml?: number | null;
+        };
+        Returns: Json;
+      };
+      create_milk_storage_container: {
+        Args: {
+          p_operation_id: string; p_baby_id: string; p_amount_ml: number;
+          p_storage_location: string; p_pumped_at: string; p_expires_at?: string | null;
+          p_label?: string | null; p_notes?: string | null; p_device_id?: string | null;
+          p_device_label?: string | null; p_actor_name?: string | null;
+        };
+        Returns: Json;
+      };
+      thaw_milk_storage_container: {
+        Args: { p_operation_id: string; p_container_id: string; p_thawed_at?: string; p_device_id?: string | null; p_device_label?: string | null; p_actor_name?: string | null };
+        Returns: Json;
+      };
+      consume_milk_stock: {
+        Args: { p_operation_id: string; p_baby_id: string; p_amount_ml: number; p_container_id?: string | null; p_device_id?: string | null; p_device_label?: string | null; p_actor_name?: string | null };
+        Returns: Json;
+      };
+      discard_milk_storage_container: {
+        Args: { p_operation_id: string; p_container_id: string; p_device_id?: string | null; p_device_label?: string | null; p_actor_name?: string | null };
+        Returns: Json;
+      };
+      get_milk_inventory_summary: {
+        Args: { p_baby_id: string };
+        Returns: Json;
+      };
+      take_over_baby_care: {
+        Args: {
+          p_operation_id: string;
+          p_session_id: string;
+          p_baby_id: string;
+          p_caregiver_name: string;
+          p_device_id: string;
+          p_device_label: string;
+        };
+        Returns: Json;
+      };
+      get_care_handover_snapshot: {
+        Args: { p_baby_id: string };
+        Returns: Json;
+      };
+      get_recent_medicine_dose: {
+        Args: {
+          p_baby_id: string;
+          p_medicine_name: string;
+        };
+        Returns: {
+          entry_id: string;
+          medicine_name: string;
+          medicine_dose: string | null;
+          caregiver_name: string | null;
+          occurred_at: string;
+        }[];
+      };
+      is_family_father: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
       is_nickname_available: {
         Args: {
           nickname: string;
         };
+        Returns: boolean;
+      };
+      redeem_family_referral_code: {
+        Args: {
+          p_code: string;
+        };
+        Returns: Database["public"]["Tables"]["profiles"]["Row"];
+      };
+      reconcile_subscription: {
+        Args: {
+          p_user_id: string;
+          p_product_id: string;
+          p_status: "active" | "expired" | "cancelled" | "grace_period";
+          p_is_lifetime?: boolean;
+          p_expires_at?: string | null;
+        };
+        Returns: Database["public"]["Tables"]["subscriptions"]["Row"];
+      };
+      is_day5_offer_eligible: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
+      has_active_family_premium: {
+        Args: { p_baby_id: string };
+        Returns: boolean;
+      };
+      has_active_profile_premium: {
+        Args: { p_profile_id: string };
+        Returns: boolean;
+      };
+      is_first_family_baby: {
+        Args: { p_baby_id: string };
+        Returns: boolean;
+      };
+      can_create_care_reminder: {
+        Args: { p_baby_id: string };
         Returns: boolean;
       };
       get_upcoming_vaccinations: {

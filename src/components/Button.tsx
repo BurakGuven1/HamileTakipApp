@@ -1,33 +1,96 @@
+import * as Haptics from "expo-haptics";
 import type { ComponentProps } from "react";
+import { forwardRef, useEffect } from "react";
 import type { StyleProp, ViewStyle } from "react-native";
-import { Pressable, StyleSheet, Text } from "react-native";
+import { Pressable, StyleSheet, Text, type View } from "react-native";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming
+} from "react-native-reanimated";
 
+import { useAppTheme } from "@/providers/AppThemeProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
 type ButtonVariant = "primary" | "secondary" | "ghost";
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type ButtonProps = Omit<ComponentProps<typeof Pressable>, "style"> & {
+  breathing?: boolean;
   label: string;
   style?: StyleProp<ViewStyle>;
   variant?: ButtonVariant;
 };
 
-export function Button({
+export const Button = forwardRef<View, ButtonProps>(function Button({
+  breathing = false,
   label,
   variant = "primary",
   style,
   disabled,
+  onPress,
+  onPressIn,
+  onPressOut,
   ...pressableProps
-}: ButtonProps) {
+}: ButtonProps, ref) {
+  const appTheme = useAppTheme();
+  const breathScale = useSharedValue(1);
+  const pressScale = useSharedValue(1);
+  const themedVariantStyle =
+    variant === "primary"
+      ? { backgroundColor: appTheme.primary, borderColor: appTheme.primary }
+      : variant === "secondary"
+        ? { borderColor: appTheme.primary }
+        : null;
+
+  useEffect(() => {
+    if (!breathing || disabled) {
+      breathScale.value = withTiming(1, { duration: 180 });
+      return;
+    }
+
+    breathScale.value = withRepeat(
+      withSequence(
+        withTiming(1.015, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      false
+    );
+  }, [breathing, breathScale, disabled]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: breathScale.value * pressScale.value }]
+  }));
+
   return (
-    <Pressable
+    <AnimatedPressable
+      ref={ref}
       accessibilityRole="button"
       disabled={disabled}
-      style={({ pressed }) => [
+      onPress={(event) => {
+        if (!disabled) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+        }
+        onPress?.(event);
+      }}
+      onPressIn={(event) => {
+        pressScale.value = withTiming(0.98, { duration: 110 });
+        onPressIn?.(event);
+      }}
+      onPressOut={(event) => {
+        pressScale.value = withTiming(1, { duration: 140 });
+        onPressOut?.(event);
+      }}
+      style={[
         styles.base,
         styles[variant],
+        themedVariantStyle,
         disabled && styles.disabled,
-        pressed && !disabled && styles.pressed,
+        animatedStyle,
         style
       ]}
       {...pressableProps}
@@ -35,42 +98,48 @@ export function Button({
       <Text
         style={[
           typography.button,
-          variant !== "primary" && styles.secondaryText,
+          variant === "secondary" && { color: appTheme.primary },
+          variant === "ghost" && { color: appTheme.primary },
           disabled && styles.disabledText
         ]}
       >
         {label}
       </Text>
-    </Pressable>
+    </AnimatedPressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   base: {
     minHeight: 48,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: radii.md,
+    ...radii.button,
+    borderWidth: 1,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md
   },
   primary: {
-    backgroundColor: colors.primary
+    backgroundColor: colors.primary,
+    borderColor: colors.primary
   },
   secondary: {
-    backgroundColor: colors.primarySoft
+    backgroundColor: colors.transparent,
+    borderColor: colors.primary
   },
   ghost: {
-    backgroundColor: "transparent"
+    backgroundColor: colors.transparent,
+    borderColor: colors.transparent
   },
   secondaryText: {
     color: colors.primary
   },
-  pressed: {
-    opacity: 0.84
+  ghostText: {
+    color: colors.primary
   },
   disabled: {
-    backgroundColor: colors.border
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.border
   },
   disabledText: {
     color: colors.textMuted
