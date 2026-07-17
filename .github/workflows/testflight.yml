@@ -18,7 +18,8 @@ concurrency:
 jobs:
   testflight:
     name: Archive and upload
-    runs-on: macos-15
+    # Expo SDK 57's ExpoModulesJSI package requires Swift tools 6.2 (Xcode 26).
+    runs-on: macos-26
     timeout-minutes: 60
     # Existing GitHub Environment name. Its environment secrets are used below.
     environment: EXPO_OWNER
@@ -33,6 +34,17 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+
+      - name: Select Xcode 26
+        run: |
+          set -euo pipefail
+          XCODE_PATH="$(find /Applications -maxdepth 1 -name 'Xcode_26*.app' -print | sort | tail -n 1)"
+          if [ -z "$XCODE_PATH" ]; then
+            echo "Xcode 26 is required by ExpoModulesJSI but was not found."
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
+          xcodebuild -version
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
