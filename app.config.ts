@@ -1,9 +1,9 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
 
 const isDevelopment = process.env.APP_VARIANT === "development";
-const expoOwner = process.env.EXPO_OWNER ?? "burakguven351999";
+const expoOwner = process.env.EXPO_OWNER || "burakguven351999";
 const easProjectId =
-  process.env.EAS_PROJECT_ID ?? "710c02c1-ddbb-4433-818f-00dadd19a758";
+  process.env.EAS_PROJECT_ID || "710c02c1-ddbb-4433-818f-00dadd19a758";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -22,7 +22,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // every upload. The GitHub Actions workflow supplies a Unix timestamp.
     buildNumber: process.env.IOS_BUILD_NUMBER ?? "1",
     bundleIdentifier:
-      process.env.EXPO_PUBLIC_IOS_BUNDLE_IDENTIFIER ??
+      process.env.EXPO_PUBLIC_IOS_BUNDLE_IDENTIFIER ||
       "com.burakguven.hamiletakip",
     infoPlist: {
       NSCameraUsageDescription:
@@ -37,7 +37,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     package:
-      process.env.EXPO_PUBLIC_ANDROID_PACKAGE ??
+      process.env.EXPO_PUBLIC_ANDROID_PACKAGE ||
       "com.burakguven.hamiletakip",
     adaptiveIcon: {
       backgroundColor: "#FBF6EF",
