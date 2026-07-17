@@ -88,15 +88,37 @@ jobs:
             exit 1
           fi
           SCHEME="$(xcodebuild -list -json -workspace "$WORKSPACE" | ruby -rjson -e 'puts JSON.parse(STDIN.read).dig("workspace", "schemes").first')"
+          ARCHIVE_LOG="$RUNNER_TEMP/xcodebuild-archive.log"
+          RESULT_BUNDLE="$RUNNER_TEMP/Anne.xcresult"
+          set +e
           xcodebuild \
             -workspace "$WORKSPACE" \
             -scheme "$SCHEME" \
             -configuration Release \
             -sdk iphoneos \
             -archivePath "$RUNNER_TEMP/AnnePlus.xcarchive" \
+            -resultBundlePath "$RESULT_BUNDLE" \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
             CODE_SIGN_STYLE=Automatic \
-            archive
+            archive 2>&1 | tee "$ARCHIVE_LOG"
+          BUILD_STATUS=${PIPESTATUS[0]}
+          if [ "$BUILD_STATUS" -ne 0 ]; then
+            echo "::group::Xcode failure summary"
+            grep -i -E 'error:|codesign|provisioning|no profiles|failed:' "$ARCHIVE_LOG" | tail -n 120 || true
+            echo "::endgroup::"
+            exit "$BUILD_STATUS"
+          fi
+
+      - name: Upload Xcode diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcode-archive-diagnostics-${{ github.run_number }}
+          path: |
+            ${{ runner.temp }}/xcodebuild-archive.log
+            ${{ runner.temp }}/Anne.xcresult
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Export App Store IPA
         env:
