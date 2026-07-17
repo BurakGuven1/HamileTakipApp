@@ -23,8 +23,6 @@ jobs:
     env:
       # Expo configuration required while generating the native iOS project.
       APP_VARIANT: production
-      EXPO_OWNER: ${{ secrets.EXPO_OWNER }}
-      EAS_PROJECT_ID: ${{ secrets.EAS_PROJECT_ID }}
       EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
       EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: ${{ secrets.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY }}
