@@ -106,7 +106,6 @@ jobs:
             -archivePath "$RUNNER_TEMP/AnnePlus.xcarchive" \
             -resultBundlePath "$RESULT_BUNDLE" \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
             CODE_SIGN_STYLE=Automatic \
             archive 2>&1 | tee "$ARCHIVE_LOG"
           BUILD_STATUS=${PIPESTATUS[0]}
