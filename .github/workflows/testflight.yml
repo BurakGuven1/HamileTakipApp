@@ -79,8 +79,8 @@ jobs:
           WIDGET_PROFILE_PATH="$RUNNER_TEMP/widget.mobileprovision"
           printf '%s' "$IOS_APP_PROVISIONING_PROFILE_BASE64" | base64 -D > "$APP_PROFILE_PATH"
           printf '%s' "$IOS_WIDGET_PROVISIONING_PROFILE_BASE64" | base64 -D > "$WIDGET_PROFILE_PATH"
-          APP_PROFILE_UUID="$(security cms -D -i "$APP_PROFILE_PATH" | /usr/libexec/PlistBuddy -c 'Print :UUID' /dev/stdin)"
-          WIDGET_PROFILE_UUID="$(security cms -D -i "$WIDGET_PROFILE_PATH" | /usr/libexec/PlistBuddy -c 'Print :UUID' /dev/stdin)"
+          APP_PROFILE_UUID="$(security cms -D -i "$APP_PROFILE_PATH" | plutil -extract UUID raw -o - -)"
+          WIDGET_PROFILE_UUID="$(security cms -D -i "$WIDGET_PROFILE_PATH" | plutil -extract UUID raw -o - -)"
           cp "$APP_PROFILE_PATH" "$PROFILE_DIRECTORY/$APP_PROFILE_UUID.mobileprovision"
           cp "$WIDGET_PROFILE_PATH" "$PROFILE_DIRECTORY/$WIDGET_PROFILE_UUID.mobileprovision"
 
