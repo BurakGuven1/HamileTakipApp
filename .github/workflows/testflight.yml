@@ -83,13 +83,17 @@ jobs:
           WIDGET_PROFILE_UUID="$(security cms -D -i "$WIDGET_PROFILE_PATH" | plutil -extract UUID raw -o - -)"
           cp "$APP_PROFILE_PATH" "$PROFILE_DIRECTORY/$APP_PROFILE_UUID.mobileprovision"
           cp "$WIDGET_PROFILE_PATH" "$PROFILE_DIRECTORY/$WIDGET_PROFILE_UUID.mobileprovision"
+          echo "IOS_APP_PROFILE_UUID=$APP_PROFILE_UUID" >> "$GITHUB_ENV"
+          echo "IOS_WIDGET_PROFILE_UUID=$WIDGET_PROFILE_UUID" >> "$GITHUB_ENV"
+
+      - name: Configure manual App Store signing
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: ruby tools/configure-ios-signing.rb
 
       - name: Archive signed app
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
         run: |
           set -euo pipefail
           WORKSPACE="$(find ios -maxdepth 1 -name '*.xcworkspace' -print -quit)"
@@ -100,8 +104,6 @@ jobs:
           SCHEME="$(xcodebuild -list -json -workspace "$WORKSPACE" | ruby -rjson -e 'puts JSON.parse(STDIN.read).dig("workspace", "schemes").first')"
           ARCHIVE_LOG="$RUNNER_TEMP/xcodebuild-archive.log"
           RESULT_BUNDLE="$RUNNER_TEMP/Anne.xcresult"
-          API_KEY_PATH="$RUNNER_TEMP/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
-          printf '%s' "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 -D > "$API_KEY_PATH"
           set +e
           xcodebuild \
             -workspace "$WORKSPACE" \
@@ -111,11 +113,6 @@ jobs:
             -archivePath "$RUNNER_TEMP/AnnePlus.xcarchive" \
             -resultBundlePath "$RESULT_BUNDLE" \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
-            CODE_SIGN_STYLE=Automatic \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$API_KEY_PATH" \
-            -authenticationKeyID "$APP_STORE_CONNECT_API_KEY_ID" \
-            -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID" \
             archive 2>&1 | tee "$ARCHIVE_LOG"
           BUILD_STATUS=${PIPESTATUS[0]}
           if [ "$BUILD_STATUS" -ne 0 ]; then
@@ -139,23 +136,21 @@ jobs:
       - name: Export App Store IPA
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
           set -euo pipefail
           EXPORT_OPTIONS="$RUNNER_TEMP/ExportOptions.plist"
           /usr/libexec/PlistBuddy -c 'Add : dict' "$EXPORT_OPTIONS"
           /usr/libexec/PlistBuddy -c 'Add :method string app-store-connect' "$EXPORT_OPTIONS"
-          /usr/libexec/PlistBuddy -c 'Add :signingStyle string automatic' "$EXPORT_OPTIONS"
+          /usr/libexec/PlistBuddy -c 'Add :signingStyle string manual' "$EXPORT_OPTIONS"
+          /usr/libexec/PlistBuddy -c 'Add :signingCertificate string Apple Distribution' "$EXPORT_OPTIONS"
           /usr/libexec/PlistBuddy -c "Add :teamID string $APPLE_TEAM_ID" "$EXPORT_OPTIONS"
+          /usr/libexec/PlistBuddy -c 'Add :provisioningProfiles dict' "$EXPORT_OPTIONS"
+          /usr/libexec/PlistBuddy -c "Add :provisioningProfiles:com.burakguven.hamiletakip string $IOS_APP_PROFILE_UUID" "$EXPORT_OPTIONS"
+          /usr/libexec/PlistBuddy -c "Add :provisioningProfiles:com.burakguven.hamiletakip.widgets string $IOS_WIDGET_PROFILE_UUID" "$EXPORT_OPTIONS"
           xcodebuild -exportArchive \
             -archivePath "$RUNNER_TEMP/AnnePlus.xcarchive" \
             -exportOptionsPlist "$EXPORT_OPTIONS" \
-            -exportPath "$RUNNER_TEMP/ipa" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$RUNNER_TEMP/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8" \
-            -authenticationKeyID "$APP_STORE_CONNECT_API_KEY_ID" \
-            -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID"
+            -exportPath "$RUNNER_TEMP/ipa"
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
