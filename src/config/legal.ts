@@ -4,6 +4,7 @@ const defaultLegalBaseUrl = "https://hamile-takip-app-vqgw.vercel.app";
 const legalBaseUrl = defaultLegalBaseUrl;
 
 export type LegalPage =
+  | "appleEula"
   | "privacy"
   | "terms"
   | "accountDeletion"
@@ -11,7 +12,10 @@ export type LegalPage =
   | "explicitConsent"
   | "kvkkDisclosure";
 
-const legalPaths: Record<LegalPage, string> = {
+const appleStandardEulaUrl =
+  "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/";
+
+const legalPaths: Record<Exclude<LegalPage, "appleEula">, string> = {
   privacy: "/gizlilik-politikasi/",
   terms: "/kullanim-sartlari/",
   accountDeletion: "/delete-account/",
@@ -21,6 +25,10 @@ const legalPaths: Record<LegalPage, string> = {
 };
 
 export function getLegalUrl(page: LegalPage) {
+  if (page === "appleEula") {
+    return appleStandardEulaUrl;
+  }
+
   return `${legalBaseUrl}${legalPaths[page]}`;
 }
 

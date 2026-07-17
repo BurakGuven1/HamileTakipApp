@@ -28,11 +28,7 @@ import { createCareUuid } from "@/features/care-journal/careSync";
 import {
   cancelLocalCareReminder, getCareReminderCopy, scheduleNightShiftAlarm,
 } from "@/features/care-journal/reminders";
-import {
-  endNightShiftLiveActivity,
-  ensureNightShiftLiveActivity,
-  type NightShiftActivityInput
-} from "@/features/care-journal/nightShiftLiveActivity";
+import type { NightShiftActivityInput } from "@/features/care-journal/nightShiftLiveActivity";
 import { syncCareQuickWidget } from "@/features/care-journal/widgetSync";
 import { useFeedback } from "@/providers/FeedbackProvider";
 
@@ -93,12 +89,14 @@ export default function NightShiftScreen() {
     enabled: Boolean(selectedBaby?.id)
   });
 
-  const session = shiftQuery.data ?? null;
+  const session = isNightShiftSession(shiftQuery.data) ? shiftQuery.data : null;
   const activeSession = session?.status === "active" ? session : null;
   const isMyShift = Boolean(activeSession && activeSession.caregiver_id === userQuery.data);
   const snapshot = snapshotQuery.data;
-  const activeSleep = snapshot?.active_timers?.find((timer) => timer.timer_type === "sleep") ?? null;
-  const alarms = (remindersQuery.data ?? []).filter(
+  const activeTimers = Array.isArray(snapshot?.active_timers) ? snapshot.active_timers : [];
+  const activeSleep = activeTimers.find((timer) => timer.timer_type === "sleep") ?? null;
+  const reminders = Array.isArray(remindersQuery.data) ? remindersQuery.data : [];
+  const alarms = reminders.filter(
     (reminder) => reminder.alarm_kind === "night_shift" && reminder.target_user_id === userQuery.data
   );
   const latestEntries = useMemo(() => {
@@ -111,17 +109,6 @@ export default function NightShiftScreen() {
     .filter((alarm) => Date.parse(alarm.scheduled_for) > Date.now())
     .sort((a, b) => Date.parse(a.scheduled_for) - Date.parse(b.scheduled_for))[0];
 
-  const liveActivityInput = selectedBaby && session
-    ? buildLiveActivityInput(
-        selectedBaby.id,
-        selectedBaby.name,
-        session,
-        activeSleep?.started_at ?? null,
-        snapshot?.last_feed?.occurred_at ?? null,
-        nextShiftAlarm?.scheduled_for ?? null
-      )
-    : null;
-
   useEffect(() => {
     if (!selectedBaby?.id) return;
     const refresh = () => {
@@ -130,9 +117,16 @@ export default function NightShiftScreen() {
         queryClient.invalidateQueries({ queryKey: ["care-handover", selectedBaby.id] })
       ]);
     };
-    const removeShift = subscribeToNightShift(selectedBaby.id, refresh);
-    const removeCare = subscribeToCareCoordination(selectedBaby.id, refresh);
-    return () => { removeShift(); removeCare(); };
+    try {
+      const removeShift = subscribeToNightShift(selectedBaby.id, refresh);
+      const removeCare = subscribeToCareCoordination(selectedBaby.id, refresh);
+      return () => {
+        removeShift();
+        removeCare();
+      };
+    } catch {
+      return;
+    }
   }, [queryClient, selectedBaby?.id]);
 
   useEffect(() => {
@@ -148,27 +142,6 @@ export default function NightShiftScreen() {
     selectedBaby?.id,
     selectedBaby?.name,
     snapshot?.last_feed?.id
-  ]);
-
-  useEffect(() => {
-    if (!liveActivityInput || !session || session.caregiver_id !== userQuery.data) {
-      return;
-    }
-    if (session.status === "active") {
-      ensureNightShiftLiveActivity(liveActivityInput).catch(() => undefined);
-      return;
-    }
-    endNightShiftLiveActivity(liveActivityInput).catch(() => undefined);
-  }, [
-    activeSleep?.started_at,
-    liveActivityInput?.nextReminderLine,
-    liveActivityInput?.statusLine,
-    nextShiftAlarm?.scheduled_for,
-    session?.id,
-    session?.planned_end_at,
-    session?.status,
-    snapshot?.last_feed?.occurred_at,
-    userQuery.data
   ]);
 
   async function refreshCare() {
@@ -194,8 +167,18 @@ export default function NightShiftScreen() {
         null
       );
     },
-    onSuccess: async () => {
+    onSuccess: async (startedSession) => {
       showSuccess("Gece vardiyası sende. Alarmlar yalnızca sana yönlendirilecek.");
+      if (selectedBaby && isNightShiftSession(startedSession)) {
+        void updateNightShiftLiveActivity("start", buildLiveActivityInput(
+          selectedBaby.id,
+          selectedBaby.name,
+          startedSession,
+          activeSleep?.started_at ?? null,
+          snapshot?.last_feed?.occurred_at ?? null,
+          nextShiftAlarm?.scheduled_for ?? null
+        ));
+      }
       await queryClient.invalidateQueries({ queryKey: ["night-shift", selectedBaby?.id] });
     },
     onError: (error) => showError(error, "Vardiya başlatılamadı")
@@ -209,8 +192,18 @@ export default function NightShiftScreen() {
       }
       return finishNightShift(activeSession.id);
     },
-    onSuccess: async () => {
+    onSuccess: async (completedSession) => {
       showSuccess("Vardiya tamamlandı. Sabah özeti hazır.");
+      if (selectedBaby && isNightShiftSession(completedSession)) {
+        void updateNightShiftLiveActivity("end", buildLiveActivityInput(
+          selectedBaby.id,
+          selectedBaby.name,
+          completedSession,
+          activeSleep?.started_at ?? null,
+          snapshot?.last_feed?.occurred_at ?? null,
+          nextShiftAlarm?.scheduled_for ?? null
+        ));
+      }
       await queryClient.invalidateQueries({ queryKey: ["night-shift", selectedBaby?.id] });
     },
     onError: (error) => showError(error, "Vardiya bitirilemedi")
@@ -468,6 +461,36 @@ function parseSummary(value: unknown) {
   };
 }
 
+function isNightShiftSession(value: unknown): value is NightShiftSession {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const session = value as Partial<NightShiftSession>;
+  return typeof session.id === "string"
+    && typeof session.baby_id === "string"
+    && typeof session.caregiver_id === "string"
+    && typeof session.caregiver_name === "string"
+    && typeof session.started_at === "string"
+    && typeof session.planned_end_at === "string"
+    && (session.status === "active" || session.status === "completed");
+}
+
+async function updateNightShiftLiveActivity(
+  action: "start" | "end",
+  input: NightShiftActivityInput
+) {
+  const iosVersion = Number.parseFloat(String(Platform.Version));
+  if (Platform.OS !== "ios" || !Number.isFinite(iosVersion) || iosVersion < 16.2) return;
+  try {
+    const activity = await import("@/features/care-journal/nightShiftLiveActivity");
+    if (action === "start") {
+      await activity.ensureNightShiftLiveActivity(input);
+    } else {
+      await activity.endNightShiftLiveActivity(input);
+    }
+  } catch {
+    // Live Activity is optional; the night-shift screen must remain usable.
+  }
+}
+
 function buildLiveActivityInput(
   babyId: string,
   babyName: string,
@@ -532,8 +555,23 @@ function nextOccurrence(value: Date) { const date = new Date(); date.setHours(va
 function minutesSince(value?: string) { if (!value) return null; const time = Date.parse(value); return Number.isFinite(time) ? Math.max(0, Math.round((Date.now() - time) / 60_000)) : null; }
 function relativeTime(value: string) { const minutes = minutesSince(value); if (minutes === null) return "zamanı bilinmiyor"; if (minutes < 1) return "şimdi"; if (minutes < 60) return `${minutes} dk önce`; return `${Math.floor(minutes / 60)} sa ${minutes % 60} dk önce`; }
 function entryLabel(type: CareEntryType) { return type === "breastfeeding" || type === "bottle" ? "Beslenme" : type === "diaper" ? "Bez" : type === "sleep" ? "Uyku" : "Bakım"; }
-function formatClock(value: string) { return new Intl.DateTimeFormat("tr-TR", { hour: "2-digit", minute: "2-digit" }).format(new Date(value)); }
-function formatDateTime(value: Date) { return new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(value); }
+function formatClock(value: string) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "Saat bilinmiyor";
+  try {
+    return new Intl.DateTimeFormat("tr-TR", { hour: "2-digit", minute: "2-digit" }).format(date);
+  } catch {
+    return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  }
+}
+function formatDateTime(value: Date) {
+  if (!Number.isFinite(value.getTime())) return "Zaman bilinmiyor";
+  try {
+    return new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(value);
+  } catch {
+    return `${String(value.getDate()).padStart(2, "0")}.${String(value.getMonth() + 1).padStart(2, "0")} ${String(value.getHours()).padStart(2, "0")}:${String(value.getMinutes()).padStart(2, "0")}`;
+  }
+}
 function formatDuration(minutes: number) { const hours = Math.floor(minutes / 60); const rest = minutes % 60; return hours ? `${hours}sa ${rest ? `${rest}dk` : ""}`.trim() : `${rest}dk`; }
 
 const styles = StyleSheet.create({

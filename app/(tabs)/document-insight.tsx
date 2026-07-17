@@ -228,7 +228,7 @@ export default function DocumentInsightScreen() {
           <View style={styles.stack}>
             <Text style={typography.heading3}>Belge yalnızca bu cihazda okunur</Text>
             <Text style={typography.body}>
-              Değerleri ve belgenin kendi referans aralıklarını cihazda tabloya dönüştürür. Teşhis, aciliyet, tedavi veya ilaç önerisi üretmez.
+              Laboratuvar değerlerini bulur, belgenin referans aralıklarıyla karşılaştırır ve her testi halk dilinde açıklar. Teşhis, aciliyet, tedavi veya ilaç önerisi üretmez.
             </Text>
             <Text style={styles.privacyLine}>İnternete gönderilmez • OpenAI kullanılmaz • Orijinal dosya saklanmaz • Sonuç geçmişi oluşturulmaz</Text>
           </View>
@@ -275,7 +275,7 @@ export default function DocumentInsightScreen() {
                 </Text>
               </Pressable>
 
-              <Button disabled={!selected || !consentAccepted || isAnalyzing} label={isAnalyzing ? "Belge düzenleniyor…" : "Belgeyi düzenle"} onPress={analyze} />
+              <Button disabled={!selected || !consentAccepted || isAnalyzing} label={isAnalyzing ? "Belge okunuyor…" : "Belgeyi anla"} onPress={analyze} />
             </View>
           </Card>
         ) : (
@@ -294,8 +294,8 @@ function ResultView({ flaggedValues, result }: { flaggedValues: DocumentInsightV
     <View style={styles.stackLarge}>
       {result.readability !== "readable" ? (
         <Card style={{ backgroundColor: colors.highlightSoft }}>
-          <Text style={typography.heading3}>Belgenin tamamı net okunamadı</Text>
-          <Text style={typography.body}>Düşük güvenli satırları orijinal belgeden kontrol edin; okunmayan alanlar tahmin edilmedi.</Text>
+          <Text style={typography.heading3}>Laboratuvar sonuçları güvenle ayırt edilemedi</Text>
+          <Text style={typography.body}>Belge metni okundu ancak test adı, sonuç ve birim eşleştirilemedi. Daha düz ve net bir fotoğraf deneyin; okunmayan alanlar tahmin edilmedi.</Text>
         </Card>
       ) : null}
 
@@ -318,29 +318,15 @@ function ResultView({ flaggedValues, result }: { flaggedValues: DocumentInsightV
 
       <Card>
         <View style={styles.stack}>
-          <Text style={typography.heading2}>Belgedeki değerler</Text>
-          {result.values.length ? result.values.map((value, index) => <ValueRow key={`${value.testName}-${index}`} value={value} />) : <Text style={typography.body}>Güvenle tabloya dönüştürülebilen bir değer bulunamadı.</Text>}
+          <Text style={typography.heading2}>Sonuçlarınız, anlaşılır şekilde</Text>
+          {result.values.length ? (
+            <>
+              <Text style={styles.smallText}>{result.values.length} laboratuvar sonucu okundu. “Normal” ifadesi yalnızca belgenin kendi referans aralığını anlatır.</Text>
+              {result.values.map((value, index) => <ValueRow key={`${value.testName}-${index}`} value={value} />)}
+            </>
+          ) : <Text style={typography.body}>Güvenle eşleştirilebilen bir laboratuvar sonucu bulunamadı.</Text>}
         </View>
       </Card>
-
-      {result.glossary.length ? (
-        <Card>
-          <View style={styles.stack}>
-            <Text style={typography.heading2}>Terimler ne demek?</Text>
-            <Text style={styles.smallText}>Açıklamalar genel bilgi verir; kişisel tıbbi yorum değildir.</Text>
-            {result.glossary.map((item) => (
-              <View key={item.term} style={styles.glossaryItem}>
-                <Text style={typography.label}>{item.term}</Text>
-                <Text style={typography.body}>{item.explanation}</Text>
-                <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(item.sourceUrl)} style={styles.sourceLink}>
-                  <Link2 color={appTheme.primary} size={16} />
-                  <Text style={[styles.sourceText, { color: appTheme.primary }]}>{item.sourceLabel}</Text>
-                </Pressable>
-              </View>
-            ))}
-          </View>
-        </Card>
-      ) : null}
 
       {result.doctorQuestions.length ? (
         <Card>
@@ -363,6 +349,7 @@ function ResultView({ flaggedValues, result }: { flaggedValues: DocumentInsightV
 }
 
 function ValueRow({ compact = false, value }: { compact?: boolean; value: DocumentInsightValue }) {
+  const appTheme = useAppTheme();
   const isOutside = value.referenceStatus === "below" || value.referenceStatus === "above" || (value.referenceStatus === "document_marked" && value.documentMarker !== "normal");
   return (
     <View style={[styles.valueRow, compact && styles.compactValueRow]}>
@@ -376,6 +363,37 @@ function ValueRow({ compact = false, value }: { compact?: boolean; value: Docume
       </View>
       <Text style={styles.smallText}>{value.referenceExplanation}</Text>
       {value.confidence !== "high" ? <Text style={styles.lowConfidence}>Okuma güveni: {value.confidence === "medium" ? "orta" : "düşük"} • Orijinalden kontrol edin</Text> : null}
+      {!compact ? (
+        <View style={styles.explanationBox}>
+          <View style={styles.explanationSection}>
+            <Text style={styles.explanationLabel}>Bu test neyi anlatır?</Text>
+            <Text style={typography.body}>{value.plainLanguage.whatItIs}</Text>
+          </View>
+          <View style={styles.explanationSection}>
+            <Text style={styles.explanationLabel}>Sizin sonucunuz</Text>
+            <Text style={typography.body}>{value.plainLanguage.resultSummary}</Text>
+          </View>
+          <View style={styles.explanationSection}>
+            <Text style={styles.explanationLabel}>Genel olarak ne anlama gelebilir?</Text>
+            <Text style={typography.body}>{value.plainLanguage.possibleMeaning}</Text>
+          </View>
+          {value.plainLanguage.symptomContext.length ? (
+            <View style={styles.explanationSection}>
+              <Text style={styles.explanationLabel}>Bu yöndeki sonuçlarla birlikte görülebilen yakınmalar</Text>
+              <Text style={typography.body}>{value.plainLanguage.symptomContext.join(" • ")}</Text>
+              <Text style={styles.smallText}>Bu yakınmalar sonucu kanıtlamaz; hiçbiri görülmeyebilir ve başka nedenleri olabilir.</Text>
+            </View>
+          ) : null}
+          <View style={styles.explanationSection}>
+            <Text style={styles.explanationLabel}>Birlikte değerlendirilmesi gerekenler</Text>
+            <Text style={typography.body}>{value.plainLanguage.clinicianContext}</Text>
+          </View>
+          <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(value.plainLanguage.sourceUrl)} style={styles.sourceLink}>
+            <Link2 color={appTheme.primary} size={16} />
+            <Text style={[styles.sourceText, { color: appTheme.primary }]}>{value.plainLanguage.sourceLabel}</Text>
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -448,7 +466,9 @@ const styles = StyleSheet.create({
   statusNeutral: { backgroundColor: colors.primarySoft },
   statusText: { color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 12 },
   lowConfidence: { color: colors.danger, fontFamily: fonts.bodySemiBold, fontSize: 12, lineHeight: 18 },
-  glossaryItem: { borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth, gap: spacing.xs, paddingBottom: spacing.md },
+  explanationBox: { backgroundColor: colors.surfaceMuted, borderRadius: radii.md, gap: spacing.md, marginTop: spacing.xs, padding: spacing.md },
+  explanationSection: { gap: spacing.xs },
+  explanationLabel: { color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13, lineHeight: 19 },
   sourceLink: { alignItems: "center", alignSelf: "flex-start", flexDirection: "row", gap: spacing.xs, paddingVertical: spacing.xs },
   sourceText: { fontFamily: fonts.bodySemiBold, fontSize: 13 },
   safetyNotice: { color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13, lineHeight: 20 }

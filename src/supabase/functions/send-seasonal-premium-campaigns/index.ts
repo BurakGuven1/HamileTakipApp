@@ -263,9 +263,9 @@ function getActiveTurkeyCampaign(now = new Date()): Campaign | null {
     return {
       key: "mothers_day",
       year,
-      title: "Anneler Günü Premium fırsatı",
+      title: "Anneler Günü'nde Anne+ Premium",
       body:
-        "{{name}}, bugün kendine küçük bir alan aç. Anne+ Premium'u 7 gün ücretsiz dene; istediğin an iptal edebilirsin.",
+        "{{name}}, bugün kendine küçük bir alan aç. Premium özellikleri ve güncel abonelik seçeneklerini incele.",
     };
   }
 
@@ -273,9 +273,9 @@ function getActiveTurkeyCampaign(now = new Date()): Campaign | null {
     return {
       key: "black_friday",
       year,
-      title: "Kara Cuma Premium fırsatı",
+      title: "Anne+ Premium'u keşfet",
       body:
-        "{{name}}, Premium araçları, forumu ve anı galerisini 7 gün ücretsiz deneyebilirsin.",
+        "{{name}}, Premium araçları, forumu ve anı galerisini güncel paket seçenekleriyle keşfet.",
     };
   }
 
@@ -286,9 +286,9 @@ function getActiveTurkeyCampaign(now = new Date()): Campaign | null {
     return {
       key: "new_year",
       year: newYearCampaignYear,
-      title: "Yeni yıl Premium fırsatı",
+      title: "Yeni yılda Anne+ Premium",
       body:
-        "{{name}}, yeni yılda bebeğinle daha yakın bir takip alanı kur. Premium'u 7 gün ücretsiz dene.",
+        "{{name}}, yeni yılda bebeğinle daha yakın bir takip alanı kur. Premium özellikleri ve güncel paketleri incele.",
     };
   }
 
@@ -305,9 +305,9 @@ function getForcedCampaign(campaignKey?: string): Campaign | null {
     return {
       key: "mothers_day",
       year,
-      title: "Anneler Günü Premium fırsatı",
+      title: "Anneler Günü'nde Anne+ Premium",
       body:
-        "{{name}}, bugün kendine küçük bir alan aç. Anne+ Premium'u 7 gün ücretsiz dene; istediğin an iptal edebilirsin.",
+        "{{name}}, bugün kendine küçük bir alan aç. Premium özellikleri ve güncel abonelik seçeneklerini incele.",
     };
   }
 
@@ -315,9 +315,9 @@ function getForcedCampaign(campaignKey?: string): Campaign | null {
     return {
       key: "black_friday",
       year,
-      title: "Kara Cuma Premium fırsatı",
+      title: "Anne+ Premium'u keşfet",
       body:
-        "{{name}}, Premium araçları, forumu ve anı galerisini 7 gün ücretsiz deneyebilirsin.",
+        "{{name}}, Premium araçları, forumu ve anı galerisini güncel paket seçenekleriyle keşfet.",
     };
   }
 
@@ -325,9 +325,9 @@ function getForcedCampaign(campaignKey?: string): Campaign | null {
     return {
       key: "new_year",
       year,
-      title: "Yeni yıl Premium fırsatı",
+      title: "Yeni yılda Anne+ Premium",
       body:
-        "{{name}}, yeni yılda bebeğinle daha yakın bir takip alanı kur. Premium'u 7 gün ücretsiz dene.",
+        "{{name}}, yeni yılda bebeğinle daha yakın bir takip alanı kur. Premium özellikleri ve güncel paketleri incele.",
     };
   }
 

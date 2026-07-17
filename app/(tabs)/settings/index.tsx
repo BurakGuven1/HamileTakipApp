@@ -27,6 +27,11 @@ import { DatePickerField } from "@/components/DatePickerField";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
 import { Thread } from "@/components/Thread";
+import {
+  getWaterRemindersEnabled,
+  setWaterRemindersEnabled,
+  WATER_REMINDER_TIME_LABEL
+} from "@/features/pregnancy/waterReminders";
 import { reconcileCustomerInfoWithSupabase } from "@/features/subscription/reconcileSubscription";
 import {
   getSubscriptionStatusFromCustomerInfo,
@@ -78,6 +83,8 @@ export default function SettingsScreen() {
   const [ownUserId, setOwnUserId] = useState<string>();
   const [restoringPurchases, setRestoringPurchases] = useState(false);
   const [sendingTestNotification, setSendingTestNotification] = useState(false);
+  const [waterRemindersEnabled, setWaterRemindersEnabledState] = useState(false);
+  const [updatingWaterReminders, setUpdatingWaterReminders] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const profileEditorYRef = useRef(0);
 
@@ -94,6 +101,12 @@ export default function SettingsScreen() {
       .getUser()
       .then(({ data }) => setOwnUserId(data.user?.id))
       .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    getWaterRemindersEnabled()
+      .then(setWaterRemindersEnabledState)
+      .catch(() => setWaterRemindersEnabledState(false));
   }, []);
 
   useEffect(() => {
@@ -256,6 +269,27 @@ export default function SettingsScreen() {
       );
     } catch (error) {
       showError(error, "Bildirim izni yenilenemedi");
+    }
+  }
+
+  async function updateWaterReminders(enabled: boolean) {
+    setUpdatingWaterReminders(true);
+    try {
+      const nextEnabled = await setWaterRemindersEnabled(enabled);
+      setWaterRemindersEnabledState(nextEnabled);
+      if (nextEnabled) {
+        showSuccess(
+          `${WATER_REMINDER_TIME_LABEL} saatlerinde nazik hatırlatmalar planlandı.`,
+          "Su hatırlatmaları açık"
+        );
+      } else {
+        showSuccess("Planlanmış su hatırlatmaları kaldırıldı.", "Hatırlatmalar kapalı");
+      }
+    } catch (error) {
+      setWaterRemindersEnabledState(false);
+      showError(error, "Su hatırlatmaları güncellenemedi");
+    } finally {
+      setUpdatingWaterReminders(false);
     }
   }
 
@@ -631,6 +665,13 @@ export default function SettingsScreen() {
               onValueChange={(value) =>
                 updatePreferenceMutation.mutate({ notify_daily_support: value })
               }
+            />
+            <PreferenceRow
+              label="Günlük su hatırlatmaları · Ücretsiz"
+              description={`${WATER_REMINDER_TIME_LABEL} saatlerinde cihazında nazik su molaları planla. İstediğin an kapatabilirsin.`}
+              value={waterRemindersEnabled}
+              disabled={updatingWaterReminders}
+              onValueChange={(value) => void updateWaterReminders(value)}
             />
             <PreferenceRow
               label="Akıllı uyku tahminleri"

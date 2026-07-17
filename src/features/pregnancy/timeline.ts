@@ -24,8 +24,8 @@ export const pregnancyTimelineBands: PregnancyTimelineBand[] = [
     endWeek: 12,
     id: "folic-acid",
     note:
-      "400 mcg folik asit gebelikten önce ve erken gebelikte nöral tüp defekti riskini azaltmaya yardımcı olur. Kişisel doz için doktor takibi esastır.",
-    source: "CDC / NHS",
+      "Türkiye rehberi gebelik planlayan kadınlarda gebelikten en az 1 ay önce başlayıp 12. haftaya kadar günde 400–800 mikrogram folik asit tanımlar. Kişisel doz için doktor takibi esastır.",
+    source: "T.C. Sağlık Bakanlığı / WHO",
     startWeek: 1,
     title: "Folik asit"
   },
@@ -34,10 +34,20 @@ export const pregnancyTimelineBands: PregnancyTimelineBand[] = [
     endWeek: 42,
     id: "vitamin-d",
     note:
-      "D vitamini desteği ihtiyacı güneşlenme, ten rengi, kapalı ortam ve doktor önerisine göre değişebilir.",
-    source: "NHS",
-    startWeek: 1,
+      "Türkiye destek programında 12. haftadan itibaren günde 1200 IU D vitamini bilgisi yer alır. Diğer ürünlerdeki D vitaminiyle toplam doz doktorla kontrol edilmelidir.",
+    source: "T.C. Sağlık Bakanlığı",
+    startWeek: 12,
     title: "D vitamini"
+  },
+  {
+    color: "#B86F55",
+    endWeek: 42,
+    id: "iron-support",
+    note:
+      "Türkiye destek programında 16. haftadan itibaren günde 40–60 mg elemental demir bilgisi yer alır. Kan sonuçları ve kişisel plan için doktor takibi önceliklidir.",
+    source: "T.C. Sağlık Bakanlığı / WHO",
+    startWeek: 16,
+    title: "Demir desteği"
   },
   {
     color: "#6B96C7",
@@ -73,7 +83,7 @@ export const pregnancyTimelineMilestones: PregnancyTimelineMilestone[] = [
   {
     body:
       "Nöral tüp çok erken haftalarda gelişmeye başlar. Bu yüzden folik asit erken dönemde özellikle önemlidir.",
-    source: "CDC",
+    source: "T.C. Sağlık Bakanlığı / WHO",
     title: "Erken sinir sistemi gelişimi",
     type: "bebek",
     week: 4
@@ -105,7 +115,7 @@ export const pregnancyTimelineMilestones: PregnancyTimelineMilestone[] = [
   {
     body:
       "İlk trimesterin sonuna yaklaşılır. Folik asit için ilk 12 hafta kritik dönem olarak kabul edilir.",
-    source: "NHS",
+    source: "T.C. Sağlık Bakanlığı",
     title: "İlk trimester kapanışı",
     type: "beslenme",
     week: 12

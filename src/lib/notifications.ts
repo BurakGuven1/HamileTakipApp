@@ -11,6 +11,7 @@ const easProjectId =
 Notifications.setNotificationHandler({
   handleNotification: async (notification) => {
     const notificationType = notification.request.content.data?.type;
+    const isWaterReminder = notificationType === "water_reminder";
     const isForegroundManagedAlert =
       notificationType === "care_reminder" ||
       notificationType === "sleep_prediction" ||
@@ -20,7 +21,7 @@ Notifications.setNotificationHandler({
       // Bakım alarmı ön plandaysa useCareReminderVoice Türkçe metni okur.
       // Diğer bildirimlerde normal ses ve görünür banner davranışı korunur.
       shouldPlaySound: !isForegroundManagedAlert,
-      shouldSetBadge: true,
+      shouldSetBadge: !isWaterReminder,
       shouldShowBanner: true,
       shouldShowList: true
     };
@@ -115,6 +116,14 @@ export async function ensureNotificationChannels() {
       importance: Notifications.AndroidImportance.DEFAULT,
       sound: "default",
       lightColor: "#E3B873"
+    }),
+    Notifications.setNotificationChannelAsync("hydration-reminders", {
+      name: "Su hatırlatmaları",
+      description:
+        "Kullanıcı tarafından açılan, gün içine yayılan nazik su içme hatırlatmaları.",
+      importance: Notifications.AndroidImportance.DEFAULT,
+      sound: "default",
+      lightColor: "#6B96C7"
     }),
     Notifications.setNotificationChannelAsync("sleep-insights", {
       name: "Uyku tahminleri",

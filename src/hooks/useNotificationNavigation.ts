@@ -50,6 +50,8 @@ export function useNotificationNavigation() {
           pathname: "/care-journal",
           params: typeof data.entry === "string" ? { entry: data.entry } : undefined
         });
+      } else if (data?.screen === "pregnancy-nutrition") {
+        router.push("/pregnancy-nutrition");
       }
     }
 

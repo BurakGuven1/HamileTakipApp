@@ -120,6 +120,10 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="pregnancy-nutrition"
+        options={{ href: null, title: "Su ve Takviye Rehberi" }}
+      />
+      <Tabs.Screen
         name="care-journal"
         options={{ href: null, title: "Akıllı bakım günlüğü" }}
       />

@@ -41,7 +41,7 @@ function toSafePageLines(
     elements: Array<{
       text: string;
       confidence: number;
-      boundingBox: { x: number; y: number };
+      boundingBox: { x: number; y: number; width: number; height: number };
     }>;
   }>,
   fallbackText: string
@@ -49,18 +49,22 @@ function toSafePageLines(
   if (pages.length) {
     return pages.map((page) => ({
       pageNumber: Number.isInteger(page.pageNumber) ? page.pageNumber : 0,
+      fullText: String(page.fullText ?? "").slice(0, 50_000),
       lines: page.elements.length
         ? page.elements.map((element) => ({
             text: String(element.text ?? "").slice(0, 500),
             confidence: Number.isFinite(element.confidence) ? element.confidence : 0.5,
             x: Number.isFinite(element.boundingBox?.x) ? element.boundingBox.x : 0,
-            y: Number.isFinite(element.boundingBox?.y) ? element.boundingBox.y : 0
+            y: Number.isFinite(element.boundingBox?.y) ? element.boundingBox.y : 0,
+            width: Number.isFinite(element.boundingBox?.width) ? element.boundingBox.width : 0,
+            height: Number.isFinite(element.boundingBox?.height) ? element.boundingBox.height : 0
           }))
         : page.fullText.split(/\r?\n/).map((text, index) => ({ text: text.slice(0, 500), confidence: 0.7, x: 0, y: index }))
     }));
   }
   return [{
     pageNumber: 0,
+    fullText: fallbackText.slice(0, 50_000),
     lines: fallbackText.split(/\r?\n/).slice(0, 500).map((text, index) => ({ text: text.slice(0, 500), confidence: 0.5, x: 0, y: index }))
   }];
 }

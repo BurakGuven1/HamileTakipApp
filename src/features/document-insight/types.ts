@@ -15,6 +15,15 @@ export type DocumentInsightValue = {
   pageNumber: number;
   referenceStatus: DocumentReferenceStatus;
   referenceExplanation: string;
+  plainLanguage: {
+    whatItIs: string;
+    resultSummary: string;
+    possibleMeaning: string;
+    symptomContext: string[];
+    clinicianContext: string;
+    sourceLabel: string;
+    sourceUrl: string;
+  };
 };
 
 export type MaskedFieldType =
@@ -51,10 +60,13 @@ export type DocumentInsightResult = {
 
 export type OcrPageInput = {
   pageNumber: number;
+  fullText?: string;
   lines: Array<{
     text: string;
     confidence: number;
     x: number;
     y: number;
+    width?: number;
+    height?: number;
   }>;
 };

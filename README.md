@@ -75,9 +75,10 @@ Deploy sonrası kullanılacak URL'ler:
 
 Mağaza ve servis kontrol listesi:
 
-- [ ] RevenueCat Paywall Editor > Şartlar linki -> `/kullanim-sartlari/`
-- [ ] RevenueCat Paywall Editor > Gizlilik linki -> `/gizlilik-politikasi/`
+- [x] Uygulama içi paywall > Gizlilik Politikası -> `/gizlilik-politikasi/`
+- [x] Uygulama içi paywall > Kullanım Koşulları (EULA) -> Apple Standard EULA
 - [ ] App Store Connect > App Information > Privacy Policy URL -> `/gizlilik-politikasi/`
+- [ ] App Store Connect > App Description sonuna `Kullanım Koşulları (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/` ekle
 - [ ] Google Play Console > App content > Privacy Policy -> `/gizlilik-politikasi/`
 - [ ] Google Play Console > Data deletion URL -> `/delete-account/`
 - [ ] Uygulama içi Ayarlar ekranına Gizlilik, KVKK, Açık Rıza ve Kullanım Şartları linkleri ekle

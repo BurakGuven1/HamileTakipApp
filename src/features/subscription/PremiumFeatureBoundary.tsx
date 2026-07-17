@@ -80,15 +80,15 @@ export function PremiumFeatureBoundary({
           <View style={{ gap: spacing.lg }}>
             <View style={styles.cardHeader}>
               <View style={{ flex: 1, gap: spacing.xs }}>
-                <Text style={typography.heading2}>7 gün ücretsiz deneme</Text>
+                <Text style={typography.heading2}>Premium paketlerini incele</Text>
                 <Text style={typography.body}>
-                  Deneme başlamadan ücret çekilmez. Süreç açık, iptal her zaman
-                  sende.
+                  Paket süresi ve tahsil edilecek toplam tutar, satın almadan
+                  önce açıkça gösterilir.
                 </Text>
               </View>
               <Sparkles color={appTheme.primary} size={28} />
             </View>
-            <PremiumTrialTimeline />
+            <PremiumPurchaseTimeline />
             <Button
               breathing
               disabled={opening}
@@ -102,16 +102,16 @@ export function PremiumFeatureBoundary({
   );
 }
 
-export function PremiumTrialTimeline() {
+export function PremiumPurchaseTimeline() {
   return (
     <View style={styles.timeline}>
       <TimelineItem
-        label="Bugün"
-        text="Tüm Premium özellikler ücretsiz açılır."
+        label="Paket seçimi"
+        text="Süreyi ve her yenilemede tahsil edilecek toplam tutarı görürsün."
       />
       <TimelineItem
-        label="7. gün"
-        text="Deneme biter; seçtiğin aylık veya yıllık paket başlar."
+        label="Satın alma"
+        text="Apple onayın olmadan ücret alınmaz; varsa teklif koşulları App Store ekranında görünür."
       />
       <TimelineItem
         last

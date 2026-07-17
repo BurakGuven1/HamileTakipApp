@@ -83,11 +83,11 @@ export async function getPassivePremiumOffer({
   }
 
   return {
-    cta: "7 gün ücretsiz dene",
+    cta: "Paketleri ve fiyatları gör",
     kind: "day5_offer",
     message:
-      "Anne+ Premium'u sakin sakin keşfet. Deneme süresince tüm premium alanlar açık, sürpriz ücret yok.",
-    title: "Premium'u deneyebilirsin"
+      "Anne+ Premium seçeneklerini incele. Paket süresi ve tahsil edilecek toplam tutar satın almadan önce gösterilir.",
+    title: "Premium'u keşfet"
   };
 }
 
@@ -129,22 +129,22 @@ export function getActiveSeasonalPremiumCampaign(
   if (isInRange(today, addDays(mothersDay, -3), addDays(mothersDay, 1))) {
     return {
       campaignKey: `mothers_day_${year}`,
-      cta: "Anneler Günü teklifini aç",
+      cta: "Premium paketlerini gör",
       kind: "seasonal",
       message:
-        "Bugün kendine küçük bir alan aç. Premium'u 7 gün ücretsiz dene, istediğin an iptal et.",
-      title: "Anneler Günü Premium fırsatı"
+        "Bugün kendine küçük bir alan aç. Premium özellikleri ve güncel abonelik seçeneklerini incele.",
+      title: "Anneler Günü'nde Anne+ Premium"
     };
   }
 
   if (isInRange(today, addDays(blackFriday, -2), addDays(blackFriday, 2))) {
     return {
       campaignKey: `black_friday_${year}`,
-      cta: "Kara Cuma teklifini aç",
+      cta: "Premium paketlerini gör",
       kind: "seasonal",
       message:
-        "Premium araçları, forumu ve anı galerisini 7 gün ücretsiz deneyebilirsin.",
-      title: "Kara Cuma Premium fırsatı"
+        "Premium araçları, forumu ve anı galerisini güncel paket seçenekleriyle keşfet.",
+      title: "Anne+ Premium'u keşfet"
     };
   }
 
@@ -157,11 +157,11 @@ export function getActiveSeasonalPremiumCampaign(
   ) {
     return {
       campaignKey: `new_year_${newYearCampaignYear}`,
-      cta: "Yeni yıl teklifini aç",
+      cta: "Premium paketlerini gör",
       kind: "seasonal",
       message:
-        "Yeni yılda bebeğinle daha yakın bir takip alanı kur. Premium'u 7 gün ücretsiz dene.",
-      title: "Yeni yıl Premium fırsatı"
+        "Yeni yılda bebeğinle daha yakın bir takip alanı kur. Premium özellikleri ve güncel paketleri incele.",
+      title: "Yeni yılda Anne+ Premium"
     };
   }
 

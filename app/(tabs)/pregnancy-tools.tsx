@@ -6,6 +6,7 @@ import {
   CalendarDays,
   ClipboardCheck,
   Dumbbell,
+  Droplets,
   HeartPulse,
   Minus,
   Plus,
@@ -223,6 +224,25 @@ export default function PregnancyToolsScreen() {
               <Link href="/pregnancy-exercise" asChild>
                 <Button breathing label="Egzersizi başlat" />
               </Link>
+            </Card>
+
+            <Card>
+              <View style={{ gap: spacing.md }}>
+                <View style={styles.cardHeader}>
+                  <View style={{ flex: 1, gap: spacing.xs }}>
+                    <Text style={typography.eyebrow}>Ücretsiz</Text>
+                    <Text style={typography.heading2}>Su ve takviye rehberi</Text>
+                    <Text style={typography.body}>
+                      Günlük su hatırlatmalarını aç; gebelik ayına göre Sağlık
+                      Bakanlığı ve WHO kaynaklı genel takviye zamanlarını incele.
+                    </Text>
+                  </View>
+                  <Droplets color={appTheme.primary} size={30} />
+                </View>
+                <Link href="/pregnancy-nutrition" asChild>
+                  <Button label="Su ve takviye rehberini aç" variant="secondary" />
+                </Link>
+              </View>
             </Card>
 
             <Card>
