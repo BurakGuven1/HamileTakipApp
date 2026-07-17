@@ -20,6 +20,8 @@ jobs:
     name: Archive and upload
     runs-on: macos-15
     timeout-minutes: 60
+    # Existing GitHub Environment name. Its environment secrets are used below.
+    environment: EXPO_OWNER
     env:
       # Expo configuration required while generating the native iOS project.
       APP_VARIANT: production

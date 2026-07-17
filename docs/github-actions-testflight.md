@@ -5,11 +5,9 @@ native iOS projesini üretip imzalar ve TestFlight'a yükler. Çalıştırmak i�
 `.github/workflows/testflight.yml` dosyasındaki **Build and upload iOS to
 TestFlight** akışını Actions sekmesinden **Run workflow** ile başlat.
 
-Workflow GitHub repository secret'larını kullanır. GitHub deposunda
-**Settings > Secrets and variables > Actions > Secrets** yolunu aç ve
-**New repository secret** ile aşağıdaki değerleri ekle. Bu seçim, private
-repoda GitHub Free kullanan hesaplarda environment secret'larının workflow'a
-aktarılmaması sorununu önler.
+Workflow, GitHub'daki `EXPO_OWNER` adlı environment'ın secret'larını kullanır.
+**Settings > Environments > EXPO_OWNER > Environment secrets** altında aşağıdaki
+değerlerin bulunması gerekir.
 
 ## Uygulama yapılandırması
 
