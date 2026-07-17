@@ -14,7 +14,7 @@ export function useSubscriptionStatus() {
     queryKey: SUBSCRIPTION_STATUS_QUERY_KEY,
     queryFn: async () => {
       const [customerInfo, effectiveAccess] = await Promise.all([
-        getCustomerInfo(),
+        getCustomerInfo().catch(() => null),
         getEffectivePremiumAccess().catch(() => null)
       ]);
       const revenueCatStatus = getSubscriptionStatusFromCustomerInfo(customerInfo);

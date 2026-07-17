@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
-import { Link } from "expo-router";
+import { Link, useLocalSearchParams } from "expo-router";
 import {
   Baby as BabyIcon,
   CalendarCheck,
@@ -50,6 +50,7 @@ type BabyGender = "kiz" | "erkek" | "belirtilmemis";
 type BabySection = "profile" | "vaccines" | "growth";
 
 export default function BabyScreen() {
+  const params = useLocalSearchParams<{ section?: string }>();
   const queryClient = useQueryClient();
   const { showError, showSuccess } = useFeedback();
   const [section, setSection] = useState<BabySection>("profile");
@@ -75,6 +76,16 @@ export default function BabyScreen() {
   const [editHeight, setEditHeight] = useState("");
   const [editHeadCircumference, setEditHeadCircumference] = useState("");
   const [editGrowthNotes, setEditGrowthNotes] = useState("");
+
+  useEffect(() => {
+    if (
+      params.section === "profile" ||
+      params.section === "vaccines" ||
+      params.section === "growth"
+    ) {
+      setSection(params.section);
+    }
+  }, [params.section]);
 
   const profileQuery = useQuery({
     queryKey: ["current-profile"],

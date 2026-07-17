@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { dispatchPushes, type PushCandidate } from "../_shared/push.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,7 +11,6 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const WEBHOOK_SECRET = Deno.env.get("FORUM_NOTIFICATION_WEBHOOK_SECRET") ?? "";
-const EXPO_PUSH_ENDPOINT = "https://exp.host/--/api/v2/push/send";
 
 type WebhookTable = "forum_comments" | "forum_post_likes" | "forum_comment_likes";
 
@@ -35,33 +35,6 @@ function asString(value: unknown): string | null {
 function snippet(value: string, maxLength = 72) {
   const clean = value.replace(/\s+/g, " ").trim();
   return clean.length <= maxLength ? clean : `${clean.slice(0, maxLength - 1)}...`;
-}
-
-async function sendExpoPush(tokens: string[], message: Omit<PushTarget, "userId" | "preference">) {
-  if (tokens.length === 0) {
-    return 0;
-  }
-
-  const payload = tokens.map((token) => ({
-    to: token,
-    sound: "default",
-    title: message.title,
-    body: message.body,
-    data: message.data,
-  }));
-
-  const response = await fetch(EXPO_PUSH_ENDPOINT, {
-    method: "POST",
-    headers: { Accept: "application/json", "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    console.error("Expo push error:", await response.text());
-    return 0;
-  }
-
-  return tokens.length;
 }
 
 Deno.serve(async (req) => {
@@ -207,18 +180,33 @@ Deno.serve(async (req) => {
 
     const { data: tokens, error: tokenError } = await supabase
       .from("push_tokens")
-      .select("expo_push_token")
-      .eq("user_id", target.userId);
+      .select("id,user_id,expo_push_token")
+      .eq("user_id", target.userId)
+      .eq("enabled", true);
 
     if (tokenError) throw tokenError;
 
-    const sent = await sendExpoPush(
-      (tokens ?? []).map((token) => token.expo_push_token),
-      target,
-    );
+    const eventId = asString(payload.record.id) ??
+      asString(payload.record.comment_id) ??
+      asString(payload.record.post_id) ??
+      crypto.randomUUID();
+    const candidates: PushCandidate[] = (tokens ?? []).map((token) => ({
+      dedupeKey: `forum:${payload.table}:${eventId}`,
+      kind: String(target.data.type ?? "forum_notification"),
+      tokenId: token.id,
+      token: token.expo_push_token,
+      userId: target.userId,
+      message: {
+        title: target.title,
+        body: target.body,
+        sound: "default",
+        data: { ...target.data, screen: "forum" },
+      },
+    }));
+    const delivery = await dispatchPushes(supabase, candidates);
 
-    return new Response(JSON.stringify({ success: true, sent }), {
-      status: 200,
+    return new Response(JSON.stringify({ success: delivery.failed === 0, ...delivery }), {
+      status: delivery.failed > 0 ? 502 : 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

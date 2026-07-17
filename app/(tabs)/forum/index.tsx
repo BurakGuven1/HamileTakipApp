@@ -48,10 +48,12 @@ import {
   unblockForumNickname
 } from "@/lib/forumBlocks";
 import { trackEvent } from "@/lib/analytics";
+import { useAppTheme } from "@/providers/AppThemeProvider";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
 export default function ForumScreen() {
+  const appTheme = useAppTheme();
   const fatherRoleQuery = useQuery({
     queryKey: ["current-user-is-family-father"],
     queryFn: isCurrentUserFamilyFather
@@ -61,7 +63,7 @@ export default function ForumScreen() {
     return (
       <Screen scroll={false}>
         <View style={styles.roleGateLoading}>
-          <ActivityIndicator color={colors.primary} />
+          <ActivityIndicator color={appTheme.primary} />
         </View>
       </Screen>
     );
@@ -102,6 +104,7 @@ export default function ForumScreen() {
 
 function ForumContent() {
   const queryClient = useQueryClient();
+  const appTheme = useAppTheme();
   const { showError, showSuccess } = useFeedback();
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>();
   const [activePostId, setActivePostId] = useState<string>();
@@ -302,9 +305,9 @@ function ForumContent() {
   return (
     <Screen>
       <View style={styles.container}>
-        <View style={styles.hero}>
+        <View style={[styles.hero, { backgroundColor: appTheme.tint }]}>
           <View style={styles.iconBubble}>
-            <MessageCircleHeart color={colors.primary} size={28} />
+            <MessageCircleHeart color={appTheme.primary} size={28} />
           </View>
           <View style={{ gap: spacing.xs }}>
             <Text style={typography.eyebrow}>Anne topluluğu</Text>
@@ -326,7 +329,7 @@ function ForumContent() {
             active={!selectedCategoryId}
             icon={
               <Sparkles
-                color={!selectedCategoryId ? colors.surface : colors.primary}
+                color={!selectedCategoryId ? colors.surface : appTheme.primary}
                 size={18}
               />
             }
@@ -345,7 +348,7 @@ function ForumContent() {
                 category.icon,
                 selectedCategoryId === category.id
                   ? colors.surface
-                  : colors.primary
+                  : appTheme.primary
               )}
               label={category.name}
               onPress={() => {
@@ -385,7 +388,7 @@ function ForumContent() {
         ) : null}
 
         {postsQuery.isLoading || categoriesQuery.isLoading ? (
-          <ActivityIndicator color={colors.primary} />
+          <ActivityIndicator color={appTheme.primary} />
         ) : posts.length === 0 ? (
           <EmptyState
             title="Bu kategoride ilk sen yaz"
@@ -438,7 +441,7 @@ function ForumContent() {
                       icon={
                         <MessageCircle
                           color={
-                            commentComposerOpen ? colors.primary : colors.textMuted
+                            commentComposerOpen ? appTheme.primary : colors.textMuted
                           }
                           size={16}
                         />
@@ -505,7 +508,7 @@ function ForumContent() {
                   ) : null}
 
                   {commentsQuery.isLoading ? (
-                    <ActivityIndicator color={colors.primary} />
+                    <ActivityIndicator color={appTheme.primary} />
                   ) : comments.length === 0 ? (
                     <Text style={styles.metaText}>Henüz yorum yok.</Text>
                   ) : (
@@ -564,11 +567,20 @@ type ChipProps = {
 };
 
 function Chip({ active, icon, label, onPress }: ChipProps) {
+  const appTheme = useAppTheme();
+
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={[styles.chip, active && styles.chipActive]}
+      style={[
+        styles.chip,
+        active && styles.chipActive,
+        active && {
+          backgroundColor: appTheme.primary,
+          borderColor: appTheme.primary
+        }
+      ]}
     >
       {icon}
       <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
@@ -612,8 +624,17 @@ function PostCard({
   onReport,
   post
 }: PostCardProps) {
+  const appTheme = useAppTheme();
+
   return (
-    <Pressable onPress={onPress} style={[styles.postCard, active && styles.postCardActive]}>
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.postCard,
+        active && styles.postCardActive,
+        active && { backgroundColor: appTheme.tint, borderColor: appTheme.primary }
+      ]}
+    >
       <View style={{ gap: spacing.sm }}>
         <View style={{ gap: spacing.xs }}>
           <Text style={styles.postTitle}>{post.title}</Text>
@@ -718,14 +739,16 @@ function LikeButton({
   disabled: boolean;
   onPress: () => void;
 }) {
+  const appTheme = useAppTheme();
+
   return (
     <ActionButton
       active={active}
       disabled={disabled}
       icon={
         <Heart
-          color={active ? colors.accent : colors.textMuted}
-          fill={active ? colors.accent : "transparent"}
+          color={active ? appTheme.accent : colors.textMuted}
+          fill={active ? appTheme.accent : "transparent"}
           size={16}
         />
       }
@@ -748,15 +771,29 @@ function ActionButton({
   onPress: () => void;
   disabled: boolean;
 }) {
+  const appTheme = useAppTheme();
+
   return (
     <Pressable
       accessibilityRole="button"
       disabled={disabled}
       onPress={onPress}
-      style={[styles.actionButton, active && styles.actionButtonActive]}
+      style={[
+        styles.actionButton,
+        active && styles.actionButtonActive,
+        active && { backgroundColor: appTheme.accentSoft }
+      ]}
     >
       {icon}
-      <Text style={[styles.actionText, active && styles.actionTextActive]}>{label}</Text>
+      <Text
+        style={[
+          styles.actionText,
+          active && styles.actionTextActive,
+          active && { color: appTheme.accent }
+        ]}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }

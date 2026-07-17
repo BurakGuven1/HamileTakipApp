@@ -18,6 +18,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     icon: "./assets/branding/app-icon.png",
     supportsTablet: false,
+    // TestFlight requires a new, monotonically increasing build number for
+    // every upload. The GitHub Actions workflow supplies a Unix timestamp.
+    buildNumber: process.env.IOS_BUILD_NUMBER ?? "1",
     bundleIdentifier:
       process.env.EXPO_PUBLIC_IOS_BUNDLE_IDENTIFIER ??
       "com.burakguven.hamiletakip",
@@ -90,9 +93,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         widgets: [
           {
             name: "CareQuickWidget",
-            displayName: "Anne+ Hızlı Bakım",
-            description: "Son bakım durumunu gör ve emzirme, uyku veya bez kaydını hızla aç.",
-            supportedFamilies: ["systemSmall", "systemMedium"],
+            displayName: "Anne+ · Şu an ne önemli?",
+            description: "Uyku, yaklaşan aşı, gece vardiyası ve sıradaki hatırlatmayı tek kartta gör.",
+            supportedFamilies: [
+              "systemSmall",
+              "systemMedium",
+              "accessoryRectangular",
+              "accessoryInline"
+            ],
             contentMarginsDisabled: true,
             android: null
           }

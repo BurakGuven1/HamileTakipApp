@@ -66,11 +66,12 @@ tetikleyen işlem GitHub'a push etmektir.
 
 Deploy sonrası kullanılacak URL'ler:
 
-- Gizlilik Politikası: `/gizlilik-politikasi/`
-- KVKK Aydınlatma Metni: `/kvkk-aydinlatma-metni/`
-- Açık Rıza Metni: `/acik-riza-metni/`
-- Kullanım Şartları: `/kullanim-sartlari/`
-- Hesap Silme: `/delete-account/`
+- Gizlilik Politikası: `https://hamile-takip-app-vqgw.vercel.app/gizlilik-politikasi/`
+- KVKK Aydınlatma Metni: `https://hamile-takip-app-vqgw.vercel.app/kvkk-aydinlatma-metni/`
+- Açık Rıza Metni: `https://hamile-takip-app-vqgw.vercel.app/acik-riza-metni/`
+- Kullanım Şartları: `https://hamile-takip-app-vqgw.vercel.app/kullanim-sartlari/`
+- Sorumluluk Reddi: `https://hamile-takip-app-vqgw.vercel.app/sorumluluk-reddi/`
+- Hesap Silme: `https://hamile-takip-app-vqgw.vercel.app/delete-account/`
 
 Mağaza ve servis kontrol listesi:
 

@@ -5,6 +5,7 @@ import {
   Bell,
   CalendarHeart,
   Check,
+  ChevronLeft,
   Heart,
   Milk,
   ShieldCheck,
@@ -12,10 +13,10 @@ import {
   UserRound
 } from "lucide-react-native";
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { createBaby } from "@/api/babies";
+import { createBaby, listBabies, updateBaby } from "@/api/babies";
 import {
   getCurrentProfile,
   isNicknameAvailable,
@@ -28,6 +29,7 @@ import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
 import { Thread } from "@/components/Thread";
 import { registerAndSavePushToken } from "@/lib/notifications";
+import { useAppTheme } from "@/providers/AppThemeProvider";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import {
   colors,
@@ -63,7 +65,9 @@ const steps: { id: OnboardingStep; label: string }[] = [
 
 export default function OnboardingScreen() {
   const queryClient = useQueryClient();
+  const appTheme = useAppTheme();
   const { showError, showInfo } = useFeedback();
+  const hasHydrated = useRef(false);
   const [step, setStep] = useState<OnboardingStep>("family");
   const [status, setStatus] = useState<ParentStatus>();
   const [motherName, setMotherName] = useState("");
@@ -72,6 +76,7 @@ export default function OnboardingScreen() {
   const [babyName, setBabyName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [babyGender, setBabyGender] = useState<BabyGender>("belirtilmemis");
+  const [createdBabyId, setCreatedBabyId] = useState<string>();
   const [feedingMode, setFeedingMode] = useState<FeedingMode>("mixed");
   const [themePreference, setThemePreference] = useState<ThemePreference>("auto");
   const [nickname, setNickname] = useState("");
@@ -82,37 +87,70 @@ export default function OnboardingScreen() {
     queryFn: getCurrentProfile
   });
 
+  const babiesQuery = useQuery({
+    queryKey: ["babies"],
+    queryFn: listBabies
+  });
+
   const profile = profileQuery.data;
 
   useEffect(() => {
-    if (profile?.forum_nickname && !nickname) {
-      setNickname(profile.forum_nickname);
+    if (
+      hasHydrated.current ||
+      !profileQuery.isFetched ||
+      !babiesQuery.isFetched
+    ) {
+      return;
     }
-  }, [nickname, profile?.forum_nickname]);
 
-  useEffect(() => {
+    hasHydrated.current = true;
     if (!profile) return;
 
-    setMotherName((current) => {
-      if (current.trim()) return current;
-      if (profile.mother_name && profile.mother_name !== "Anne") {
-        return profile.mother_name;
-      }
-      return profile.display_name ?? "";
-    });
-    setFatherName((current) => {
-      if (current.trim()) return current;
-      return profile.father_name && profile.father_name !== "Baba"
-        ? profile.father_name
-        : "";
-    });
-  }, [profile]);
+    const baby = babiesQuery.data?.[0];
+    const restoredStatus: ParentStatus = profile.is_pregnant
+      ? "pregnant"
+      : baby
+        ? "baby"
+        : "skip";
 
-  useEffect(() => {
-    if (profile?.theme_preference) {
-      setThemePreference(profile.theme_preference);
+    setStatus(restoredStatus);
+    setMotherName(
+      profile.mother_name && profile.mother_name !== "Anne"
+        ? profile.mother_name
+        : profile.display_name ?? ""
+    );
+    setFatherName(
+      profile.father_name && profile.father_name !== "Baba"
+        ? profile.father_name
+        : ""
+    );
+    setDueDate(profile.due_date ?? "");
+    setFeedingMode(profile.feeding_mode ?? "mixed");
+    setThemePreference(profile.theme_preference ?? "auto");
+    setNickname(profile.forum_nickname ?? "");
+
+    if (baby) {
+      setCreatedBabyId(baby.id);
+      setBabyName(baby.name);
+      setBirthDate(baby.birth_date);
+      setBabyGender((baby.gender as BabyGender) ?? "belirtilmemis");
     }
-  }, [profile?.theme_preference]);
+
+    const restoredStep: Record<string, OnboardingStep> = {
+      family_names_added: "status",
+      details_added: "feeding",
+      feeding_mode_selected: "theme",
+      nickname_set: "notifications",
+      theme_selected: "nickname"
+    };
+
+    if (profile.onboarding_step === "status_selected") {
+      setStep(restoredStatus === "skip" ? "feeding" : "details");
+      return;
+    }
+
+    setStep(restoredStep[profile.onboarding_step] ?? "family");
+  }, [babiesQuery.data, babiesQuery.isFetched, profile, profileQuery.isFetched]);
 
   useEffect(() => {
     if (step !== "nickname" || nickname.trim().length < 3) {
@@ -140,7 +178,8 @@ export default function OnboardingScreen() {
 
   const updateStepMutation = useMutation({
     mutationFn: updateCurrentProfile,
-    onSuccess: async () => {
+    onSuccess: async (updatedProfile) => {
+      queryClient.setQueryData(["current-profile"], updatedProfile);
       await queryClient.invalidateQueries({ queryKey: ["current-profile"] });
     }
   });
@@ -196,7 +235,11 @@ export default function OnboardingScreen() {
         return;
       }
 
-      await updateStepMutation.mutateAsync({ onboarding_step: "status_selected" });
+      await updateStepMutation.mutateAsync({
+        is_pregnant: false,
+        due_date: null,
+        onboarding_step: "status_selected"
+      });
       setStep("feeding");
     } catch (error) {
       showError(error, "Seçim kaydedilemedi");
@@ -232,12 +275,22 @@ export default function OnboardingScreen() {
           return;
         }
 
-        await createBaby({
-          parent_id: profile.id,
-          name: babyName.trim(),
-          birth_date: birthDate,
-          gender: babyGender
-        });
+        if (createdBabyId) {
+          await updateBaby(createdBabyId, {
+            name: babyName.trim(),
+            birth_date: birthDate,
+            gender: babyGender
+          });
+        } else {
+          const createdBaby = await createBaby({
+            parent_id: profile.id,
+            name: babyName.trim(),
+            birth_date: birthDate,
+            gender: babyGender
+          });
+          setCreatedBabyId(createdBaby.id);
+        }
+        await queryClient.invalidateQueries({ queryKey: ["babies"] });
         setThemePreference("auto");
         await updateStepMutation.mutateAsync({ onboarding_step: "details_added" });
         setStep("feeding");
@@ -331,12 +384,12 @@ export default function OnboardingScreen() {
     }
 
     if (step === "feeding") {
-      setStep("theme");
+      void saveFeedingMode();
       return;
     }
 
     if (step === "theme") {
-      setStep("nickname");
+      void saveTheme();
       return;
     }
 
@@ -348,19 +401,46 @@ export default function OnboardingScreen() {
     void completeOnboarding(false);
   }
 
+  function goToPreviousStep() {
+    if (activeIndex <= 0 || updateStepMutation.isPending) return;
+
+    if (step === "feeding" && status === "skip") {
+      setStep("status");
+      return;
+    }
+
+    const previousStep = steps[activeIndex - 1];
+    if (previousStep) setStep(previousStep.id);
+  }
+
   return (
     <Screen>
       <View style={styles.container}>
         <View style={styles.topBar}>
-          <Text style={typography.eyebrow}>Anne+ kurulum</Text>
+          <View style={styles.topBarTitle}>
+            {activeIndex > 0 ? (
+              <Pressable
+                accessibilityLabel="Bir önceki adıma dön"
+                accessibilityRole="button"
+                disabled={updateStepMutation.isPending}
+                hitSlop={10}
+                onPress={goToPreviousStep}
+                style={styles.backButton}
+              >
+                <ChevronLeft color={appTheme.primary} size={20} />
+              </Pressable>
+            ) : null}
+            <Text style={typography.eyebrow}>Anne+ kurulum</Text>
+          </View>
           <Pressable accessibilityRole="button" onPress={skipCurrentStep}>
-            <Text style={styles.skipText}>Şimdilik geç</Text>
+            <Text style={[styles.skipText, { color: appTheme.primary }]}>Şimdilik geç</Text>
           </Pressable>
         </View>
 
         <View style={styles.progressWrap}>
           <View style={styles.threadProgress}>
             <Thread
+              color={appTheme.primary}
               height={42}
               mutedColor={colors.border}
               progress={progressValue}
@@ -372,7 +452,11 @@ export default function OnboardingScreen() {
                   key={item.id}
                   style={[
                     styles.stepDot,
-                    index <= activeIndex && styles.stepDotActive
+                    index <= activeIndex && styles.stepDotActive,
+                    index <= activeIndex && {
+                      backgroundColor: appTheme.primary,
+                      borderColor: appTheme.primary
+                    }
                   ]}
                 />
               ))}
@@ -384,7 +468,8 @@ export default function OnboardingScreen() {
                 key={item.id}
                 style={[
                   styles.stepLabel,
-                  index <= activeIndex && styles.stepLabelActive
+                  index <= activeIndex && styles.stepLabelActive,
+                  index <= activeIndex && { color: appTheme.primary }
                 ]}
               >
                 {item.label}
@@ -671,9 +756,11 @@ function HeaderBlock({
   title: string;
   body: string;
 }) {
+  const appTheme = useAppTheme();
+
   return (
     <View style={{ gap: spacing.md }}>
-      <View style={styles.iconBubble}>{icon}</View>
+      <View style={[styles.iconBubble, { backgroundColor: appTheme.tint }]}>{icon}</View>
       <View style={{ gap: spacing.sm }}>
         <Text style={typography.heading1}>{title}</Text>
         <Text style={typography.body}>{body}</Text>
@@ -695,18 +782,27 @@ function ChoiceCard({
   body: string;
   onPress: () => void;
 }) {
+  const appTheme = useAppTheme();
+
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={[styles.choiceCard, active && styles.choiceCardActive]}
+      style={[
+        styles.choiceCard,
+        active && styles.choiceCardActive,
+        active && {
+          backgroundColor: appTheme.tint,
+          borderColor: appTheme.primary
+        }
+      ]}
     >
       <View style={styles.choiceIcon}>{icon}</View>
       <View style={styles.choiceCopy}>
         <Text style={styles.choiceTitle}>{title}</Text>
         <Text style={styles.choiceBody}>{body}</Text>
       </View>
-      {active ? <Check color={colors.primary} size={22} /> : null}
+      {active ? <Check color={appTheme.primary} size={22} /> : null}
     </Pressable>
   );
 }
@@ -724,17 +820,25 @@ function ThemeChoice({
   label: string;
   onPress: () => void;
 }) {
+  const appTheme = useAppTheme();
+
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={[styles.themeChoice, active && styles.themeChoiceActive]}
+      style={[
+        styles.themeChoice,
+        active && styles.themeChoiceActive,
+        active && { borderColor: appTheme.primary }
+      ]}
     >
       <View style={[styles.themeSwatch, { backgroundColor: color }]}>
         {active ? <Check color={colors.surfaceStrong} size={20} /> : null}
       </View>
       <Text style={styles.themeLabel}>{label}</Text>
-      {isSuggested ? <Text style={styles.themeSuggested}>Önerilen</Text> : null}
+      {isSuggested ? (
+        <Text style={[styles.themeSuggested, { color: appTheme.primary }]}>Önerilen</Text>
+      ) : null}
     </Pressable>
   );
 }
@@ -748,13 +852,21 @@ function SegmentButton({
   label: string;
   onPress: () => void;
 }) {
+  const appTheme = useAppTheme();
+
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
       style={[styles.segmentButton, active && styles.segmentButtonActive]}
     >
-      <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+      <Text
+        style={[
+          styles.segmentText,
+          active && styles.segmentTextActive,
+          active && { color: appTheme.primary }
+        ]}
+      >
         {label}
       </Text>
     </Pressable>
@@ -762,9 +874,11 @@ function SegmentButton({
 }
 
 function FeatureRow({ label }: { label: string }) {
+  const appTheme = useAppTheme();
+
   return (
     <View style={styles.featureRow}>
-      <Heart color={colors.accent} size={18} />
+      <Heart color={appTheme.accent} size={18} />
       <Text style={styles.featureText}>{label}</Text>
     </View>
   );
@@ -778,6 +892,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "space-between"
+  },
+  topBarTitle: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm
+  },
+  backButton: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    height: 36,
+    justifyContent: "center",
+    width: 36
   },
   skipText: {
     ...typography.label,

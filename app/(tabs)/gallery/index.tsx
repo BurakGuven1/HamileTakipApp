@@ -22,8 +22,8 @@ import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
 import { PremiumFeatureBoundary } from "@/features/subscription/PremiumFeatureBoundary";
 import { formatDate } from "@/lib/dates";
-import { resolveAccentColor } from "@/hooks/useAccentColor";
 import { useFeedback } from "@/providers/FeedbackProvider";
+import { useAppTheme } from "@/providers/AppThemeProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
 export default function GalleryScreen() {
@@ -40,6 +40,7 @@ export default function GalleryScreen() {
 
 function GalleryContent() {
   const queryClient = useQueryClient();
+  const accentColor = useAppTheme();
   const { showError, showSuccess } = useFeedback();
   const [selectedBabyId, setSelectedBabyId] = useState<string>();
 
@@ -53,11 +54,6 @@ function GalleryContent() {
     () => babies.find((baby) => baby.id === selectedBabyId) ?? babies[0],
     [babies, selectedBabyId]
   );
-  const accentColor = useMemo(
-    () => resolveAccentColor({ babies: selectedBaby ? [selectedBaby] : babies }),
-    [babies, selectedBaby]
-  );
-
   useEffect(() => {
     if (!selectedBabyId && babies[0]) {
       setSelectedBabyId(babies[0].id);

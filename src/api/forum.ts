@@ -10,13 +10,28 @@ export async function listForumCategories() {
   const { data, error } = await supabase
     .from("forum_categories")
     .select("*")
-    .order("sort_order", { ascending: true });
+    .order("sort_order", { ascending: true })
+    .order("id", { ascending: true });
 
   if (error) {
     throw error;
   }
 
-  return data;
+  const seenCategoryNames = new Set<string>();
+
+  return data.filter((category) => {
+    const normalizedName = category.name
+      .normalize("NFKC")
+      .trim()
+      .toLocaleLowerCase("tr-TR");
+
+    if (seenCategoryNames.has(normalizedName)) {
+      return false;
+    }
+
+    seenCategoryNames.add(normalizedName);
+    return true;
+  });
 }
 
 export async function listPublicForumPosts(categoryId?: string) {

@@ -1,202 +1,262 @@
-// ============================================================
-// Edge Function: send-vaccine-reminders
-// ============================================================
-// AMAÇ: Yaklaşan (3 gün içinde zamanı gelen, henüz yapılmamış) aşıları
-// bulur ve ilgili ebeveynin cihaz(lar)ına Expo Push Notification gönderir.
-//
-// TETİKLEME: Her gün 1 kez, migration dosyasındaki (0013) pg_cron job'u
-// veya Supabase Dashboard > Database > Cron Jobs üzerinden.
-//
-// KURULUM:
-//   supabase functions deploy send-vaccine-reminders
-//   supabase secrets set SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=...
-//   (Bu iki secret genelde Supabase tarafından otomatik enjekte edilir,
-//   ayrıca ayarlamanız gerekmeyebilir - deploy sonrası test edin.)
-// ============================================================
-
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-};
+import {
+  dispatchPushes,
+  type PushCandidate,
+} from "../_shared/push.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const EXPO_PUSH_ENDPOINT = "https://exp.host/--/api/v2/push/send";
 
-interface UpcomingVaccination {
-  baby_id: string;
-  parent_id: string;
-  vaccine_name: string;
-  scheduled_date: string;
-}
+type ReminderGroup = {
+  babyId?: string;
+  ownerId: string;
+  pregnancyVaccinationIds?: string[];
+  scheduledDate: string;
+  source: "baby" | "pregnancy";
+  subjectName: string;
+  vaccineNames: string[];
+  vaccinationIds: string[];
+};
 
-interface ExpoPushMessage {
-  to: string;
-  sound: "default";
-  title: string;
-  body: string;
-  data?: Record<string, unknown>;
-}
-
-// Expo push API tek seferde en fazla 100 mesaj kabul eder.
-function chunk<T>(arr: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < arr.length; i += size) {
-    chunks.push(arr.slice(i, i + size));
-  }
-  return chunks;
-}
+type PushToken = {
+  id: string;
+  user_id: string;
+  expo_push_token: string;
+};
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS") return json({ ok: true });
+  if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+
+  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+    auth: { persistSession: false },
+  });
+
+  if (!await isAuthorized(req, supabase)) {
+    return json({ error: "unauthorized" }, 401);
   }
 
   try {
-    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
-      auth: { persistSession: false },
-    });
+    const today = turkeyDate();
+    const tomorrow = addDays(today, 1);
 
-    // 1) Yaklaşan aşıları çek (0013 migration'daki RPC fonksiyonu)
-    const { data: upcoming, error: rpcError } = await supabase.rpc(
-      "get_upcoming_vaccinations",
-      { days_ahead: 3 },
+    const [babyResult, pregnancyResult] = await Promise.all([
+      supabase
+        .from("baby_vaccinations")
+        .select(
+          "id,baby_id,scheduled_date,babies!inner(name,parent_id),vaccine_schedule!inner(vaccine_name)",
+        )
+        .eq("completed", false)
+        .in("scheduled_date", [today, tomorrow]),
+      supabase
+        .from("pregnancy_vaccinations")
+        .select(
+          "id,profile_id,scheduled_date,vaccine_name,profiles!inner(mother_name,is_pregnant)",
+        )
+        .eq("completed", false)
+        .eq("profiles.is_pregnant", true)
+        .in("scheduled_date", [today, tomorrow]),
+    ]);
+
+    if (babyResult.error) throw babyResult.error;
+    if (pregnancyResult.error) throw pregnancyResult.error;
+
+    const groups = new Map<string, ReminderGroup>();
+
+    for (const row of babyResult.data ?? []) {
+      const baby = asObject(row.babies);
+      const schedule = asObject(row.vaccine_schedule);
+      const key = `baby:${row.baby_id}:${row.scheduled_date}`;
+      const group: ReminderGroup = groups.get(key) ?? {
+        babyId: row.baby_id,
+        ownerId: String(baby.parent_id),
+        scheduledDate: row.scheduled_date,
+        source: "baby" as const,
+        subjectName: String(baby.name || "Bebek"),
+        vaccineNames: [],
+        vaccinationIds: [],
+      };
+      group.vaccineNames.push(String(schedule.vaccine_name || "Aşı"));
+      group.vaccinationIds.push(row.id);
+      groups.set(key, group);
+    }
+
+    for (const row of pregnancyResult.data ?? []) {
+      const profile = asObject(row.profiles);
+      const key = `pregnancy:${row.profile_id}:${row.scheduled_date}`;
+      const group: ReminderGroup = groups.get(key) ?? {
+        ownerId: row.profile_id,
+        scheduledDate: row.scheduled_date,
+        source: "pregnancy" as const,
+        subjectName: String(profile.mother_name || "Anne"),
+        vaccineNames: [],
+        vaccinationIds: [],
+      };
+      group.vaccineNames.push(row.vaccine_name);
+      group.vaccinationIds.push(row.id);
+      groups.set(key, group);
+    }
+
+    if (groups.size === 0) {
+      const delivery = await dispatchPushes(supabase, []);
+      return json({ success: true, reminders: 0, ...delivery });
+    }
+
+    const ownerIds = [...new Set([...groups.values()].map((item) => item.ownerId))];
+    const [profileResult, memberResult] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id,mother_name,father_name,notify_vaccine_reminders")
+        .in("id", ownerIds),
+      supabase
+        .from("family_members")
+        .select("owner_id,member_id")
+        .in("owner_id", ownerIds),
+    ]);
+    if (profileResult.error) throw profileResult.error;
+    if (memberResult.error) throw memberResult.error;
+
+    const profiles = new Map(
+      (profileResult.data ?? []).map((profile) => [profile.id, profile]),
     );
-
-    if (rpcError) {
-      console.error("get_upcoming_vaccinations hatası:", rpcError);
-      return new Response(JSON.stringify({ error: rpcError.message }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const recipientsByOwner = new Map<string, Set<string>>();
+    for (const ownerId of ownerIds) {
+      if (profiles.get(ownerId)?.notify_vaccine_reminders !== false) {
+        recipientsByOwner.set(ownerId, new Set([ownerId]));
+      }
+    }
+    for (const member of memberResult.data ?? []) {
+      recipientsByOwner.get(member.owner_id)?.add(member.member_id);
     }
 
-    const rows = (upcoming ?? []) as UpcomingVaccination[];
-    if (rows.length === 0) {
-      return new Response(
-        JSON.stringify({ success: true, sent: 0, message: "Yaklaşan aşı yok" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+    const recipientIds = [...new Set(
+      [...recipientsByOwner.values()].flatMap((recipients) => [...recipients]),
+    )];
+    const tokenResult = recipientIds.length
+      ? await supabase
+        .from("push_tokens")
+        .select("id,user_id,expo_push_token")
+        .eq("enabled", true)
+        .in("user_id", recipientIds)
+      : { data: [], error: null };
+    if (tokenResult.error) throw tokenResult.error;
+
+    const tokensByUser = new Map<string, PushToken[]>();
+    for (const token of (tokenResult.data ?? []) as PushToken[]) {
+      tokensByUser.set(token.user_id, [
+        ...(tokensByUser.get(token.user_id) ?? []),
+        token,
+      ]);
     }
 
-    // 2) İlgili ebeveynlerin bildirim tercihlerini ve push token'larını çek
-    const parentIds = [...new Set(rows.map((r) => r.parent_id))];
-    const { data: parentProfiles, error: profileError } = await supabase
-      .from("profiles")
-      .select("id, mother_name, notify_vaccine_reminders")
-      .in("id", parentIds);
+    const candidates: PushCandidate[] = [];
+    for (const group of groups.values()) {
+      const isToday = group.scheduledDate === today;
+      const profile = profiles.get(group.ownerId);
+      for (const userId of recipientsByOwner.get(group.ownerId) ?? []) {
+        const recipientName = userId === group.ownerId
+          ? profile?.mother_name || "Anne"
+          : profile?.father_name || "Baba";
+        for (const token of tokensByUser.get(userId) ?? []) {
+          const countText = group.vaccineNames.length > 1
+            ? `${group.vaccineNames.length} aşı`
+            : group.vaccineNames[0];
+          const title = group.source === "baby"
+            ? `${recipientName}, ${group.subjectName} için ${isToday ? "bugün" : "yarın"} aşı günü`
+            : `${recipientName}, ${isToday ? "bugün" : "yarın"} gebelik aşısı hatırlatman var`;
+          const body = group.source === "baby"
+            ? `${countText}. Planı aile hekiminizle doğrulamayı unutmayın.`
+            : `${countText}. Uygun tarih ve aşı geçmişiniz için aile hekiminize danışın.`;
 
-    if (profileError) {
-      console.error("profiles tercih sorgu hatası:", profileError);
-      return new Response(JSON.stringify({ error: profileError.message }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const enabledParentIds = new Set(
-      (parentProfiles ?? [])
-        .filter((profile) => profile.notify_vaccine_reminders)
-        .map((profile) => profile.id),
-    );
-    const parentNameById = new Map(
-      (parentProfiles ?? []).map((profile) => [
-        profile.id,
-        profile.mother_name || "Anne",
-      ]),
-    );
-
-    if (enabledParentIds.size === 0) {
-      return new Response(
-        JSON.stringify({
-          success: true,
-          sent: 0,
-          message: "Yaklaşan aşı var ama tüm ebeveynler bildirimi kapatmış",
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    const { data: tokens, error: tokenError } = await supabase
-      .from("push_tokens")
-      .select("user_id, expo_push_token")
-      .in("user_id", [...enabledParentIds]);
-
-    if (tokenError) {
-      console.error("push_tokens sorgu hatası:", tokenError);
-      return new Response(JSON.stringify({ error: tokenError.message }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const tokensByUser = new Map<string, string[]>();
-    for (const t of tokens ?? []) {
-      const list = tokensByUser.get(t.user_id) ?? [];
-      list.push(t.expo_push_token);
-      tokensByUser.set(t.user_id, list);
-    }
-
-    // 3) Her yaklaşan aşı için Expo push mesajı oluştur
-    const messages: ExpoPushMessage[] = [];
-    for (const row of rows) {
-      if (!enabledParentIds.has(row.parent_id)) continue;
-      const userTokens = tokensByUser.get(row.parent_id) ?? [];
-      const motherName = parentNameById.get(row.parent_id) ?? "Anne";
-      for (const token of userTokens) {
-        messages.push({
-          to: token,
-          sound: "default",
-          title: `${motherName}, aşı hatırlatması`,
-          body: `${row.vaccine_name} için önerilen tarih yaklaşıyor (${row.scheduled_date}).`,
-          data: { type: "vaccine_reminder", baby_id: row.baby_id },
-        });
+          candidates.push({
+            dedupeKey:
+              `vaccine:${group.source}:${group.babyId ?? group.ownerId}:${group.scheduledDate}:${today}`,
+            kind: "vaccine_reminder",
+            tokenId: token.id,
+            token: token.expo_push_token,
+            userId,
+            message: {
+              title,
+              body,
+              sound: "default",
+              channelId: "vaccines",
+              priority: "high",
+              data: {
+                type: "vaccine_reminder",
+                screen: group.source === "baby" ? "baby-vaccines" : "home",
+                source: group.source,
+                baby_id: group.babyId,
+                vaccination_ids: group.vaccinationIds,
+                scheduled_date: group.scheduledDate,
+              },
+            },
+          });
+        }
       }
     }
 
-    if (messages.length === 0) {
-      return new Response(
-        JSON.stringify({
-          success: true,
-          sent: 0,
-          message: "Yaklaşan aşı var ama kayıtlı push token bulunamadı",
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    // 4) Expo push API'ye 100'lük gruplar halinde gönder
-    let sentCount = 0;
-    for (const batch of chunk(messages, 100)) {
-      const response = await fetch(EXPO_PUSH_ENDPOINT, {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(batch),
-      });
-
-      if (!response.ok) {
-        console.error("Expo push gönderim hatası:", await response.text());
-        continue;
-      }
-      sentCount += batch.length;
-    }
-
-    return new Response(
-      JSON.stringify({ success: true, sent: sentCount, vaccinations: rows.length }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
-  } catch (err) {
-    console.error("send-vaccine-reminders hata:", err);
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    const delivery = await dispatchPushes(supabase, candidates);
+    return json({ success: true, reminders: groups.size, ...delivery });
+  } catch (error) {
+    console.error("send-vaccine-reminders failed", error);
+    return json({ error: String(error) }, 500);
   }
 });
+
+async function isAuthorized(req: Request, supabase: any) {
+  const provided = req.headers.get("x-notification-dispatch-secret");
+  if (!provided) return false;
+
+  const { data } = await supabase
+    .from("notification_dispatch_config")
+    .select("dispatch_secret")
+    .eq("singleton", true)
+    .maybeSingle();
+
+  return typeof data?.dispatch_secret === "string" &&
+    safeEqual(provided, data.dispatch_secret);
+}
+
+function safeEqual(left: string, right: string) {
+  if (left.length !== right.length) return false;
+  let difference = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    difference |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  }
+  return difference === 0;
+}
+
+function turkeyDate() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Istanbul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${value.year}-${value.month}-${value.day}`;
+}
+
+function addDays(date: string, days: number) {
+  const value = new Date(`${date}T12:00:00Z`);
+  value.setUTCDate(value.getUTCDate() + days);
+  return value.toISOString().slice(0, 10);
+}
+
+function asObject(value: unknown): Record<string, unknown> {
+  if (Array.isArray(value)) return (value[0] ?? {}) as Record<string, unknown>;
+  return (value ?? {}) as Record<string, unknown>;
+}
+
+function json(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers":
+        "authorization, x-client-info, apikey, content-type, x-notification-dispatch-secret",
+      "Content-Type": "application/json",
+    },
+  });
+}

@@ -1,18 +1,27 @@
 import * as Linking from "expo-linking";
 
-const legalBaseUrl = process.env.EXPO_PUBLIC_LEGAL_BASE_URL?.replace(/\/$/, "");
+const defaultLegalBaseUrl = "https://hamile-takip-app-vqgw.vercel.app";
+const legalBaseUrl = defaultLegalBaseUrl;
 
-export type LegalPage = "privacy" | "terms" | "accountDeletion" | "disclaimer";
+export type LegalPage =
+  | "privacy"
+  | "terms"
+  | "accountDeletion"
+  | "disclaimer"
+  | "explicitConsent"
+  | "kvkkDisclosure";
 
 const legalPaths: Record<LegalPage, string> = {
   privacy: "/gizlilik-politikasi/",
   terms: "/kullanim-sartlari/",
   accountDeletion: "/delete-account/",
-  disclaimer: "/sorumluluk-reddi/"
+  disclaimer: "/sorumluluk-reddi/",
+  explicitConsent: "/acik-riza-metni/",
+  kvkkDisclosure: "/kvkk-aydinlatma-metni/"
 };
 
 export function getLegalUrl(page: LegalPage) {
-  return legalBaseUrl ? `${legalBaseUrl}${legalPaths[page]}` : null;
+  return `${legalBaseUrl}${legalPaths[page]}`;
 }
 
 export async function openLegalPage(page: LegalPage) {

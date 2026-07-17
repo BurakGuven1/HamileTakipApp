@@ -1,8 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { dispatchPushes, type PushCandidate } from "../_shared/push.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const EXPO_PUSH_ENDPOINT = "https://exp.host/--/api/v2/push/send";
 
 type ReminderRow = {
   id: string;
@@ -11,6 +11,9 @@ type ReminderRow = {
   created_by: string;
   creator_push_token: string | null;
   entry_type: string;
+  alarm_kind: "standard" | "night_shift" | "shift_summary";
+  snooze_minutes: number;
+  target_user_id: string | null;
   title: string;
 };
 
@@ -28,7 +31,7 @@ type IntelligenceRow = {
 type BabyRow = { id: string; parent_id: string };
 type FamilyMemberRow = { member_id: string; owner_id: string };
 type FamilyPremiumTrialRow = { expires_at: string; owner_id: string };
-type PushTokenRow = { expo_push_token: string; user_id: string };
+type PushTokenRow = { id: string; expo_push_token: string; user_id: string };
 type NotificationPreferenceRow = {
   id: string;
   notify_development_periods: boolean;
@@ -61,7 +64,7 @@ Deno.serve(async (req) => {
     const [reminderResult, intelligenceResult] = await Promise.all([
       supabase
         .from("care_reminders")
-        .select("id,baby_id,created_by,creator_push_token,entry_type,title,body")
+        .select("id,baby_id,created_by,creator_push_token,entry_type,alarm_kind,snooze_minutes,target_user_id,title,body")
         .eq("status", "scheduled")
         .lte("scheduled_for", now)
         .order("scheduled_for", { ascending: true })
@@ -189,42 +192,70 @@ Deno.serve(async (req) => {
     const tokenResult = allRecipientIds.length > 0
       ? await supabase
         .from("push_tokens")
-        .select("user_id,expo_push_token")
+        .select("id,user_id,expo_push_token")
+        .eq("enabled", true)
         .in("user_id", allRecipientIds)
       : { data: [], error: null };
     if (tokenResult.error) return json({ error: tokenResult.error.message }, 500);
 
-    const tokensByUser = new Map<string, string[]>();
+    const tokensByUser = new Map<string, PushTokenRow[]>();
     for (const token of (tokenResult.data ?? []) as PushTokenRow[]) {
       tokensByUser.set(token.user_id, [
         ...(tokensByUser.get(token.user_id) ?? []),
-        token.expo_push_token,
+        token,
       ]);
     }
 
-    const messages: Record<string, unknown>[] = [];
+    const messages: PushCandidate[] = [];
     for (const reminder of reminders) {
       const ownerId = ownerByBaby.get(reminder.baby_id);
       const eligibleRecipients = ownerId
-        ? premiumRecipientsByOwner.get(ownerId)
+        ? reminder.alarm_kind === "standard"
+          ? premiumRecipientsByOwner.get(ownerId)
+          : allFamilyRecipientsByOwner.get(ownerId)
         : undefined;
       if (!ownerId || !eligibleRecipients?.has(reminder.created_by)) continue;
 
-      for (const userId of eligibleRecipients) {
+      const isShiftAlarm = reminder.alarm_kind === "night_shift";
+      const isShiftSummary = reminder.alarm_kind === "shift_summary";
+
+      const recipients = reminder.target_user_id
+        ? eligibleRecipients.has(reminder.target_user_id)
+          ? [reminder.target_user_id]
+          : []
+        : [...eligibleRecipients];
+      for (const userId of recipients) {
         for (const token of tokensByUser.get(userId) ?? []) {
-          if (token === reminder.creator_push_token) continue;
+          if (token.expo_push_token === reminder.creator_push_token) continue;
           messages.push({
-            to: token,
-            title: reminder.title,
-            body: reminder.body,
-            sound: "baby_reminder.wav",
-            channelId: "care-reminders",
-            priority: "high",
-            data: {
-              screen: "care-journal",
-              type: "care_reminder",
-              entry: reminder.entry_type,
-              reminder_id: reminder.id,
+            dedupeKey: `care-reminder:${reminder.id}`,
+            kind: isShiftAlarm
+              ? "care_alarm"
+              : isShiftSummary
+                ? "shift_summary"
+                : "care_reminder",
+            tokenId: token.id,
+            token: token.expo_push_token,
+            userId,
+            message: {
+              title: reminder.title,
+              body: reminder.body,
+              sound: isShiftSummary ? "default" : "baby_reminder.wav",
+              channelId: isShiftSummary ? "shift-summaries" : "care-reminders",
+              categoryId: isShiftAlarm ? "CARE_ALARM" : undefined,
+              priority: "high",
+              data: {
+                screen: isShiftAlarm || isShiftSummary ? "night-shift" : "care-journal",
+                type: isShiftAlarm
+                  ? "care_alarm"
+                  : isShiftSummary
+                    ? "shift_summary"
+                    : "care_reminder",
+                entry: reminder.entry_type,
+                reminder_id: reminder.id,
+                baby_id: reminder.baby_id,
+                snooze_minutes: reminder.snooze_minutes,
+              },
             },
           });
         }
@@ -253,41 +284,40 @@ Deno.serve(async (req) => {
         if (notification.exclude_user_id === userId) continue;
         for (const token of tokensByUser.get(userId) ?? []) {
           messages.push({
-            to: token,
-            title: notification.title,
-            body: notification.body,
-            sound: notification.kind === "sleep_prediction"
-              ? "baby_reminder.wav"
-              : "default",
-            channelId: notification.kind === "medicine_safety"
-              ? "care-safety"
-              : notification.kind === "sleep_prediction"
-                ? "sleep-insights"
-              : notification.kind === "milk_expiry"
-                ? "milk-inventory"
-                : "development-insights",
-            priority: "high",
-            data: {
-              ...(notification.payload ?? {}),
-              screen: "care-journal",
-              type: notification.kind,
-              intelligence_id: notification.id,
+            dedupeKey: `care-intelligence:${notification.id}`,
+            kind: notification.kind,
+            tokenId: token.id,
+            token: token.expo_push_token,
+            userId,
+            message: {
+              title: notification.title,
+              body: notification.body,
+              sound: notification.kind === "sleep_prediction"
+                ? "baby_reminder.wav"
+                : "default",
+              channelId: notification.kind === "medicine_safety"
+                ? "care-safety"
+                : notification.kind === "sleep_prediction"
+                  ? "sleep-insights"
+                : notification.kind === "milk_expiry"
+                  ? "milk-inventory"
+                  : "development-insights",
+              priority: "high",
+              data: {
+                ...(notification.payload ?? {}),
+                screen: "care-journal",
+                type: notification.kind,
+                intelligence_id: notification.id,
+              },
             },
           });
         }
       }
     }
 
-    for (let index = 0; index < messages.length; index += 100) {
-      const response = await fetch(EXPO_PUSH_ENDPOINT, {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(messages.slice(index, index + 100)),
-      });
-      if (!response.ok) return json({ error: await response.text() }, 502);
+    const delivery = await dispatchPushes(supabase, messages);
+    if (delivery.failed > 0) {
+      return json({ error: "push_delivery_failed", ...delivery }, 502);
     }
 
     if (reminders.length > 0) {
@@ -312,7 +342,8 @@ Deno.serve(async (req) => {
       success: true,
       reminders: reminders.length,
       intelligence: intelligence.length,
-      sent: messages.length,
+      sent: delivery.ticketed,
+      delivery,
     });
   } catch (error) {
     console.error("send-care-reminders failed", error);

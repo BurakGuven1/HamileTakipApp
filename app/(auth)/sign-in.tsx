@@ -9,7 +9,7 @@ import { TextField } from "@/components/TextField";
 import { Thread } from "@/components/Thread";
 import { signInFatherWithFamilyCode } from "@/api/familyAccess";
 import { getEffectivePremiumAccess } from "@/api/subscriptions";
-import { openLegalPage } from "@/config/legal";
+import { openLegalPage, type LegalPage } from "@/config/legal";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { colors, radii, spacing, typography } from "@/theme";
@@ -135,7 +135,7 @@ export default function SignInScreen() {
     );
   }
 
-  async function openLegalDocument(page: "privacy" | "terms") {
+  async function openLegalDocument(page: LegalPage) {
     try {
       await openLegalPage(page);
     } catch (error) {
@@ -241,6 +241,18 @@ export default function SignInScreen() {
                         onPress={() => openLegalDocument("terms")}
                       >
                         <Text style={styles.linkText}>Kullanım Şartları</Text>
+                      </Pressable>
+                      <Pressable
+                        accessibilityRole="link"
+                        onPress={() => openLegalDocument("kvkkDisclosure")}
+                      >
+                        <Text style={styles.linkText}>KVKK Aydınlatma</Text>
+                      </Pressable>
+                      <Pressable
+                        accessibilityRole="link"
+                        onPress={() => openLegalDocument("explicitConsent")}
+                      >
+                        <Text style={styles.linkText}>Açık Rıza Metni</Text>
                       </Pressable>
                     </View>
                   </View>
@@ -369,7 +381,7 @@ const styles = StyleSheet.create({
   linkText: {
     ...typography.label,
     color: colors.primary,
-    textAlign: "center"
+    textAlign: "left"
   },
   helperText: {
     ...typography.body,
@@ -405,10 +417,12 @@ const styles = StyleSheet.create({
     lineHeight: 19
   },
   legalLinks: {
+    columnGap: spacing.md,
+    flexBasis: "100%",
     flexDirection: "row",
-    gap: spacing.md,
-    marginLeft: 32,
-    width: "100%"
+    flexWrap: "wrap",
+    paddingLeft: 32,
+    rowGap: spacing.sm
   },
   warning: {
     ...typography.body,

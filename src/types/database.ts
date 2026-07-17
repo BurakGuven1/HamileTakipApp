@@ -31,6 +31,7 @@ export type Database = {
           notify_medicine_safety: boolean;
           notify_development_periods: boolean;
           notify_milk_inventory: boolean;
+          notify_daily_support: boolean;
           feeding_mode: "breastfeeding" | "pumping" | "mixed" | "formula";
           created_at: string;
           updated_at: string;
@@ -56,6 +57,7 @@ export type Database = {
           notify_medicine_safety?: boolean;
           notify_development_periods?: boolean;
           notify_milk_inventory?: boolean;
+          notify_daily_support?: boolean;
           feeding_mode?: "breastfeeding" | "pumping" | "mixed" | "formula";
           created_at?: string;
           updated_at?: string;
@@ -80,6 +82,7 @@ export type Database = {
           notify_medicine_safety?: boolean;
           notify_development_periods?: boolean;
           notify_milk_inventory?: boolean;
+          notify_daily_support?: boolean;
           feeding_mode?: "breastfeeding" | "pumping" | "mixed" | "formula";
           updated_at?: string;
         };
@@ -534,6 +537,26 @@ export type Database = {
         Update: never;
         Relationships: [];
       };
+      night_shift_sessions: {
+        Row: {
+          id: string;
+          baby_id: string;
+          caregiver_id: string;
+          caregiver_name: string;
+          started_at: string;
+          planned_end_at: string;
+          ended_at: string | null;
+          ended_reason: "manual" | "planned" | "handed_over" | null;
+          status: "active" | "completed";
+          summary: Json | null;
+          summary_notification_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
       milk_inventory: {
         Row: { id: string; baby_id: string; amount_ml: number; movement_type: "stored" | "used"; occurred_at: string; notes: string | null; created_by: string; created_at: string };
         Insert: { id?: string; baby_id: string; amount_ml: number; movement_type: "stored" | "used"; occurred_at?: string; notes?: string | null; created_by?: string; created_at?: string };
@@ -581,9 +604,9 @@ export type Database = {
         Relationships: [];
       };
       care_reminders: {
-        Row: { id: string; baby_id: string; created_by: string; entry_type: "breastfeeding" | "bottle" | "sleep" | "diaper" | "pumping" | "medicine" | "solid_food" | "temperature"; scheduled_for: string; title: string; body: string; local_notification_id: string | null; creator_push_token: string | null; status: "scheduled" | "sent" | "cancelled"; sent_at: string | null; cancelled_at: string | null; created_at: string; updated_at: string };
-        Insert: { id?: string; baby_id: string; created_by?: string; entry_type: "breastfeeding" | "bottle" | "sleep" | "diaper" | "pumping" | "medicine" | "solid_food" | "temperature"; scheduled_for: string; title: string; body: string; local_notification_id?: string | null; creator_push_token?: string | null; status?: "scheduled" | "sent" | "cancelled"; sent_at?: string | null; cancelled_at?: string | null; created_at?: string; updated_at?: string };
-        Update: { scheduled_for?: string; title?: string; body?: string; local_notification_id?: string | null; creator_push_token?: string | null; status?: "scheduled" | "sent" | "cancelled"; sent_at?: string | null; cancelled_at?: string | null; updated_at?: string };
+        Row: { id: string; baby_id: string; created_by: string; entry_type: "breastfeeding" | "bottle" | "sleep" | "diaper" | "pumping" | "medicine" | "solid_food" | "temperature"; scheduled_for: string; title: string; body: string; local_notification_id: string | null; creator_push_token: string | null; target_user_id: string | null; alarm_kind: "standard" | "night_shift" | "shift_summary"; snooze_minutes: number; night_shift_session_id: string | null; status: "scheduled" | "sent" | "cancelled"; sent_at: string | null; cancelled_at: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; baby_id: string; created_by?: string; entry_type: "breastfeeding" | "bottle" | "sleep" | "diaper" | "pumping" | "medicine" | "solid_food" | "temperature"; scheduled_for: string; title: string; body: string; local_notification_id?: string | null; creator_push_token?: string | null; target_user_id?: string | null; alarm_kind?: "standard" | "night_shift" | "shift_summary"; snooze_minutes?: number; night_shift_session_id?: string | null; status?: "scheduled" | "sent" | "cancelled"; sent_at?: string | null; cancelled_at?: string | null; created_at?: string; updated_at?: string };
+        Update: { scheduled_for?: string; title?: string; body?: string; local_notification_id?: string | null; creator_push_token?: string | null; target_user_id?: string | null; alarm_kind?: "standard" | "night_shift" | "shift_summary"; snooze_minutes?: number; night_shift_session_id?: string | null; status?: "scheduled" | "sent" | "cancelled"; sent_at?: string | null; cancelled_at?: string | null; updated_at?: string };
         Relationships: [];
       };
       sleep_predictions: {
@@ -980,6 +1003,11 @@ export type Database = {
           user_id: string;
           expo_push_token: string;
           device_type: "ios" | "android" | null;
+          project_id: string | null;
+          enabled: boolean;
+          disabled_at: string | null;
+          last_seen_at: string;
+          last_error: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -988,13 +1016,121 @@ export type Database = {
           user_id: string;
           expo_push_token: string;
           device_type?: "ios" | "android" | null;
+          project_id?: string | null;
+          enabled?: boolean;
+          disabled_at?: string | null;
+          last_seen_at?: string;
+          last_error?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           expo_push_token?: string;
           device_type?: "ios" | "android" | null;
+          project_id?: string | null;
+          enabled?: boolean;
+          disabled_at?: string | null;
+          last_seen_at?: string;
+          last_error?: string | null;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      pregnancy_vaccinations: {
+        Row: {
+          id: string;
+          profile_id: string;
+          vaccine_code: string;
+          vaccine_name: string;
+          recommended_week_start: number;
+          recommended_week_end: number;
+          scheduled_date: string;
+          completed: boolean;
+          completed_date: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          vaccine_code: string;
+          vaccine_name: string;
+          recommended_week_start: number;
+          recommended_week_end: number;
+          scheduled_date: string;
+          completed?: boolean;
+          completed_date?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          vaccine_name?: string;
+          recommended_week_start?: number;
+          recommended_week_end?: number;
+          scheduled_date?: string;
+          completed?: boolean;
+          completed_date?: string | null;
+          notes?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      vaccine_reminder_dismissals: {
+        Row: {
+          id: string;
+          user_id: string;
+          reminder_key: string;
+          scheduled_date: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          reminder_key: string;
+          scheduled_date: string;
+          created_at?: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
+      notification_deliveries: {
+        Row: {
+          id: string;
+          dedupe_key: string;
+          user_id: string;
+          push_token_id: string;
+          kind: string;
+          status: "pending" | "ticketed" | "delivered" | "failed";
+          expo_ticket_id: string | null;
+          error: string | null;
+          attempts: number;
+          created_at: string;
+          updated_at: string;
+          delivered_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          dedupe_key: string;
+          user_id: string;
+          push_token_id: string;
+          kind: string;
+          status?: "pending" | "ticketed" | "delivered" | "failed";
+          expo_ticket_id?: string | null;
+          error?: string | null;
+          attempts?: number;
+          created_at?: string;
+          updated_at?: string;
+          delivered_at?: string | null;
+        };
+        Update: {
+          status?: "pending" | "ticketed" | "delivered" | "failed";
+          expo_ticket_id?: string | null;
+          error?: string | null;
+          attempts?: number;
+          updated_at?: string;
+          delivered_at?: string | null;
         };
         Relationships: [];
       };
@@ -1031,6 +1167,21 @@ export type Database = {
       };
     };
     Functions: {
+      get_active_vaccine_reminders: {
+        Args: {
+          p_today?: string;
+        };
+        Returns: {
+          reminder_key: string;
+          source: "baby" | "pregnancy";
+          vaccination_id: string;
+          subject_name: string;
+          vaccine_name: string;
+          scheduled_date: string;
+          recommended_week_start: number | null;
+          recommended_week_end: number | null;
+        }[];
+      };
       add_pregnancy_counter_delta: {
         Args: {
           p_counter_date: string;
@@ -1200,6 +1351,14 @@ export type Database = {
       get_care_handover_snapshot: {
         Args: { p_baby_id: string };
         Returns: Json;
+      };
+      start_night_shift: {
+        Args: { p_baby_id: string; p_caregiver_name: string; p_planned_end_at: string; p_summary_notification_id: string | null };
+        Returns: Database["public"]["Tables"]["night_shift_sessions"]["Row"];
+      };
+      finish_night_shift: {
+        Args: { p_session_id: string };
+        Returns: Database["public"]["Tables"]["night_shift_sessions"]["Row"];
       };
       get_recent_medicine_dose: {
         Args: {

@@ -21,7 +21,9 @@ function getLatestBabyGender(babies: Baby[]) {
 }
 
 export function resolveAccentColor({ babies, profile }: AccentInput) {
-  const babyGender = getLatestBabyGender(babies ?? []);
+  const babyGender = profile?.is_pregnant
+    ? null
+    : getLatestBabyGender(babies ?? []);
   const theme = getAppTheme(
     profile?.theme_preference,
     babyGender ?? (profile?.is_pregnant ? "belirtilmemis" : null)

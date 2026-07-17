@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useLocalSearchParams, type ErrorBoundaryProps } from "expo-router";
+import { useLocalSearchParams, useRouter, type ErrorBoundaryProps } from "expo-router";
 import { Baby, BellRing, Check, Clock3, Droplets, HandHeart, LockKeyhole, Milk, Moon, Pill, RefreshCw, ShieldAlert, Sparkles, Thermometer, Trash2, Undo2, Users, WifiOff } from "lucide-react-native";
-import { useEffect, useMemo, useState } from "react";
-import type { ComponentType, ReactNode } from "react";
+import { Component, useEffect, useMemo, useState } from "react";
+import type { ComponentType, ErrorInfo, ReactNode } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { listBabies } from "@/api/babies";
@@ -55,8 +55,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
 import type { ReportPeriod } from "@/features/care-journal/report";
-import { syncCareTimerLiveActivity } from "@/features/care-journal/liveActivity";
-import { listMilkContainers, listMilkStorageEvents } from "@/features/care-journal/milkInventory";
+import { syncCareQuickWidget } from "@/features/care-journal/widgetSync";
 import { showPaywallIfNeeded } from "@/features/subscription/showPaywallIfNeeded";
 import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
 import { useCareSyncStatus } from "@/hooks/useCareSync";
@@ -78,27 +77,458 @@ const ENTRY_TYPES: { label: string; type: CareEntryType }[] = [
 ];
 
 export default function CareJournalScreen() {
-  return <CareJournalContent />;
+  return <CareJournalScreenContent />;
 }
 
-export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
-  console.error("CareJournal route render failed", error);
+export function ErrorBoundary(_props: ErrorBoundaryProps) {
+  return <CareJournalScreenContent />;
+}
+
+type EssentialEntryType = CareEntryType;
+
+function CareJournalScreenContent() {
+  const router = useRouter();
+  const params = useLocalSearchParams<{ entry?: string }>();
+  const queryClient = useQueryClient();
+  const { showError, showSuccess } = useFeedback();
+  const [selectedBabyId, setSelectedBabyId] = useState<string>();
+  const [entryType, setEntryType] = useState<EssentialEntryType>("breastfeeding");
+  const [amount, setAmount] = useState("");
+  const [duration, setDuration] = useState("");
+  const [breastSide, setBreastSide] = useState<"left" | "right" | "both">("left");
+  const [diaperType, setDiaperType] = useState<"wet" | "dirty" | "both">("wet");
+  const [feedingContent, setFeedingContent] = useState<"breast_milk" | "formula" | "water">("breast_milk");
+  const [sleepKind, setSleepKind] = useState<"day" | "night">("day");
+  const [medicineName, setMedicineName] = useState("");
+  const [medicineDose, setMedicineDose] = useState("");
+  const [foodName, setFoodName] = useState("");
+  const [foodAmount, setFoodAmount] = useState("");
+  const [firstTry, setFirstTry] = useState(false);
+  const [temperature, setTemperature] = useState("");
+  const [temperatureSite, setTemperatureSite] = useState<"armpit" | "ear" | "forehead" | "oral" | "other" | "rectal">("armpit");
+  const [notes, setNotes] = useState("");
+  const [reportDays, setReportDays] = useState<ReportPeriod>(7);
+
+  const babiesQuery = useQuery({ queryKey: ["babies"], queryFn: listBabies });
+  const profileQuery = useQuery({
+    queryKey: ["current-profile"],
+    queryFn: getCurrentProfile
+  });
+  const babies = Array.isArray(babiesQuery.data)
+    ? babiesQuery.data.filter(
+        (baby) => baby && typeof baby.id === "string" && typeof baby.name === "string"
+      )
+    : [];
+  const selectedBaby =
+    babies.find((baby) => baby.id === selectedBabyId) ?? babies[0];
+  const caregiverName =
+    profileQuery.data?.mother_name ?? profileQuery.data?.display_name ?? null;
+  const feedingMode = normalizeFeedingMode(profileQuery.data?.feeding_mode);
+  const visibleEntryTypes = useMemo(
+    () => orderEntryTypesForFeedingMode(feedingMode),
+    [feedingMode]
+  );
+
+  useEffect(() => {
+    if (!selectedBabyId && babies[0]) setSelectedBabyId(babies[0].id);
+  }, [babies, selectedBabyId]);
+
+  const entriesQuery = useQuery({
+    queryKey: ["care-journal-essential", selectedBaby?.id],
+    queryFn: () => listCareJournalEntries(selectedBaby?.id as string, 300),
+    enabled: Boolean(selectedBaby?.id)
+  });
+  const entries = normalizeCareEntries(entriesQuery.data);
+
+  useEffect(() => {
+    if (params.entry && isCareEntryType(params.entry)) {
+      setEntryType(params.entry);
+    }
+  }, [params.entry]);
+
+  useEffect(() => {
+    if (!selectedBaby || !entriesQuery.isSuccess) return;
+    syncCareQuickWidget(selectedBaby.id, selectedBaby.name, entries).catch(
+      () => undefined
+    );
+  }, [entriesQuery.data, entriesQuery.isSuccess, selectedBaby?.id, selectedBaby?.name]);
+
+  const addMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedBaby) throw new Error("Önce bir bebek profili oluşturmalısın.");
+      const durationMinutes = duration.trim() ? Number(duration) : null;
+      const amountMl = amount.trim() ? Number(amount.replace(",", ".")) : null;
+      if (
+        durationMinutes !== null &&
+        (!Number.isFinite(durationMinutes) || durationMinutes <= 0)
+      ) {
+        throw new Error("Süreyi dakika olarak doğru girmelisin.");
+      }
+      if (
+        (entryType === "bottle" || entryType === "pumping") &&
+        (amountMl === null || !Number.isFinite(amountMl) || amountMl <= 0)
+      ) {
+        throw new Error("Miktarı ml olarak doğru girmelisin.");
+      }
+      if (entryType === "medicine" && !medicineName.trim()) {
+        throw new Error("İlaç veya vitamin adını girmelisin.");
+      }
+      if (entryType === "solid_food" && !foodName.trim()) {
+        throw new Error("Besin adını girmelisin.");
+      }
+      const temperatureC = temperature.trim()
+        ? Number(temperature.replace(",", "."))
+        : null;
+      if (
+        entryType === "temperature" &&
+        (temperatureC === null ||
+          !Number.isFinite(temperatureC) ||
+          temperatureC < 30 ||
+          temperatureC > 45)
+      ) {
+        throw new Error("Ateşi 30,0–45,0 °C arasında girmelisin.");
+      }
+
+      const now = Date.now();
+      const occurredAt = durationMinutes
+        ? new Date(now - durationMinutes * 60_000).toISOString()
+        : new Date(now).toISOString();
+
+      if (entryType === "medicine") {
+        return addMedicineCareEntrySafely({
+          babyId: selectedBaby.id,
+          caregiverName,
+          medicineDose: medicineDose.trim() || null,
+          medicineName: medicineName.trim(),
+          notes: notes.trim() || null,
+          occurredAt,
+          overrideRecent: false
+        });
+      }
+
+      return addCareJournalEntry({
+        amount_ml:
+          entryType === "bottle" || entryType === "pumping" ? amountMl : null,
+        baby_id: selectedBaby.id,
+        breast_side: entryType === "breastfeeding" ? breastSide : null,
+        caregiver_name: caregiverName,
+        diaper_type: entryType === "diaper" ? diaperType : null,
+        ended_at:
+          durationMinutes && (entryType === "breastfeeding" || entryType === "sleep")
+            ? new Date(now).toISOString()
+            : null,
+        entry_type: entryType,
+        feeding_content: entryType === "bottle" ? feedingContent : null,
+        food_amount: entryType === "solid_food" ? foodAmount.trim() || null : null,
+        food_name: entryType === "solid_food" ? foodName.trim() : null,
+        is_first_try: entryType === "solid_food" && firstTry,
+        medicine_dose: null,
+        medicine_name: null,
+        notes: notes.trim() || null,
+        occurred_at: occurredAt,
+        sleep_kind: entryType === "sleep" ? sleepKind : null,
+        temperature_c: entryType === "temperature" ? temperatureC : null,
+        temperature_site: entryType === "temperature" ? temperatureSite : null
+      });
+    },
+    onSuccess: async () => {
+      setAmount("");
+      setDuration("");
+      setMedicineName("");
+      setMedicineDose("");
+      setFoodName("");
+      setFoodAmount("");
+      setFirstTry(false);
+      setTemperature("");
+      setNotes("");
+      showSuccess("Bakım kaydı eklendi.");
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["care-journal-essential", selectedBaby?.id]
+        }),
+        queryClient.invalidateQueries({ queryKey: ["care-journal"] })
+      ]);
+    },
+    onError: (mutationError) => showError(mutationError, "Bakım kaydı eklenemedi")
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (entry: CareJournalViewEntry) =>
+      deleteCareJournalEntry(entry, caregiverName),
+    onSuccess: async () => {
+      showSuccess("Bakım kaydı silindi.");
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["care-journal-essential", selectedBaby?.id]
+        }),
+        queryClient.invalidateQueries({ queryKey: ["care-journal"] })
+      ]);
+    },
+    onError: (mutationError) => showError(mutationError, "Bakım kaydı silinemedi")
+  });
+
+  async function shareEssentialReport() {
+    if (!selectedBaby) return;
+    try {
+      const { shareCareJournalReport } = await import("@/features/care-journal/report");
+      const since = Date.now() - reportDays * 86_400_000;
+      await shareCareJournalReport(
+        selectedBaby,
+        entries.filter((entry) => Date.parse(entry.occurred_at) >= since),
+        reportDays
+      );
+    } catch (reportError) {
+      showError(reportError, "PDF oluşturulamadı");
+    }
+  }
+
   return (
     <Screen>
-      <Card>
-        <View style={{ gap: spacing.md }}>
-          <Text style={typography.heading2}>Bakım günlüğü güvenli biçimde durduruldu</Text>
-          <Text style={typography.body}>
-            Verilerin korunuyor. Ekranı yeniden hazırlamak için tekrar deneyebilirsin.
+      <View style={styles.container}>
+        <View style={styles.hero}>
+          <View style={styles.iconBubble}>
+            <Baby color={colors.sageGreen} size={28} />
+          </View>
+          <Text style={typography.eyebrow}>Anne + bebek</Text>
+          <Text style={typography.heading1}>Akıllı bakım günlüğü</Text>
+          <Text style={styles.heroText}>
+            Beslenme, uyku ve bez kayıtlarını ekle; geçmişini görüntüle ve doktorun
+            için PDF oluştur.
           </Text>
-          <Button label="Tekrar dene" onPress={() => void retry()} />
         </View>
-      </Card>
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push({ pathname: "/night-shift", params: selectedBaby?.id ? { babyId: selectedBaby.id } : undefined })}
+          style={styles.nightShiftLaunch}
+        >
+          <View style={styles.nightShiftIcon}><Moon color="#E8C381" size={27} /></View>
+          <View style={{ flex: 1, gap: 3 }}>
+            <Text style={styles.nightShiftEyebrow}>TEK ELLE · GÖZ ALMAYAN EKRAN</Text>
+            <Text style={styles.nightShiftTitle}>Gece Vardiyası Modu</Text>
+            <Text style={styles.nightShiftText}>Beslenme, bez, uyku ve yalnızca vardiyadaki ebeveyne özel alarm.</Text>
+          </View>
+        </Pressable>
+
+        {babies.length > 1 ? (
+          <View style={styles.chips}>
+            {babies.map((baby) => (
+              <ChoiceChip
+                key={baby.id}
+                active={baby.id === selectedBaby?.id}
+                label={baby.name}
+                onPress={() => setSelectedBabyId(baby.id)}
+              />
+            ))}
+          </View>
+        ) : null}
+
+        {!selectedBaby ? (
+          <EmptyState
+            title="Bebek profili gerekli"
+            description="Bakım günlüğünü kullanmak için Bebek sekmesinden profil oluştur."
+          />
+        ) : (
+          <>
+            <Card>
+              <View style={{ gap: spacing.md }}>
+                <Text style={typography.heading2}>Şimdi kaydet</Text>
+                <View style={styles.chips}>
+                  {visibleEntryTypes.map((item) => (
+                    <ChoiceChip
+                      key={item.type}
+                      active={entryType === item.type}
+                      label={item.label}
+                      onPress={() => setEntryType(item.type)}
+                    />
+                  ))}
+                </View>
+                {entryType === "breastfeeding" ? (
+                  <View style={styles.chips}>
+                    <ChoiceChip active={breastSide === "left"} label="Sol" onPress={() => setBreastSide("left")} />
+                    <ChoiceChip active={breastSide === "right"} label="Sağ" onPress={() => setBreastSide("right")} />
+                    <ChoiceChip active={breastSide === "both"} label="İkisi" onPress={() => setBreastSide("both")} />
+                  </View>
+                ) : null}
+                {entryType === "diaper" ? (
+                  <View style={styles.chips}>
+                    <ChoiceChip active={diaperType === "wet"} label="Islak" onPress={() => setDiaperType("wet")} />
+                    <ChoiceChip active={diaperType === "dirty"} label="Kaka" onPress={() => setDiaperType("dirty")} />
+                    <ChoiceChip active={diaperType === "both"} label="İkisi" onPress={() => setDiaperType("both")} />
+                  </View>
+                ) : null}
+                {entryType === "bottle" ? (
+                  <View style={styles.chips}>
+                    <ChoiceChip active={feedingContent === "breast_milk"} label="Anne sütü" onPress={() => setFeedingContent("breast_milk")} />
+                    <ChoiceChip active={feedingContent === "formula"} label="Mama" onPress={() => setFeedingContent("formula")} />
+                    <ChoiceChip active={feedingContent === "water"} label="Su" onPress={() => setFeedingContent("water")} />
+                  </View>
+                ) : null}
+                {entryType === "sleep" ? (
+                  <View style={styles.chips}>
+                    <ChoiceChip active={sleepKind === "day"} label="Gündüz uykusu" onPress={() => setSleepKind("day")} />
+                    <ChoiceChip active={sleepKind === "night"} label="Gece uykusu" onPress={() => setSleepKind("night")} />
+                  </View>
+                ) : null}
+                {entryType === "bottle" || entryType === "pumping" ? (
+                  <TextField
+                    keyboardType="decimal-pad"
+                    label="Miktar (ml)"
+                    value={amount}
+                    onChangeText={setAmount}
+                  />
+                ) : null}
+                {entryType === "medicine" ? (
+                  <>
+                    <TextField label="İlaç / vitamin adı" value={medicineName} onChangeText={setMedicineName} />
+                    <TextField label="Doz (örn. 3 damla)" value={medicineDose} onChangeText={setMedicineDose} />
+                  </>
+                ) : null}
+                {entryType === "solid_food" ? (
+                  <>
+                    <TextField label="Besin" value={foodName} onChangeText={setFoodName} />
+                    <TextField label="Miktar (örn. 3 kaşık)" value={foodAmount} onChangeText={setFoodAmount} />
+                    <ChoiceChip active={firstTry} label={firstTry ? "İlk deneme ✓" : "İlk deneme"} onPress={() => setFirstTry((value) => !value)} />
+                  </>
+                ) : null}
+                {entryType === "temperature" ? (
+                  <>
+                    <TextField keyboardType="decimal-pad" label="Ateş (°C)" placeholder="36,7" value={temperature} onChangeText={setTemperature} />
+                    <View style={styles.chips}>
+                      <ChoiceChip active={temperatureSite === "armpit"} label="Koltuk altı" onPress={() => setTemperatureSite("armpit")} />
+                      <ChoiceChip active={temperatureSite === "forehead"} label="Alın" onPress={() => setTemperatureSite("forehead")} />
+                      <ChoiceChip active={temperatureSite === "ear"} label="Kulak" onPress={() => setTemperatureSite("ear")} />
+                      <ChoiceChip active={temperatureSite === "other"} label="Diğer" onPress={() => setTemperatureSite("other")} />
+                    </View>
+                  </>
+                ) : null}
+                {entryType === "breastfeeding" || entryType === "sleep" ? (
+                  <TextField
+                    keyboardType="number-pad"
+                    label="Süre (dakika, isteğe bağlı)"
+                    value={duration}
+                    onChangeText={setDuration}
+                  />
+                ) : null}
+                <TextField
+                  label="Not (isteğe bağlı)"
+                  value={notes}
+                  onChangeText={setNotes}
+                />
+                <Button
+                  disabled={addMutation.isPending}
+                  label={addMutation.isPending ? "Kaydediliyor..." : "Bakım kaydını ekle"}
+                  onPress={() => addMutation.mutate()}
+                />
+              </View>
+            </Card>
+
+            <DoctorReportCard
+              days={reportDays}
+              disabled={entriesQuery.isLoading || entriesQuery.isError}
+              error={entriesQuery.isError}
+              loading={entriesQuery.isLoading}
+              onDaysChange={setReportDays}
+              onRetry={() => void entriesQuery.refetch()}
+              onShare={() => void shareEssentialReport()}
+            />
+
+            <View style={{ gap: spacing.md }}>
+              <Text style={typography.heading2}>Bakım geçmişi</Text>
+              {entriesQuery.isLoading ? (
+                <Text style={typography.body}>Kayıtlar yükleniyor...</Text>
+              ) : null}
+              {!entriesQuery.isLoading && entries.length === 0 ? (
+                <EmptyState
+                  title="Henüz kayıt yok"
+                  description="İlk bakım kaydını eklediğinde burada görünecek."
+                />
+              ) : null}
+              {entries.slice(0, 100).map((entry) => (
+                <EssentialEntryCard
+                  key={entry.id}
+                  deleting={deleteMutation.isPending}
+                  entry={entry}
+                  onDelete={() => deleteMutation.mutate(entry)}
+                />
+              ))}
+            </View>
+          </>
+        )}
+      </View>
     </Screen>
   );
 }
 
-function CareJournalContent() {
+function EssentialEntryCard({
+  deleting,
+  entry,
+  onDelete
+}: {
+  deleting: boolean;
+  entry: CareJournalViewEntry;
+  onDelete: () => void;
+}) {
+  const note = typeof entry.notes === "string" ? entry.notes : null;
+  return (
+    <Card>
+      <View style={styles.entryRow}>
+        <View style={{ flex: 1, gap: spacing.xs }}>
+          <Text style={typography.heading3}>{entryLabel(entry.entry_type)}</Text>
+          <Text style={styles.entryMeta}>{formatTime(entry.occurred_at)}</Text>
+          {note ? <Text style={typography.body}>{note}</Text> : null}
+        </View>
+        <Pressable
+          accessibilityLabel="Bakım kaydını sil"
+          disabled={deleting}
+          hitSlop={10}
+          onPress={onDelete}
+        >
+          <Trash2 color={colors.danger} size={20} />
+        </Pressable>
+      </View>
+    </Card>
+  );
+}
+
+class CareSectionBoundary extends Component<
+  { children: ReactNode; title: string },
+  { failed: boolean }
+> {
+  override state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  override componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error(`Care journal section failed: ${this.props.title}`, error, info);
+  }
+
+  override render() {
+    if (this.state.failed) {
+      return (
+        <Card>
+          <View style={{ gap: spacing.md }}>
+            <Text style={typography.heading3}>{this.props.title} hazırlanamadı</Text>
+            <Text style={typography.body}>
+              Günlüğün geri kalanı kullanılabilir. Bu bölümü yeniden hazırlayabilirsin.
+            </Text>
+            <Button
+              label="Bu bölümü tekrar dene"
+              variant="secondary"
+              onPress={() => this.setState({ failed: false })}
+            />
+          </View>
+        </Card>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+function LegacyAdvancedCareJournalContent() {
   const queryClient = useQueryClient();
   const appTheme = useAppTheme();
   const { showError, showInfo, showSuccess } = useFeedback();
@@ -152,7 +582,14 @@ function CareJournalContent() {
   const membershipQuery = useQuery({ queryKey: ["current-family-membership"], queryFn: getCurrentFamilyMembership });
   const currentUserQuery = useQuery({ queryKey: ["current-care-user-id"], queryFn: getCurrentCareUserId });
   const caregiverName = membershipQuery.data ? profileQuery.data?.father_name : profileQuery.data?.mother_name;
-  const babies = Array.isArray(babiesQuery.data) ? babiesQuery.data : [];
+  const babies = Array.isArray(babiesQuery.data)
+    ? babiesQuery.data.filter(
+        (baby) =>
+          baby &&
+          typeof baby.id === "string" &&
+          typeof baby.name === "string"
+      )
+    : [];
   const familyPremiumQuery = useQuery({ queryKey: ["family-premium-care", babies[0]?.id], queryFn: () => hasFamilyPremiumCareAccess(babies[0]?.id as string), enabled: Boolean(!hasRevenueCatPremium && babies[0]?.id) });
   const isPremium = hasRevenueCatPremium || Boolean(familyPremiumQuery.data);
   const selectedBaby = isPremium
@@ -175,9 +612,9 @@ function CareJournalContent() {
     queryFn: () => listCareJournalEntries(selectedBaby?.id as string, isPremium ? historyLimit : 100),
     enabled: Boolean(selectedBaby?.id)
   });
-  const entries = Array.isArray(entriesQuery.data) ? entriesQuery.data : [];
+  const entries = normalizeCareEntries(entriesQuery.data);
   const reportQuery = useQuery({ queryKey: ["care-journal-report", selectedBaby?.id], queryFn: () => listCareJournalEntriesSince(selectedBaby?.id as string, 30), enabled: Boolean(selectedBaby?.id) });
-  const reportEntries = Array.isArray(reportQuery.data) ? reportQuery.data : [];
+  const reportEntries = normalizeCareEntries(reportQuery.data);
   const remindersQuery = useQuery({ queryKey: ["care-reminders", selectedBaby?.id], queryFn: () => listCareReminders(selectedBaby?.id as string), enabled: Boolean(selectedBaby?.id) });
   const tasksQuery = useQuery({ queryKey: ["care-tasks", selectedBaby?.id], queryFn: () => listCareTasks(selectedBaby?.id as string), enabled: Boolean(isPremium && selectedBaby?.id) });
   const sleepPredictionQuery = useQuery({ queryKey: ["sleep-prediction", selectedBaby?.id], queryFn: () => getSleepPrediction(selectedBaby?.id as string), enabled: Boolean(isPremium && selectedBaby?.id) });
@@ -189,7 +626,7 @@ function CareJournalContent() {
   const activeTimer = activeTimers.find((timer) => timer.timer_type !== "pumping") ?? null;
   const activePumpLeft = activeTimers.find((timer) => timer.timer_type === "pumping" && timer.breast_side === "left") ?? null;
   const activePumpRight = activeTimers.find((timer) => timer.timer_type === "pumping" && timer.breast_side === "right") ?? null;
-  const feedingMode = profileQuery.data?.feeding_mode ?? "mixed";
+  const feedingMode = normalizeFeedingMode(profileQuery.data?.feeding_mode);
   const visibleEntryTypes = useMemo(() => orderEntryTypesForFeedingMode(feedingMode), [feedingMode]);
   const todayEntries = useMemo(
     () => entries.filter((entry) => isToday(entry.occurred_at)),
@@ -201,11 +638,6 @@ function CareJournalContent() {
     const interval = setInterval(() => setTimerNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, [activeTimers.length]);
-
-  useEffect(() => {
-    if (!selectedBaby) return;
-    syncCareTimerLiveActivity(selectedBaby.name, activeTimers).catch(() => undefined);
-  }, [activeTimers, selectedBaby]);
 
   useEffect(() => {
     if (!undoAction) return;
@@ -442,6 +874,9 @@ function CareJournalContent() {
     if (!selectedBaby) return;
     try {
       const { shareCareJournalArchive } = await import("@/features/care-journal/report");
+      const { listMilkContainers, listMilkStorageEvents } = await import(
+        "@/features/care-journal/milkInventory"
+      );
       const [allEntries, containers, milkEvents] = await Promise.all([
         listAllCareJournalEntries(selectedBaby.id),
         listMilkContainers(selectedBaby.id),
@@ -534,47 +969,64 @@ function CareJournalContent() {
             ) : null}
 
             <CareSyncBanner onResolve={() => void openNextSyncConflict()} status={syncStatusQuery.data} />
-            <TodaySummary entries={todayEntries} babyName={selectedBaby?.name ?? "Bebek"} />
-            <CareHandoverCard
-              activity={Array.isArray(activityQuery.data) ? activityQuery.data : []}
-              babyName={selectedBaby?.name ?? "Bebek"}
-              currentUserId={currentUserQuery.data ?? null}
-              loading={handoverQuery.isLoading}
-              now={timerNow}
-              onTakeOver={() => handoverMutation.mutate()}
-              snapshot={handoverSnapshot}
-              takingOver={handoverMutation.isPending}
-            />
-            <SleepPredictionCard
-              isPremium={isPremium}
-              loading={sleepPredictionQuery.isLoading}
-              now={predictionNow}
-              onOpenPremium={() => void openPremium("sleep_prediction")}
-              prediction={sleepPredictionQuery.data ?? null}
+            <CareSectionBoundary title="Bugünkü bakım özeti">
+              <TodaySummary entries={todayEntries} babyName={selectedBaby?.name ?? "Bebek"} />
+            </CareSectionBoundary>
+
+            <DoctorReportCard
+              days={trendDays}
+              disabled={reportQuery.isLoading || reportQuery.isError || !selectedBaby}
+              error={reportQuery.isError}
+              loading={reportQuery.isLoading}
+              onDaysChange={setTrendDays}
+              onRetry={() => void reportQuery.refetch()}
+              onShare={() => void shareReport()}
             />
 
-            {isPremium && (feedingMode === "pumping" || feedingMode === "mixed") ? (
-              <PumpingFocusCard
-                blocked={Boolean(activeTimer)}
-                leftAmount={pumpLeftAmount}
-                leftTimer={activePumpLeft}
-                now={timerNow}
-                onLeftAmountChange={setPumpLeftAmount}
-                onRightAmountChange={setPumpRightAmount}
-                onStart={(side) => timerMutation.mutate({ action: "start", type: "pumping", side })}
-                onStop={(timer, amountValue) => {
-                  const parsed = amountValue.trim() ? Number(amountValue.replace(",", ".")) : null;
-                  if (parsed !== null && (!Number.isFinite(parsed) || parsed <= 0)) {
-                    showInfo("Miktarı ml olarak doğru gir.", "Miktarı kontrol et");
-                    return;
-                  }
-                  timerMutation.mutate({ action: "stop", timer, amountMl: parsed });
-                }}
-                pending={timerMutation.isPending}
-                rightAmount={pumpRightAmount}
-                rightTimer={activePumpRight}
-              />
-            ) : null}
+            <CareSectionBoundary title="Canlı aile bakımı">
+              <View style={{ gap: spacing.lg }}>
+                <CareHandoverCard
+                  activity={Array.isArray(activityQuery.data) ? activityQuery.data : []}
+                  babyName={selectedBaby?.name ?? "Bebek"}
+                  currentUserId={currentUserQuery.data ?? null}
+                  loading={handoverQuery.isLoading}
+                  now={timerNow}
+                  onTakeOver={() => handoverMutation.mutate()}
+                  snapshot={handoverSnapshot}
+                  takingOver={handoverMutation.isPending}
+                />
+                <SleepPredictionCard
+                  isPremium={isPremium}
+                  loading={sleepPredictionQuery.isLoading}
+                  now={predictionNow}
+                  onOpenPremium={() => void openPremium("sleep_prediction")}
+                  prediction={sleepPredictionQuery.data ?? null}
+                />
+
+                {isPremium && (feedingMode === "pumping" || feedingMode === "mixed") ? (
+                  <PumpingFocusCard
+                    blocked={Boolean(activeTimer)}
+                    leftAmount={pumpLeftAmount}
+                    leftTimer={activePumpLeft}
+                    now={timerNow}
+                    onLeftAmountChange={setPumpLeftAmount}
+                    onRightAmountChange={setPumpRightAmount}
+                    onStart={(side) => timerMutation.mutate({ action: "start", type: "pumping", side })}
+                    onStop={(timer, amountValue) => {
+                      const parsed = amountValue.trim() ? Number(amountValue.replace(",", ".")) : null;
+                      if (parsed !== null && (!Number.isFinite(parsed) || parsed <= 0)) {
+                        showInfo("Miktarı ml olarak doğru gir.", "Miktarı kontrol et");
+                        return;
+                      }
+                      timerMutation.mutate({ action: "stop", timer, amountMl: parsed });
+                    }}
+                    pending={timerMutation.isPending}
+                    rightAmount={pumpRightAmount}
+                    rightTimer={activePumpRight}
+                  />
+                ) : null}
+              </View>
+            </CareSectionBoundary>
 
             <Card>
               <View style={{ gap: spacing.lg }}>
@@ -631,17 +1083,13 @@ function CareJournalContent() {
               </View>
             </Card>
 
-            <ReminderCard currentUserId={currentUserQuery.data ?? null} entryType={entryType} isPremium={isPremium} reminders={Array.isArray(remindersQuery.data) ? remindersQuery.data : []} reminderTime={reminderTime} onTimeChange={setReminderTime} scheduling={reminderMutation.isPending} cancelling={cancelReminderMutation.isPending} onSchedule={() => reminderMutation.mutate()} onCancel={(reminder) => cancelReminderMutation.mutate(reminder)} />
+            <CareSectionBoundary title="Bakım alarmları">
+              <ReminderCard currentUserId={currentUserQuery.data ?? null} entryType={entryType} isPremium={isPremium} reminders={Array.isArray(remindersQuery.data) ? remindersQuery.data : []} reminderTime={reminderTime} onTimeChange={setReminderTime} scheduling={reminderMutation.isPending} cancelling={cancelReminderMutation.isPending} onSchedule={() => reminderMutation.mutate()} onCancel={(reminder) => cancelReminderMutation.mutate(reminder)} />
+            </CareSectionBoundary>
 
-            <DoctorReportCard
-              days={trendDays}
-              disabled={reportQuery.isLoading || !selectedBaby}
-              onDaysChange={setTrendDays}
-              onShare={() => void shareReport()}
-            />
-
-            {isPremium ? (
-              <>
+            <CareSectionBoundary title="Premium bakım araçları">
+              {isPremium ? (
+                <View style={{ gap: spacing.lg }}>
                 <InsightsCard entries={reportEntries} days={trendDays} onArchive={() => void exportPermanentArchive()} onDaysChange={setTrendDays} />
                 {selectedBaby && MilkInventoryComponent ? (
                   <MilkInventoryComponent actorName={caregiverName || null} babyId={selectedBaby.id} />
@@ -662,8 +1110,9 @@ function CareJournalContent() {
                 ) : null}
                 <Card><View style={{ gap: spacing.md }}><Text style={typography.eyebrow}>Aile vardiyası</Text><Text style={typography.heading2}>Bakım görevleri</Text>{(Array.isArray(tasksQuery.data) ? tasksQuery.data : []).filter((t) => !t.completed_at).map((task) => <Pressable key={task.id} style={styles.taskRow} onPress={() => toggleTaskMutation.mutate(task)}><View style={styles.taskCheck}><Check color={colors.textMuted} size={16} /></View><View style={{ flex: 1 }}><Text style={typography.label}>{task.title}</Text>{task.assigned_to_name ? <Text style={styles.entryMeta}>{task.assigned_to_name}</Text> : null}</View></Pressable>)}<TextField label="Yeni görev" value={taskTitle} onChangeText={setTaskTitle} /><TextField label="Atanan kişi (isteğe bağlı)" value={taskAssignee} onChangeText={setTaskAssignee} /><Button label="Görev ekle" onPress={() => taskMutation.mutate()} /></View></Card>
                 <Card><View style={{ gap: spacing.md }}><Text style={typography.eyebrow}>Anne için</Text><Text style={typography.heading2}>Bugün nasılsın?</Text><Text style={typography.label}>Ruh hali</Text><Rating value={mood} onChange={setMood} /><Text style={typography.label}>Dinlenmişlik</Text><Rating value={rest} onChange={setRest} /><TextField label="Bugün kendin için ne yaptın?" value={selfCare} onChangeText={setSelfCare} /><Button label="Anne check-in’ini kaydet" onPress={() => checkinMutation.mutate()} /><Text style={styles.safetyNote}>Bu alan iyi oluş farkındalığı içindir; değerlendirme veya teşhis yapmaz. Kendin ya da bebeğin için acil bir endişen varsa sağlık profesyoneline başvur.</Text></View></Card>
-              </>
-            ) : <PremiumUpsellCard onPress={() => void openPremium("care_insights")} />}
+                </View>
+              ) : <PremiumUpsellCard onPress={() => void openPremium("care_insights")} />}
+            </CareSectionBoundary>
 
             <View style={{ gap: spacing.md }}>
               <Text style={typography.heading2}>Günlük zaman akışı</Text>
@@ -1000,7 +1449,7 @@ function ReminderCard({ cancelling, currentUserId, entryType, isPremium, onCance
   return <Card style={styles.reminderCard}><View style={{ gap: spacing.md }}><View style={styles.cardTitleRow}><View style={{ flex: 1 }}><Text style={typography.eyebrow}>{isPremium ? "Premium · Aile senkronlu" : "Ücretsiz · 1 aktif alarm"}</Text><Text style={typography.heading2}>Bakım alarmı kur</Text></View><Clock3 color={colors.sageGreen} size={26} /></View><Text style={typography.body}>{entryLabel(entryType)} için saati gir. Alarm cihazında çalar; Premium’da diğer aile cihazlarına da push gider.</Text><TextField keyboardType="numbers-and-punctuation" label="Alarm saati (örn. 15:30)" placeholder="15:30" value={reminderTime} onChangeText={onTimeChange} /><Button disabled={scheduling || !reminderTime.trim()} label={scheduling ? "Alarm kuruluyor..." : `${entryLabel(entryType)} alarmı kur`} onPress={onSchedule} />{reminders.length > 0 ? <View style={{ gap: spacing.sm }}><Text style={typography.label}>Planlı alarmlar</Text>{reminders.map((reminder) => <View key={reminder.id} style={styles.reminderRow}><View style={{ flex: 1 }}><Text style={typography.label}>{entryLabel(reminder.entry_type)}</Text><Text style={styles.entryMeta}>{formatReminderDate(reminder.scheduled_for)}</Text></View>{reminder.created_by === currentUserId ? <Button disabled={cancelling} label="İptal" variant="ghost" onPress={() => onCancel(reminder)} /> : <Text style={styles.entryMeta}>Aile alarmı</Text>}</View>)}</View> : null}<Text style={styles.safetyNote}>Alarm saati uygulama tarafından önerilmez. Beslenme veya ilaç zamanını yalnızca kendi planına ve sağlık profesyonelinin önerisine göre belirle.</Text></View></Card>;
 }
 
-function DoctorReportCard({ days, disabled, onDaysChange, onShare }: { days: ReportPeriod; disabled: boolean; onDaysChange: (days: ReportPeriod) => void; onShare: () => void }) {
+function DoctorReportCard({ days, disabled, error, loading, onDaysChange, onRetry, onShare }: { days: ReportPeriod; disabled: boolean; error: boolean; loading: boolean; onDaysChange: (days: ReportPeriod) => void; onRetry: () => void; onShare: () => void }) {
   return (
     <Card>
       <View style={{ gap: spacing.md }}>
@@ -1017,7 +1466,13 @@ function DoctorReportCard({ days, disabled, onDaysChange, onShare }: { days: Rep
             <ChoiceChip key={value} active={days === value} label={value === 1 ? "24 saat" : `${value} gün`} onPress={() => onDaysChange(value)} />
           ))}
         </View>
-        <Button disabled={disabled} label={disabled ? "Kayıtlar hazırlanıyor..." : "Doktor için PDF oluştur"} onPress={onShare} />
+        {error ? (
+          <>
+            <Text style={styles.conflictText}>Kayıtlar şu anda alınamadı. PDF için bağlantıyı yenileyebilirsin.</Text>
+            <Button label="Kayıtları yeniden yükle" variant="secondary" onPress={onRetry} />
+          </>
+        ) : null}
+        <Button disabled={disabled} label={loading ? "Kayıtlar hazırlanıyor..." : "Doktor için PDF oluştur"} onPress={onShare} />
         <Text style={styles.safetyNote}>PDF yalnızca senin ve ailendeki bakıcıların kaydettiği bilgileri düzenler; tıbbi değerlendirme veya öneri üretmez.</Text>
       </View>
     </Card>
@@ -1165,7 +1620,26 @@ function diaperLabel(value: CareJournalEntry["diaper_type"]) { return value === 
 function temperatureSiteLabel(value: CareJournalEntry["temperature_site"]) { return value === "armpit" ? "Koltuk altı" : value === "forehead" ? "Alın" : value === "ear" ? "Kulak" : value === "oral" ? "Ağız" : value === "rectal" ? "Rektal" : "Diğer"; }
 function isFreeType(type: CareEntryType) { return type === "breastfeeding" || type === "bottle" || type === "sleep" || type === "diaper" || type === "temperature"; }
 function isCareEntryType(value: string): value is CareEntryType { return ENTRY_TYPES.some((item) => item.type === value); }
-function orderEntryTypesForFeedingMode(mode: "breastfeeding" | "pumping" | "mixed" | "formula") {
+type FeedingMode = "breastfeeding" | "pumping" | "mixed" | "formula";
+function normalizeFeedingMode(value: unknown): FeedingMode {
+  return value === "breastfeeding" || value === "pumping" || value === "formula" || value === "mixed"
+    ? value
+    : "mixed";
+}
+function normalizeCareEntries(value: unknown): CareJournalViewEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (entry): entry is CareJournalViewEntry =>
+      Boolean(
+        entry &&
+          typeof entry === "object" &&
+          typeof entry.id === "string" &&
+          typeof entry.entry_type === "string" &&
+          typeof entry.occurred_at === "string"
+      )
+  );
+}
+function orderEntryTypesForFeedingMode(mode: FeedingMode) {
   const priority: Record<typeof mode, CareEntryType[]> = {
     breastfeeding: ["breastfeeding", "diaper", "sleep", "bottle", "pumping"],
     pumping: ["pumping", "bottle", "diaper", "sleep", "breastfeeding"],
@@ -1190,6 +1664,11 @@ const styles = StyleSheet.create({
   hero: { ...radii.card, gap: spacing.sm, padding: spacing.lg },
   heroText: { ...typography.body, color: colors.text },
   iconBubble: { alignItems: "center", borderRadius: radii.pill, height: 52, justifyContent: "center", width: 52 },
+  nightShiftEyebrow: { color: "#87AB9D", fontSize: 10, fontWeight: "800", letterSpacing: 1.2 },
+  nightShiftIcon: { alignItems: "center", backgroundColor: "#273124", borderRadius: 20, height: 54, justifyContent: "center", width: 54 },
+  nightShiftLaunch: { alignItems: "center", backgroundColor: "#101B18", borderColor: "#30453E", borderRadius: 24, borderWidth: 1, flexDirection: "row", gap: spacing.md, padding: spacing.lg },
+  nightShiftText: { color: "#A7B8B1", fontSize: 13, lineHeight: 18 },
+  nightShiftTitle: { color: "#EEF3F1", fontSize: 20, fontWeight: "800" },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   chip: { borderColor: colors.border, borderRadius: radii.pill, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   chipText: { ...typography.label, color: colors.text },

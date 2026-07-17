@@ -1,6 +1,10 @@
 import { useEffect } from "react";
+import { AppState } from "react-native";
 
-import { registerAndSavePushToken } from "@/lib/notifications";
+import {
+  clearAppNotificationBadge,
+  registerAndSavePushToken
+} from "@/lib/notifications";
 import { configureRevenueCat } from "@/lib/revenuecat";
 import { supabase } from "@/lib/supabase";
 
@@ -8,27 +12,44 @@ export function useAppBootstrap() {
   useEffect(() => {
     let mounted = true;
 
+    async function bootstrapPushToken(requestPermission = true) {
+      const { data } = await supabase.auth.getSession();
+      if (!mounted || !data.session) return;
+      await registerAndSavePushToken(requestPermission);
+    }
+
     async function bootstrap() {
-      const {
-        data: { user }
-      } = await supabase.auth.getUser();
-
-      if (!mounted) {
-        return;
-      }
-
       configureRevenueCat();
-      if (user) {
-        await registerAndSavePushToken();
-      }
+      clearAppNotificationBadge();
+      await bootstrapPushToken(true);
     }
 
     bootstrap().catch((error) => {
       console.warn("App bootstrap failed", error);
     });
 
+    const { data: authSubscription } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === "SIGNED_IN" && session) {
+          bootstrapPushToken(true).catch((error) => {
+            console.warn("Push token registration after sign-in failed", error);
+          });
+        }
+      }
+    );
+
+    const appStateSubscription = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+      clearAppNotificationBadge();
+      bootstrapPushToken(false).catch((error) => {
+        console.warn("Push token refresh failed", error);
+      });
+    });
+
     return () => {
       mounted = false;
+      authSubscription.subscription.unsubscribe();
+      appStateSubscription.remove();
     };
   }, []);
 }

@@ -127,6 +127,14 @@ export default function TabsLayout() {
         name="birth-preparation"
         options={{ href: null, title: "Doğuma hazırlık" }}
       />
+      <Tabs.Screen
+        name="night-shift"
+        options={{ href: null, title: "Gece vardiyası", tabBarStyle: { display: "none" } }}
+      />
+      <Tabs.Screen
+        name="document-insight"
+        options={{ href: null, title: "Belgeyi Anla" }}
+      />
     </Tabs>
   );
 }

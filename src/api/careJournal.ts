@@ -28,6 +28,7 @@ export type CareJournalEntry = Tables<"care_journal_entries">;
 export type MilkInventoryMovement = Tables<"milk_inventory">;
 export type CareTask = Tables<"care_tasks">;
 export type CareReminder = Tables<"care_reminders">;
+export type NightShiftSession = Tables<"night_shift_sessions">;
 export type SleepPrediction = Tables<"sleep_predictions">;
 export type CareEntryType = CareJournalEntry["entry_type"];
 export type { CareActiveTimer, CareHandoverSession, CareJournalInput, CareJournalViewEntry, CareSyncResult };
@@ -455,4 +456,86 @@ export async function cancelCareReminder(id: string) {
   if (error) throw error;
   await trackEvent("care_reminder_cancelled");
   return data;
+}
+
+export async function snoozeCareReminder(
+  id: string,
+  scheduledFor: string,
+  localNotificationId: string
+) {
+  const { data, error } = await supabase
+    .from("care_reminders")
+    .update({
+      scheduled_for: scheduledFor,
+      local_notification_id: localNotificationId,
+      status: "scheduled",
+      sent_at: null,
+      cancelled_at: null
+    })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  await trackEvent("care_alarm_snoozed");
+  return data;
+}
+
+export async function getNightShiftState(babyId: string) {
+  const { data, error } = await supabase
+    .from("night_shift_sessions")
+    .select("*")
+    .eq("baby_id", babyId)
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (data?.status === "active" && Date.parse(data.planned_end_at) <= Date.now()) {
+    const { data: completed, error: completeError } = await supabase.rpc("finish_night_shift", {
+      p_session_id: data.id
+    });
+    if (completeError) throw completeError;
+    return completed;
+  }
+  return data;
+}
+
+export async function startNightShift(
+  babyId: string,
+  caregiverName: string,
+  plannedEndAt: string,
+  summaryNotificationId: string | null
+) {
+  const { data, error } = await supabase.rpc("start_night_shift", {
+    p_baby_id: babyId,
+    p_caregiver_name: caregiverName,
+    p_planned_end_at: plannedEndAt,
+    p_summary_notification_id: summaryNotificationId
+  });
+  if (error) throw error;
+  await trackEvent("night_shift_started", { baby_id: babyId });
+  return data;
+}
+
+export async function finishNightShift(sessionId: string) {
+  const { data, error } = await supabase.rpc("finish_night_shift", {
+    p_session_id: sessionId
+  });
+  if (error) throw error;
+  await trackEvent("night_shift_finished");
+  return data;
+}
+
+export function subscribeToNightShift(babyId: string, onChange: () => void) {
+  const channel = supabase
+    .channel(`night-shift:${babyId}`)
+    .on("postgres_changes", {
+      event: "*",
+      schema: "public",
+      table: "night_shift_sessions",
+      filter: `baby_id=eq.${babyId}`
+    }, onChange)
+    .subscribe();
+  return () => {
+    supabase.removeChannel(channel).catch(() => undefined);
+  };
 }

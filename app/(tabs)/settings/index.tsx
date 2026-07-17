@@ -36,7 +36,10 @@ import {
   type PremiumSubscriptionStatus
 } from "@/lib/revenuecat";
 import { supabase } from "@/lib/supabase";
-import { registerAndSavePushToken } from "@/lib/notifications";
+import {
+  registerAndSavePushToken,
+  unregisterPushTokenForCurrentUser
+} from "@/lib/notifications";
 import {
   appStoreSubscriptionsUrl,
   openLegalPage,
@@ -74,6 +77,7 @@ export default function SettingsScreen() {
   const [feedingMode, setFeedingMode] = useState<"breastfeeding" | "pumping" | "mixed" | "formula">("mixed");
   const [ownUserId, setOwnUserId] = useState<string>();
   const [restoringPurchases, setRestoringPurchases] = useState(false);
+  const [sendingTestNotification, setSendingTestNotification] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const profileEditorYRef = useRef(0);
 
@@ -122,7 +126,8 @@ export default function SettingsScreen() {
 
       return updated;
     },
-    onSuccess: async () => {
+    onSuccess: async (updatedProfile) => {
+      queryClient.setQueryData(["current-profile"], updatedProfile);
       await queryClient.invalidateQueries({ queryKey: ["current-profile"] });
       showSuccess("Tercihin kaydedildi.");
     },
@@ -165,7 +170,8 @@ export default function SettingsScreen() {
         theme_preference: themePreference
       });
     },
-    onSuccess: async () => {
+    onSuccess: async (updatedProfile) => {
+      queryClient.setQueryData(["current-profile"], updatedProfile);
       setProfileEditOpen(false);
       await queryClient.invalidateQueries({ queryKey: ["current-profile"] });
       showSuccess("Profil bilgilerin güncellendi.");
@@ -192,6 +198,7 @@ export default function SettingsScreen() {
 
   const signOutMutation = useMutation({
     mutationFn: async () => {
+      await unregisterPushTokenForCurrentUser().catch(() => undefined);
       const { error } = await supabase.auth.signOut();
       if (error) {
         throw error;
@@ -249,6 +256,33 @@ export default function SettingsScreen() {
       );
     } catch (error) {
       showError(error, "Bildirim izni yenilenemedi");
+    }
+  }
+
+  async function sendTestNotification() {
+    setSendingTestNotification(true);
+    try {
+      const token = await registerAndSavePushToken();
+      if (!token) {
+        showInfo(
+          "Önce telefon ayarlarından Anne+ bildirimlerine izin verin.",
+          "Bildirim izni gerekli"
+        );
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke(
+        "send-test-notification",
+        { body: {} }
+      );
+      if (error) throw error;
+      if (!data?.success) throw new Error("Test bildirimi gönderilemedi.");
+
+      showSuccess("Test push bildirimi gönderildi. Birkaç saniye içinde görünmeli.");
+    } catch (error) {
+      showError(error, "Test bildirimi gönderilemedi");
+    } finally {
+      setSendingTestNotification(false);
     }
   }
 
@@ -507,7 +541,13 @@ export default function SettingsScreen() {
                       active={themePreference === item.id}
                       color={item.primary}
                       label={item.label}
-                      onPress={() => setThemePreference(item.id)}
+                      onPress={() => {
+                        if (updatePreferenceMutation.isPending) return;
+                        setThemePreference(item.id);
+                        updatePreferenceMutation.mutate({
+                          theme_preference: item.id
+                        });
+                      }}
                     />
                   ))}
                 </View>
@@ -584,6 +624,15 @@ export default function SettingsScreen() {
               }
             />
             <PreferenceRow
+              label="Günlük kişisel destek"
+              description="Gebelik haftana veya doğum sonrası dönemine uygun makale, küçük öneri ve destek mesajı al."
+              value={Boolean(profile?.notify_daily_support)}
+              disabled={!profile || updatePreferenceMutation.isPending}
+              onValueChange={(value) =>
+                updatePreferenceMutation.mutate({ notify_daily_support: value })
+              }
+            />
+            <PreferenceRow
               label="Akıllı uyku tahminleri"
               description="Yeterli kayıt oluştuğunda yaklaşan uyku penceresinden haber ver."
               value={Boolean(profile?.notify_sleep_predictions)}
@@ -624,6 +673,16 @@ export default function SettingsScreen() {
               label="Bildirim iznini yenile"
               variant="secondary"
               onPress={refreshNotificationPermission}
+            />
+            <Button
+              disabled={sendingTestNotification}
+              label={
+                sendingTestNotification
+                  ? "Test bildirimi gönderiliyor..."
+                  : "Test push bildirimi gönder"
+              }
+              variant="secondary"
+              onPress={sendTestNotification}
             />
           </View>
         </Card>
@@ -682,6 +741,16 @@ export default function SettingsScreen() {
               label="Gizlilik politikasını aç"
               variant="secondary"
               onPress={() => openLegalDocument("privacy")}
+            />
+            <Button
+              label="KVKK aydınlatma metnini aç"
+              variant="secondary"
+              onPress={() => openLegalDocument("kvkkDisclosure")}
+            />
+            <Button
+              label="Açık rıza metnini aç"
+              variant="secondary"
+              onPress={() => openLegalDocument("explicitConsent")}
             />
             <Button
               label="Kullanım şartlarını aç"

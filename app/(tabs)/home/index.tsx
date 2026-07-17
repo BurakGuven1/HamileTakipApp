@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Clock3,
   Droplets,
+  FileSearch,
   HandHeart,
   HeartPulse,
   Images,
@@ -29,7 +30,7 @@ import {
 import Animated, { Easing, FadeIn, FadeOut } from "react-native-reanimated";
 
 import { listBabies } from "@/api/babies";
-import { getCareHandoverSnapshot, getCurrentCareUserId, subscribeToCareCoordination, takeOverBabyCare, type CareJournalEntry } from "@/api/careJournal";
+import { getCareHandoverSnapshot, getCurrentCareUserId, listCareJournalEntries, subscribeToCareCoordination, takeOverBabyCare, type CareJournalEntry } from "@/api/careJournal";
 import { getCurrentFamilyMembership } from "@/api/familyAccess";
 import { getFeaturedArticles } from "@/api/articles";
 import { getCurrentProfile } from "@/api/profiles";
@@ -80,6 +81,11 @@ export default function HomeScreen() {
     queryFn: () => getCareHandoverSnapshot(firstBaby?.id as string),
     enabled: Boolean(firstBaby?.id),
     refetchInterval: 30_000
+  });
+  const careJournalWidgetQuery = useQuery({
+    queryKey: ["care-journal-home", firstBaby?.id],
+    queryFn: () => listCareJournalEntries(firstBaby?.id as string, 300),
+    enabled: Boolean(firstBaby?.id)
   });
 
   const vaccinationsQuery = useQuery({
@@ -135,21 +141,26 @@ export default function HomeScreen() {
     });
   }, [firstBaby?.id, queryClient]);
   useEffect(() => {
-    if (!firstBaby) return;
-
-    const entries = [
-      careHandoverQuery.data?.last_feed,
-      careHandoverQuery.data?.last_diaper,
-      careHandoverQuery.data?.last_sleep
-    ].filter((entry): entry is CareJournalEntry => Boolean(entry));
-
-    syncCareQuickWidget(firstBaby.name, entries).catch(() => undefined);
+    if (firstBaby && careJournalWidgetQuery.isSuccess) {
+      syncCareQuickWidget(
+        firstBaby.id,
+        firstBaby.name,
+        careJournalWidgetQuery.data ?? []
+      ).catch(() => undefined);
+      return;
+    }
+    if (!firstBaby && profile?.is_pregnant) {
+      syncCareQuickWidget(null, displayName || "Anne", []).catch(
+        () => undefined
+      );
+    }
   }, [
-    careHandoverQuery.data?.last_diaper?.id,
-    careHandoverQuery.data?.last_feed?.id,
-    careHandoverQuery.data?.last_sleep?.id,
+    careJournalWidgetQuery.data,
+    careJournalWidgetQuery.isSuccess,
     firstBaby?.id,
-    firstBaby?.name
+    firstBaby?.name,
+    profile?.is_pregnant,
+    displayName
   ]);
   const heroTitle =
     profile?.is_pregnant && week
@@ -390,6 +401,22 @@ export default function HomeScreen() {
             </View>
           </Card>
         ) : null}
+
+        <Card style={[styles.toolsCard, { backgroundColor: colors.highlightSoft }]}>
+          <View style={{ gap: spacing.md }}>
+            <View style={styles.cardHeader}>
+              <View style={{ flex: 1, gap: spacing.xs }}>
+                <Text style={typography.eyebrow}>Gizlilik odaklı</Text>
+                <Text style={typography.heading2}>Belgeyi Anla</Text>
+                <Text style={typography.body}>
+                  Tahlil ve rapordaki değerleri cihazında, yalnızca belgenin kendi referans aralıklarıyla düzenle. Tıbbi yorum yapmaz.
+                </Text>
+              </View>
+              <FileSearch color={appTheme.primary} size={30} />
+            </View>
+            <Button label="Belge ekle" onPress={() => router.push("/document-insight")} variant="secondary" />
+          </View>
+        </Card>
 
         <View style={styles.metricRow}>
           <MetricCard label="Bebek profili" value={`${babies.length}`} />

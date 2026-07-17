@@ -8,6 +8,8 @@ import { useCareReminderVoice } from "@/hooks/useCareReminderVoice";
 import { useCareSyncBootstrap } from "@/hooks/useCareSync";
 import { useNotificationNavigation } from "@/hooks/useNotificationNavigation";
 import { useRevenueCatSync } from "@/hooks/useRevenueCatSync";
+import { VaccineReminderGate } from "@/components/VaccineReminderGate";
+import { CareAlarmGate } from "@/components/CareAlarmGate";
 import { queryClient } from "@/lib/queryClient";
 import { AppThemeProvider } from "@/providers/AppThemeProvider";
 import { FeedbackProvider } from "@/providers/FeedbackProvider";
@@ -21,7 +23,11 @@ export function AppProviders({ children }: PropsWithChildren) {
           <AppBootstrappers />
           <AppThemeProvider>
             <FeedbackProvider>
-              <LullabyPlayerProvider>{children}</LullabyPlayerProvider>
+              <LullabyPlayerProvider>
+                {children}
+                <CareAlarmGate />
+                <VaccineReminderGate />
+              </LullabyPlayerProvider>
             </FeedbackProvider>
           </AppThemeProvider>
         </QueryClientProvider>
