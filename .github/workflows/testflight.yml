@@ -72,10 +72,17 @@ jobs:
           security import "$CERTIFICATE_PATH" -k "$KEYCHAIN_PATH" -P "$IOS_DISTRIBUTION_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security list-keychain -d user -s "$KEYCHAIN_PATH"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
 
           mkdir -p "$PROFILE_DIRECTORY"
-          printf '%s' "$IOS_APP_PROVISIONING_PROFILE_BASE64" | base64 -D > "$PROFILE_DIRECTORY/app.mobileprovision"
-          printf '%s' "$IOS_WIDGET_PROVISIONING_PROFILE_BASE64" | base64 -D > "$PROFILE_DIRECTORY/widget.mobileprovision"
+          APP_PROFILE_PATH="$RUNNER_TEMP/app.mobileprovision"
+          WIDGET_PROFILE_PATH="$RUNNER_TEMP/widget.mobileprovision"
+          printf '%s' "$IOS_APP_PROVISIONING_PROFILE_BASE64" | base64 -D > "$APP_PROFILE_PATH"
+          printf '%s' "$IOS_WIDGET_PROVISIONING_PROFILE_BASE64" | base64 -D > "$WIDGET_PROFILE_PATH"
+          APP_PROFILE_UUID="$(security cms -D -i "$APP_PROFILE_PATH" | /usr/libexec/PlistBuddy -c 'Print :UUID' /dev/stdin)"
+          WIDGET_PROFILE_UUID="$(security cms -D -i "$WIDGET_PROFILE_PATH" | /usr/libexec/PlistBuddy -c 'Print :UUID' /dev/stdin)"
+          cp "$APP_PROFILE_PATH" "$PROFILE_DIRECTORY/$APP_PROFILE_UUID.mobileprovision"
+          cp "$WIDGET_PROFILE_PATH" "$PROFILE_DIRECTORY/$WIDGET_PROFILE_UUID.mobileprovision"
 
       - name: Archive signed app
         env:
@@ -99,6 +106,7 @@ jobs:
             -archivePath "$RUNNER_TEMP/AnnePlus.xcarchive" \
             -resultBundlePath "$RESULT_BUNDLE" \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
             CODE_SIGN_STYLE=Automatic \
             archive 2>&1 | tee "$ARCHIVE_LOG"
           BUILD_STATUS=${PIPESTATUS[0]}
