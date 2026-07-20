@@ -5,6 +5,10 @@ import {
   PlatformColor,
 } from "react-native";
 
+// Uygulama her açılışta açık görünümle başlar; kayıtlı koyu tema tercihi
+// AppThemeProvider tarafından profil yüklendiğinde açıkça etkinleştirilir.
+Appearance.setColorScheme("light");
+
 const alpha = (rgb: string, opacity: number) => `rgba(${rgb}, ${opacity})`;
 
 export function semanticColor(
@@ -77,7 +81,7 @@ export const colors = {
   highlightSoft: semanticColor(alpha(rgb.honeyGold, 0.15), "rgba(233, 196, 126, 0.14)"),
   danger: semanticColor("#A33F52", "#FF9AAA"),
   success: semanticColor("#376B4C", "#8FD1A8"),
-  onPrimary: "#FFFCF8",
+  onPrimary: semanticColor("#FFFCF8", "#171419", "?android:attr/textColorPrimaryInverse"),
   lengthTint: semanticColor("#F7EBEC", "#35272C"),
   weightTint: semanticColor("#FBF3E4", "#352F24"),
   overlay: semanticColor(alpha(rgb.nightPlum, 0.08), "rgba(0, 0, 0, 0.34)"),

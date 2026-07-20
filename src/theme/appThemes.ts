@@ -6,7 +6,10 @@ export type ThemePreference =
   | "rose"
   | "blue"
   | "pink"
-  | "lavender";
+  | "lavender"
+  | "dark";
+
+type AccentThemePreference = Exclude<ThemePreference, "auto" | "dark">;
 
 type AppTheme = {
   accent: string;
@@ -51,6 +54,13 @@ export const appThemes: Record<Exclude<ThemePreference, "auto">, AppTheme> = {
     label: "Lavanta",
     primary: semanticColor("#6F56A3", "#C7B4F4"),
     primarySoft: semanticColor("rgba(111, 86, 163, 0.14)", "rgba(199, 180, 244, 0.14)")
+  },
+  dark: {
+    accent: "#F0A7B4",
+    accentSoft: "rgba(240, 167, 180, 0.14)",
+    label: "Koyu mod",
+    primary: "#9ED0B5",
+    primarySoft: "rgba(158, 208, 181, 0.14)"
   }
 };
 
@@ -84,7 +94,7 @@ export function getAppTheme(theme?: string | null, gender?: string | null) {
 
 export function getSuggestedThemeForGender(
   gender?: string | null
-): Exclude<ThemePreference, "auto"> {
+): AccentThemePreference {
   if (gender === "erkek") return "blue";
   if (gender === "kiz" || gender === "kız") return "pink";
   return "sage";

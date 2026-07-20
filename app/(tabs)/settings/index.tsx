@@ -567,7 +567,7 @@ export default function SettingsScreen() {
               </View>
 
               <View style={{ gap: spacing.sm }}>
-                <Text style={typography.label}>Tema rengi</Text>
+                <Text style={typography.label}>Görünüm ve tema</Text>
                 <View style={styles.themeGrid}>
                   {themeOptions.map((item) => (
                     <ThemeChip

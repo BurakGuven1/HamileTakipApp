@@ -638,7 +638,7 @@ export default function OnboardingScreen() {
             <View style={{ gap: spacing.lg }}>
               <HeaderBlock
                 icon={<Sparkles color={colors.primary} size={26} />}
-                title="Uygulamanın rengini seç"
+                title="Uygulamanın görünümünü seç"
                 body={
                   status === "baby" && suggestedTheme
                     ? `Cinsiyet bilgine göre ${suggestedTheme.label} önerdik. İstersen temel rengi şimdi değiştirebilirsin.`

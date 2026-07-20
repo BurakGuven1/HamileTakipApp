@@ -1,4 +1,5 @@
 import { trackEvent } from "@/lib/analytics";
+import { createRealtimeChannelName } from "@/lib/realtime";
 import { supabase } from "@/lib/supabase";
 import type { Tables, TablesInsert } from "@/types/database";
 import {
@@ -235,7 +236,7 @@ export function subscribeToCareJournalEntries(
   onChange: () => void
 ) {
   const channel = supabase
-    .channel(`care-journal:${babyId}`)
+    .channel(createRealtimeChannelName("care-journal", babyId))
     .on(
       "postgres_changes",
       {
@@ -365,7 +366,7 @@ export function takeOverBabyCare(babyId: string, caregiverName: string) {
 
 export function subscribeToCareCoordination(babyId: string, onChange: () => void) {
   const channel = supabase
-    .channel(`care-coordination:${babyId}`)
+    .channel(createRealtimeChannelName("care-coordination", babyId))
     .on("postgres_changes", {
       event: "*", schema: "public", table: "care_active_timers", filter: `baby_id=eq.${babyId}`
     }, onChange)
@@ -527,7 +528,7 @@ export async function finishNightShift(sessionId: string) {
 
 export function subscribeToNightShift(babyId: string, onChange: () => void) {
   const channel = supabase
-    .channel(`night-shift:${babyId}`)
+    .channel(createRealtimeChannelName("night-shift", babyId))
     .on("postgres_changes", {
       event: "*",
       schema: "public",

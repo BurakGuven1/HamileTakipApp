@@ -1,4 +1,5 @@
 import { getCurrentProfile } from "@/api/profiles";
+import { createRealtimeChannelName } from "@/lib/realtime";
 import { supabase } from "@/lib/supabase";
 import type { Tables } from "@/types/database";
 
@@ -119,7 +120,7 @@ export function subscribeToBirthPreparation(
   onChange: () => void
 ) {
   const channel = supabase
-    .channel(`birth-preparation:${profileId}`)
+    .channel(createRealtimeChannelName("birth-preparation", profileId))
     .on(
       "postgres_changes",
       {

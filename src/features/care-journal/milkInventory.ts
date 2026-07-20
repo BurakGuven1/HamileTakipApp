@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
 
+import { createRealtimeChannelName } from "@/lib/realtime";
 import { supabase } from "@/lib/supabase";
 import type { Tables } from "@/types/database";
 import { createCareUuid, getCareDeviceIdentity } from "./careSync";
@@ -112,7 +113,7 @@ export async function discardMilk(container: MilkContainer, actorName: string | 
 }
 
 export function subscribeToMilkInventory(babyId: string, onChange: () => void) {
-  const channel = supabase.channel(`milk-inventory:${babyId}`).on(
+  const channel = supabase.channel(createRealtimeChannelName("milk-inventory", babyId)).on(
     "postgres_changes",
     { event: "*", schema: "public", table: "milk_storage_containers", filter: `baby_id=eq.${babyId}` },
     onChange

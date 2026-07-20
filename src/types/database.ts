@@ -15,7 +15,7 @@ export type Database = {
           display_name: string | null;
           forum_nickname: string | null;
           family_referral_code: string;
-          theme_preference: "auto" | "sage" | "rose" | "blue" | "pink" | "lavender";
+          theme_preference: "auto" | "sage" | "rose" | "blue" | "pink" | "lavender" | "dark";
           mother_name: string;
           father_name: string;
           avatar_url: string | null;
@@ -41,7 +41,7 @@ export type Database = {
           display_name?: string | null;
           forum_nickname?: string | null;
           family_referral_code?: string;
-          theme_preference?: "auto" | "sage" | "rose" | "blue" | "pink" | "lavender";
+          theme_preference?: "auto" | "sage" | "rose" | "blue" | "pink" | "lavender" | "dark";
           mother_name?: string;
           father_name?: string;
           avatar_url?: string | null;
@@ -66,7 +66,7 @@ export type Database = {
           display_name?: string | null;
           forum_nickname?: string | null;
           family_referral_code?: string;
-          theme_preference?: "auto" | "sage" | "rose" | "blue" | "pink" | "lavender";
+          theme_preference?: "auto" | "sage" | "rose" | "blue" | "pink" | "lavender" | "dark";
           mother_name?: string;
           father_name?: string;
           avatar_url?: string | null;

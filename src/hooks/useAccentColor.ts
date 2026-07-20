@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
+import { useColorScheme } from "react-native";
 
 import { listBabies, type Baby } from "@/api/babies";
 import { getCurrentProfile, type Profile } from "@/api/profiles";
@@ -33,12 +34,14 @@ export function resolveAccentColor({ babies, profile }: AccentInput) {
     accent: theme.accent,
     accentSoft: theme.accentSoft,
     primary: theme.primary,
+    isDark: profile?.theme_preference === "dark",
     theme,
     tint: theme.primarySoft
   };
 }
 
 export function useAccentColor(input: AccentInput = {}) {
+  const colorScheme = useColorScheme();
   const shouldFetchProfile = input.profile === undefined;
   const shouldFetchBabies = input.babies === undefined;
 
@@ -59,6 +62,6 @@ export function useAccentColor(input: AccentInput = {}) {
 
   return useMemo(
     () => resolveAccentColor({ babies, profile }),
-    [babies, profile]
+    [babies, colorScheme, profile]
   );
 }

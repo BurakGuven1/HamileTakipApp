@@ -14,7 +14,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   version: "1.0.0",
   icon: "./assets/branding/app-icon.png",
   orientation: "portrait",
-  userInterfaceStyle: "automatic",
+  userInterfaceStyle: "light",
   ios: {
     icon: "./assets/branding/app-icon.png",
     supportsTablet: false,

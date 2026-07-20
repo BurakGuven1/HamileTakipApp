@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from "react";
-import { createContext, useContext } from "react";
+import { createContext, useContext, useLayoutEffect } from "react";
+import { Appearance } from "react-native";
 
 import { resolveAccentColor, useAccentColor } from "@/hooks/useAccentColor";
 
@@ -10,6 +11,10 @@ const AppThemeContext = createContext<AppThemeContextValue>(fallbackTheme);
 
 export function AppThemeProvider({ children }: PropsWithChildren) {
   const accentColor = useAccentColor();
+
+  useLayoutEffect(() => {
+    Appearance.setColorScheme(accentColor.isDark ? "dark" : "light");
+  }, [accentColor.isDark]);
 
   return (
     <AppThemeContext.Provider value={accentColor}>
