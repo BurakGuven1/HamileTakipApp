@@ -642,6 +642,19 @@ function AdvancedCareJournalContent() {
     () => entries.filter((entry) => isToday(entry.occurred_at)),
     [entries]
   );
+  const completedSleepCount = useMemo(
+    () =>
+      entries.filter((entry) => {
+        if (entry.entry_type !== "sleep" || !entry.ended_at) return false;
+        const durationMs = Date.parse(entry.ended_at) - Date.parse(entry.occurred_at);
+        return (
+          durationMs > 5 * 60_000 &&
+          durationMs <= 16 * 60 * 60_000 &&
+          Date.parse(entry.occurred_at) >= Date.now() - 21 * 86_400_000
+        );
+      }).length,
+    [entries]
+  );
 
   useEffect(() => {
     if (activeTimers.length === 0) return;
@@ -1044,6 +1057,7 @@ function AdvancedCareJournalContent() {
                     retrying={sleepPredictionQuery.isFetching}
                   />
                 ) : <SleepPredictionCard
+                  completedSleepCount={completedSleepCount}
                   isPremium={isPremium}
                   loading={sleepPredictionQuery.isLoading}
                   now={predictionNow}
@@ -1355,12 +1369,14 @@ function activityActionLabel(action: CareJournalActivity["action"]) {
 function NowItem({ label, value }: { label: string; value: string }) { return <View style={styles.nowItem}><Text style={styles.summaryLabel}>{label}</Text><Text style={styles.nowValue}>{value}</Text></View>; }
 
 function SleepPredictionCard({
+  completedSleepCount,
   isPremium,
   loading,
   now,
   onOpenPremium,
   prediction
 }: {
+  completedSleepCount: number;
   isPremium: boolean;
   loading: boolean;
   now: number;
@@ -1398,7 +1414,7 @@ function SleepPredictionCard({
     );
   }
 
-  const sampleCount = prediction?.sample_count ?? 0;
+  const sampleCount = Math.max(prediction?.sample_count ?? 0, completedSleepCount);
   const hasCurrentPrediction = Boolean(
     prediction?.status === "active" &&
       prediction.window_end &&

@@ -3,9 +3,13 @@ import { File, Paths } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import {
+  ArrowDown,
   ArrowLeft,
+  ArrowUp,
   Camera,
   Check,
+  ChevronDown,
+  ChevronUp,
   FileSearch,
   Image as ImageIcon,
   Link2,
@@ -20,8 +24,7 @@ import {
   DOCUMENT_INSIGHT_MAX_BYTES,
   analyzeMedicalDocument,
   type DocumentInsightResult,
-  type DocumentInsightValue,
-  type DocumentReferenceStatus
+  type DocumentInsightValue
 } from "@/api/documentInsight";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
@@ -39,24 +42,7 @@ type TemporaryDocument = {
 
 const MIME_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
 
-const MASKED_FIELD_LABELS: Record<string, string> = {
-  name: "Ad ve soyad",
-  tc_identity: "T.C. kimlik numarası",
-  address: "Adres",
-  phone: "Telefon",
-  email: "E-posta",
-  birth_date: "Doğum tarihi",
-  patient_id: "Hasta / protokol numarası",
-  other: "Diğer kişisel bilgiler"
-};
-
-const STATUS_LABELS: Record<DocumentReferenceStatus, string> = {
-  below: "Belge aralığının altında",
-  within: "Belge aralığında",
-  above: "Belge aralığının üstünde",
-  document_marked: "Belgede işaretli",
-  unclassified: "Karşılaştırılamadı"
-};
+type ResultCategory = "low" | "high" | "normal" | "other";
 
 export default function DocumentInsightScreen() {
   const appTheme = useAppTheme();
@@ -81,17 +67,6 @@ export default function DocumentInsightScreen() {
       if (current) void deleteTemporaryFile(current.uri);
     },
     []
-  );
-
-  const flaggedValues = useMemo(
-    () =>
-      result?.values.filter(
-        (value) =>
-          value.referenceStatus === "below" ||
-          value.referenceStatus === "above" ||
-          (value.referenceStatus === "document_marked" && value.documentMarker !== "normal")
-      ) ?? [],
-    [result]
   );
 
   const choosePdf = async () => {
@@ -224,15 +199,17 @@ export default function DocumentInsightScreen() {
           <ShieldCheck color={appTheme.primary} size={30} />
         </View>
 
-        <Card style={{ backgroundColor: appTheme.tint }}>
-          <View style={styles.stack}>
-            <Text style={typography.heading3}>Belge yalnızca bu cihazda okunur</Text>
-            <Text style={typography.body}>
-              Laboratuvar değerlerini bulur, belgenin referans aralıklarıyla karşılaştırır ve her testi halk dilinde açıklar. Teşhis, aciliyet, tedavi veya ilaç önerisi üretmez.
-            </Text>
-            <Text style={styles.privacyLine}>İnternete gönderilmez • OpenAI kullanılmaz • Orijinal dosya saklanmaz • Sonuç geçmişi oluşturulmaz</Text>
-          </View>
-        </Card>
+        {!result ? (
+          <Card style={{ backgroundColor: appTheme.tint }}>
+            <View style={styles.stack}>
+              <Text style={typography.heading3}>Belge yalnızca bu cihazda okunur</Text>
+              <Text style={typography.body}>
+                Laboratuvar değerlerini bulur, belgenin referans aralıklarıyla karşılaştırır ve her testi halk dilinde açıklar. Teşhis, aciliyet, tedavi veya ilaç önerisi üretmez.
+              </Text>
+              <Text style={styles.privacyLine}>İnternete gönderilmez • Orijinal dosya ve sonuç geçmişi saklanmaz</Text>
+            </View>
+          </Card>
+        ) : null}
 
         {!result ? (
           <Card>
@@ -279,7 +256,7 @@ export default function DocumentInsightScreen() {
             </View>
           </Card>
         ) : (
-          <ResultView flaggedValues={flaggedValues} result={result} />
+          <ResultView result={result} />
         )}
 
         {(selected || result) && !isAnalyzing ? <Button label="Belgeyi ve sonucu sil" onPress={clearAll} variant="ghost" /> : null}
@@ -288,8 +265,11 @@ export default function DocumentInsightScreen() {
   );
 }
 
-function ResultView({ flaggedValues, result }: { flaggedValues: DocumentInsightValue[]; result: DocumentInsightResult }) {
+function ResultView({ result }: { result: DocumentInsightResult }) {
   const appTheme = useAppTheme();
+  const groupedValues = useMemo(() => groupDocumentValues(result.values), [result.values]);
+  const categorizedCount = groupedValues.low.length + groupedValues.high.length + groupedValues.normal.length;
+
   return (
     <View style={styles.stackLarge}>
       {result.readability !== "readable" ? (
@@ -299,84 +279,97 @@ function ResultView({ flaggedValues, result }: { flaggedValues: DocumentInsightV
         </Card>
       ) : null}
 
-      {result.maskedFieldTypes.length ? (
-        <Card style={{ backgroundColor: appTheme.tint }}>
-          <Text style={typography.heading3}>Sonuçtan çıkarılan kişisel alanlar</Text>
-          <Text style={typography.body}>{result.maskedFieldTypes.map((field) => MASKED_FIELD_LABELS[field] ?? "Kişisel bilgi").join(" • ")}</Text>
-        </Card>
-      ) : null}
+      <Card style={{ backgroundColor: appTheme.tint }}>
+        <View style={styles.stack}>
+          <Text style={typography.eyebrow}>BELGE ÖZETİ</Text>
+          <Text style={typography.heading2}>Sonuçların anlaşılır görünümü</Text>
+          <Text style={typography.body}>
+            {result.values.length
+              ? `${result.values.length} sonuç okundu${categorizedCount ? `, ${categorizedCount} tanesi rapordaki bilgiye göre sınıflandırıldı` : ""}.`
+              : "Eşleştirilebilen bir laboratuvar sonucu bulunamadı."}
+          </Text>
+          {result.values.length ? (
+            <View style={styles.resultSummaryRow}>
+              <SummaryCount label="Düşük" value={groupedValues.low.length} tone="low" />
+              <SummaryCount label="Yüksek" value={groupedValues.high.length} tone="high" />
+              <SummaryCount label="Normal" value={groupedValues.normal.length} tone="normal" />
+            </View>
+          ) : null}
+        </View>
+      </Card>
 
-      {flaggedValues.length ? (
-        <Card style={{ backgroundColor: colors.highlightSoft }}>
-          <View style={styles.stack}>
-            <Text style={typography.heading2}>Belgedeki referans dışında görünenler</Text>
-            <Text style={styles.smallText}>Bu sıralama önem veya aciliyet göstermez; yalnızca belgedeki işaret ve aralık aktarılır.</Text>
-            {flaggedValues.map((value, index) => <ValueRow key={`flag-${value.testName}-${index}`} value={value} compact />)}
+      {result.values.length ? (
+        <Card>
+          <View style={styles.resultList}>
+            <ResultCategorySection category="low" values={groupedValues.low} />
+            <ResultCategorySection category="high" values={groupedValues.high} />
+            <ResultCategorySection category="normal" values={groupedValues.normal} />
+            <ResultCategorySection category="other" values={groupedValues.other} />
           </View>
         </Card>
       ) : null}
 
-      <Card>
-        <View style={styles.stack}>
-          <Text style={typography.heading2}>Sonuçlarınız, anlaşılır şekilde</Text>
-          {result.values.length ? (
-            <>
-              <Text style={styles.smallText}>{result.values.length} laboratuvar sonucu okundu. “Normal” ifadesi yalnızca belgenin kendi referans aralığını anlatır.</Text>
-              {result.values.map((value, index) => <ValueRow key={`${value.testName}-${index}`} value={value} />)}
-            </>
-          ) : <Text style={typography.body}>Güvenle eşleştirilebilen bir laboratuvar sonucu bulunamadı.</Text>}
-        </View>
-      </Card>
-
       {result.doctorQuestions.length ? (
         <Card>
           <View style={styles.stack}>
-            <Text style={typography.heading2}>Doktora sorulabilecek tarafsız sorular</Text>
+            <Text style={typography.heading2}>Doktoruna sorabileceğin sorular</Text>
             {result.doctorQuestions.map((question, index) => <Text key={`${question}-${index}`} style={typography.body}>{index + 1}. {question}</Text>)}
           </View>
         </Card>
       ) : null}
 
-      <Card style={{ backgroundColor: appTheme.tint }}>
+      <Card style={styles.safetyCard}>
         <View style={styles.stack}>
-          <View style={styles.sectionTitleRow}><ShieldCheck color={appTheme.primary} size={23} /><Text style={typography.heading3}>Gizlilik sonucu</Text></View>
-          <Text style={typography.body}>Orijinal geçici dosya silindi. Belge OpenAI veya başka bir yapay zekâ servisine gönderilmedi; sonuç veritabanına ya da cihaz geçmişine kaydedilmedi.</Text>
+          <View style={styles.sectionTitleRow}><ShieldCheck color={appTheme.primary} size={22} /><Text style={typography.heading3}>Bilmen gereken</Text></View>
           <Text style={styles.safetyNotice}>{result.safetyNotice}</Text>
+          <Text style={styles.smallText}>Geçici belge silindi; sonuç cihazda veya veritabanında saklanmadı.</Text>
         </View>
       </Card>
     </View>
   );
 }
 
-function ValueRow({ compact = false, value }: { compact?: boolean; value: DocumentInsightValue }) {
+function ValueRow({ value }: { value: DocumentInsightValue }) {
   const appTheme = useAppTheme();
-  const isOutside = value.referenceStatus === "below" || value.referenceStatus === "above" || (value.referenceStatus === "document_marked" && value.documentMarker !== "normal");
+  const [expanded, setExpanded] = useState(false);
+  const referenceRange = usefulDocumentText(value.referenceRange);
+  const resultSummary = usefulDocumentText(value.plainLanguage.resultSummary);
+  const whatItIs = usefulDocumentText(value.plainLanguage.whatItIs);
+  const possibleMeaning = usefulDocumentText(value.plainLanguage.possibleMeaning);
+  const clinicianContext = usefulDocumentText(value.plainLanguage.clinicianContext);
+  const sourceUrl = /^https?:\/\//i.test(value.plainLanguage.sourceUrl ?? "")
+    ? value.plainLanguage.sourceUrl
+    : null;
   return (
-    <View style={[styles.valueRow, compact && styles.compactValueRow]}>
+    <View style={styles.valueRow}>
       <View style={styles.valueHeader}>
-        <Text style={typography.label}>{value.testName}</Text>
+        <Text style={[typography.label, styles.valueName]}>{value.testName}</Text>
         <Text style={styles.resultText}>{value.result}{value.unit ? ` ${value.unit}` : ""}</Text>
       </View>
-      <Text style={styles.rangeText}>Belgedeki referans: {value.referenceRange || "Belirtilmemiş"}</Text>
-      <View style={[styles.statusPill, isOutside ? styles.statusOutside : styles.statusNeutral]}>
-        <Text style={styles.statusText}>{STATUS_LABELS[value.referenceStatus]}</Text>
-      </View>
-      <Text style={styles.smallText}>{value.referenceExplanation}</Text>
-      {value.confidence !== "high" ? <Text style={styles.lowConfidence}>Okuma güveni: {value.confidence === "medium" ? "orta" : "düşük"} • Orijinalden kontrol edin</Text> : null}
-      {!compact ? (
+      {resultSummary ? <Text style={styles.valueSummary}>{resultSummary}</Text> : null}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        onPress={() => setExpanded((current) => !current)}
+        style={styles.expandButton}
+      >
+        <Text style={[styles.expandText, { color: appTheme.primary }]}>{expanded ? "Ayrıntıyı kapat" : "Açıklamayı gör"}</Text>
+        {expanded ? <ChevronUp color={appTheme.primary} size={17} /> : <ChevronDown color={appTheme.primary} size={17} />}
+      </Pressable>
+      {expanded ? (
         <View style={styles.explanationBox}>
-          <View style={styles.explanationSection}>
-            <Text style={styles.explanationLabel}>Bu test neyi anlatır?</Text>
-            <Text style={typography.body}>{value.plainLanguage.whatItIs}</Text>
-          </View>
-          <View style={styles.explanationSection}>
-            <Text style={styles.explanationLabel}>Sizin sonucunuz</Text>
-            <Text style={typography.body}>{value.plainLanguage.resultSummary}</Text>
-          </View>
-          <View style={styles.explanationSection}>
-            <Text style={styles.explanationLabel}>Genel olarak ne anlama gelebilir?</Text>
-            <Text style={typography.body}>{value.plainLanguage.possibleMeaning}</Text>
-          </View>
+          {whatItIs ? (
+            <View style={styles.explanationSection}>
+              <Text style={styles.explanationLabel}>Bu test neyi anlatır?</Text>
+              <Text style={typography.body}>{whatItIs}</Text>
+            </View>
+          ) : null}
+          {possibleMeaning ? (
+            <View style={styles.explanationSection}>
+              <Text style={styles.explanationLabel}>Genel olarak ne anlatabilir?</Text>
+              <Text style={typography.body}>{possibleMeaning}</Text>
+            </View>
+          ) : null}
           {value.plainLanguage.symptomContext.length ? (
             <View style={styles.explanationSection}>
               <Text style={styles.explanationLabel}>Bu yöndeki sonuçlarla birlikte görülebilen yakınmalar</Text>
@@ -384,18 +377,73 @@ function ValueRow({ compact = false, value }: { compact?: boolean; value: Docume
               <Text style={styles.smallText}>Bu yakınmalar sonucu kanıtlamaz; hiçbiri görülmeyebilir ve başka nedenleri olabilir.</Text>
             </View>
           ) : null}
-          <View style={styles.explanationSection}>
-            <Text style={styles.explanationLabel}>Birlikte değerlendirilmesi gerekenler</Text>
-            <Text style={typography.body}>{value.plainLanguage.clinicianContext}</Text>
-          </View>
-          <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(value.plainLanguage.sourceUrl)} style={styles.sourceLink}>
-            <Link2 color={appTheme.primary} size={16} />
-            <Text style={[styles.sourceText, { color: appTheme.primary }]}>{value.plainLanguage.sourceLabel}</Text>
-          </Pressable>
+          {clinicianContext ? (
+            <View style={styles.explanationSection}>
+              <Text style={styles.explanationLabel}>Birlikte değerlendirilmesi gerekenler</Text>
+              <Text style={typography.body}>{clinicianContext}</Text>
+            </View>
+          ) : null}
+          {referenceRange ? (
+            <Text style={styles.rangeText}>Rapordaki referans aralığı: {referenceRange}</Text>
+          ) : null}
+          {sourceUrl ? (
+            <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(sourceUrl)} style={styles.sourceLink}>
+              <Link2 color={appTheme.primary} size={16} />
+              <Text style={[styles.sourceText, { color: appTheme.primary }]}>{value.plainLanguage.sourceLabel}</Text>
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
     </View>
   );
+}
+
+function ResultCategorySection({ category, values }: { category: ResultCategory; values: DocumentInsightValue[] }) {
+  if (!values.length) return null;
+  const metadata = getCategoryMetadata(category);
+  return (
+    <View style={styles.categorySection}>
+      <View style={styles.categoryHeader}>
+        <View style={[styles.categoryIcon, { backgroundColor: metadata.background }]}>{metadata.icon}</View>
+        <Text style={[typography.heading3, styles.categoryTitle]}>{metadata.title}</Text>
+        <Text style={styles.categoryCount}>{values.length}</Text>
+      </View>
+      {category === "other" ? <Text style={styles.smallText}>Rapor bu sonuçlar için düşük, yüksek veya normal ayrımı yapmaya yetecek bilgi içermiyor.</Text> : null}
+      {values.map((value, index) => <ValueRow key={`${category}-${value.testName}-${index}`} value={value} />)}
+    </View>
+  );
+}
+
+function SummaryCount({ label, tone, value }: { label: string; tone: "low" | "high" | "normal"; value: number }) {
+  const backgroundColor = tone === "normal" ? colors.primarySoft : colors.highlightSoft;
+  return <View style={[styles.summaryCount, { backgroundColor }]}><Text style={styles.summaryNumber}>{value}</Text><Text style={styles.summaryLabel}>{label}</Text></View>;
+}
+
+function groupDocumentValues(values: DocumentInsightValue[]) {
+  return values.reduce<Record<ResultCategory, DocumentInsightValue[]>>((groups, value) => {
+    groups[getResultCategory(value)].push(value);
+    return groups;
+  }, { high: [], low: [], normal: [], other: [] });
+}
+
+function getResultCategory(value: DocumentInsightValue): ResultCategory {
+  if (value.referenceStatus === "below" || value.documentMarker === "low") return "low";
+  if (value.referenceStatus === "above" || value.documentMarker === "high") return "high";
+  if (value.referenceStatus === "within" || value.documentMarker === "normal") return "normal";
+  return "other";
+}
+
+function getCategoryMetadata(category: ResultCategory) {
+  if (category === "low") return { background: colors.highlightSoft, icon: <ArrowDown color={colors.highlight} size={18} />, title: "Düşük görünenler" };
+  if (category === "high") return { background: colors.accentSoft, icon: <ArrowUp color={colors.accent} size={18} />, title: "Yüksek görünenler" };
+  if (category === "normal") return { background: colors.primarySoft, icon: <Check color={colors.primary} size={18} />, title: "Normal aralıkta görünenler" };
+  return { background: colors.surfaceMuted, icon: <FileSearch color={colors.textMuted} size={18} />, title: "Diğer sonuçlar" };
+}
+
+function usefulDocumentText(value?: string | null) {
+  const text = value?.trim();
+  if (!text || /^(belirtilmemiş|belirtilmemis|yok|[-–—])$/i.test(text)) return null;
+  return text;
 }
 
 function PickerButton({ icon, label, onPress }: { icon: React.ReactNode; label: string; onPress: () => void }) {
@@ -456,10 +504,24 @@ const styles = StyleSheet.create({
   consentRow: { alignItems: "flex-start", flexDirection: "row", gap: spacing.md },
   checkbox: { alignItems: "center", borderColor: colors.border, borderRadius: 6, borderWidth: 1.5, height: 24, justifyContent: "center", marginTop: 2, width: 24 },
   consentText: { color: colors.text, flex: 1, fontFamily: fonts.bodyRegular, fontSize: 13, lineHeight: 20 },
+  resultSummaryRow: { flexDirection: "row", gap: spacing.sm },
+  summaryCount: { alignItems: "center", borderRadius: radii.md, flex: 1, gap: 2, paddingHorizontal: spacing.sm, paddingVertical: spacing.md },
+  summaryNumber: { color: colors.text, fontFamily: fonts.dataBold, fontSize: 20 },
+  summaryLabel: { color: colors.textMuted, fontFamily: fonts.bodySemiBold, fontSize: 12 },
+  resultList: { gap: spacing.xl },
+  categorySection: { gap: spacing.md },
+  categoryHeader: { alignItems: "center", flexDirection: "row", gap: spacing.sm },
+  categoryIcon: { alignItems: "center", borderRadius: radii.pill, height: 34, justifyContent: "center", width: 34 },
+  categoryTitle: { flex: 1 },
+  categoryCount: { color: colors.textMuted, fontFamily: fonts.dataBold, fontSize: 14 },
   valueRow: { borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth, gap: spacing.sm, paddingBottom: spacing.lg },
   compactValueRow: { paddingBottom: spacing.md },
   valueHeader: { alignItems: "flex-start", flexDirection: "row", gap: spacing.md, justifyContent: "space-between" },
+  valueName: { flex: 1 },
   resultText: { color: colors.text, fontFamily: fonts.dataBold, fontSize: 16, textAlign: "right" },
+  valueSummary: { color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 14, lineHeight: 21 },
+  expandButton: { alignItems: "center", alignSelf: "flex-start", flexDirection: "row", gap: spacing.xs, minHeight: 44 },
+  expandText: { fontFamily: fonts.bodySemiBold, fontSize: 13 },
   rangeText: { color: colors.text, fontFamily: fonts.dataRegular, fontSize: 13, lineHeight: 19 },
   statusPill: { alignSelf: "flex-start", borderRadius: radii.pill, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
   statusOutside: { backgroundColor: colors.highlightSoft },
@@ -471,5 +533,6 @@ const styles = StyleSheet.create({
   explanationLabel: { color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13, lineHeight: 19 },
   sourceLink: { alignItems: "center", alignSelf: "flex-start", flexDirection: "row", gap: spacing.xs, paddingVertical: spacing.xs },
   sourceText: { fontFamily: fonts.bodySemiBold, fontSize: 13 },
+  safetyCard: { backgroundColor: colors.surfaceMuted },
   safetyNotice: { color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13, lineHeight: 20 }
 });

@@ -1,6 +1,7 @@
 import { createAudioPlayer } from "expo-audio";
 import * as Haptics from "expo-haptics";
 import * as Notifications from "expo-notifications";
+import * as Speech from "expo-speech";
 import { AlarmClock, BellRing } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
@@ -8,8 +9,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { cancelCareReminder, snoozeCareReminder } from "@/api/careJournal";
 import {
+  getCareAlarmVoiceText,
   rescheduleCareAlarmFromNotification
 } from "@/features/care-journal/reminders";
+import type { CareEntryType } from "@/api/careJournal";
 
 const alarmSound = require("../../assets/audio/baby_reminder.wav");
 
@@ -18,16 +21,24 @@ export function CareAlarmGate() {
   const [active, setActive] = useState<Notifications.Notification | null>(null);
   const [player] = useState(() => createAudioPlayer(alarmSound));
   const vibrationTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const voiceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeRequestId = useRef<string | null>(null);
 
   const stopRinging = useCallback(() => {
     setActive(null);
+    activeRequestId.current = null;
     player.pause();
     player.seekTo(0).catch(() => undefined);
     if (vibrationTimer.current) clearInterval(vibrationTimer.current);
     vibrationTimer.current = null;
+    if (voiceTimer.current) clearTimeout(voiceTimer.current);
+    voiceTimer.current = null;
+    Speech.stop();
   }, [player]);
 
   const startRinging = useCallback((notification: Notifications.Notification) => {
+    const requestId = notification.request.identifier;
+    activeRequestId.current = requestId;
     setActive(notification);
     player.loop = true;
     player.volume = 1;
@@ -37,6 +48,27 @@ export function CareAlarmGate() {
     vibrationTimer.current = setInterval(() => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined);
     }, 2200);
+    if (voiceTimer.current) clearTimeout(voiceTimer.current);
+    voiceTimer.current = setTimeout(() => {
+      if (activeRequestId.current !== requestId) return;
+      const entry = notification.request.content.data?.entry;
+      const voiceText = typeof notification.request.content.data?.voice_text === "string"
+        ? notification.request.content.data.voice_text
+        : getCareAlarmVoiceText(isCareEntryType(entry) ? entry : "breastfeeding");
+      player.pause();
+      const resumeAlarm = () => {
+        if (activeRequestId.current === requestId) player.play();
+      };
+      Speech.stop();
+      Speech.speak(voiceText, {
+        language: "tr-TR",
+        pitch: 1.04,
+        rate: 0.9,
+        onDone: resumeAlarm,
+        onError: resumeAlarm,
+        onStopped: resumeAlarm
+      });
+    }, 2600);
   }, [player]);
 
   const dismiss = useCallback(async (notification: Notifications.Notification | null) => {
@@ -65,12 +97,12 @@ export function CareAlarmGate() {
 
   useEffect(() => {
     const received = Notifications.addNotificationReceivedListener((notification) => {
-      if (notification.request.content.data?.type === "care_alarm") {
+      if (isAlarmNotification(notification)) {
         startRinging(notification);
       }
     });
     const responded = Notifications.addNotificationResponseReceivedListener((response) => {
-      if (response.notification.request.content.data?.type !== "care_alarm") return;
+      if (!isAlarmNotification(response.notification)) return;
       if (response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
         startRinging(response.notification);
       }
@@ -87,6 +119,7 @@ export function CareAlarmGate() {
   const snoozeMinutes = typeof content?.data?.snooze_minutes === "number"
     ? content.data.snooze_minutes
     : 10;
+  const canSnooze = typeof content?.data?.reminder_id === "string";
 
   return (
     <Modal visible={Boolean(active)} animationType="fade" transparent statusBarTranslucent>
@@ -98,10 +131,12 @@ export function CareAlarmGate() {
         <Text style={styles.title}>{content?.title ?? "Bakım zamanı"}</Text>
         <Text style={styles.body}>{content?.body ?? "Kurduğun bakım alarmının zamanı geldi."}</Text>
         <View style={styles.actions}>
-          <Pressable accessibilityRole="button" onPress={() => void snooze(active)} style={styles.snoozeButton}>
-            <AlarmClock color="#DDE9E1" size={24} />
-            <Text style={styles.snoozeText}>{snoozeMinutes} dk ertele</Text>
-          </Pressable>
+          {canSnooze ? (
+            <Pressable accessibilityRole="button" onPress={() => void snooze(active)} style={styles.snoozeButton}>
+              <AlarmClock color="#DDE9E1" size={24} />
+              <Text style={styles.snoozeText}>{snoozeMinutes} dk ertele</Text>
+            </Pressable>
+          ) : null}
           <Pressable accessibilityRole="button" onPress={() => void dismiss(active)} style={styles.dismissButton}>
             <Text style={styles.dismissText}>Alarmı kapat</Text>
           </Pressable>
@@ -109,6 +144,18 @@ export function CareAlarmGate() {
       </View>
     </Modal>
   );
+}
+
+function isAlarmNotification(notification: Notifications.Notification) {
+  const type = notification.request.content.data?.type;
+  return type === "care_alarm" || type === "care_reminder";
+}
+
+function isCareEntryType(value: unknown): value is CareEntryType {
+  return typeof value === "string" && [
+    "breastfeeding", "bottle", "sleep", "diaper", "pumping", "medicine",
+    "solid_food", "temperature"
+  ].includes(value);
 }
 
 const styles = StyleSheet.create({

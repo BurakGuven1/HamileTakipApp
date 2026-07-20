@@ -69,7 +69,8 @@ export async function scheduleCareReminderAt(
       data: {
         screen: "care-journal",
         type: "care_reminder",
-        entry: entryType
+        entry: entryType,
+        voice_text: getCareAlarmVoiceText(entryType)
       }
     },
     trigger: {
@@ -112,7 +113,8 @@ export async function scheduleNightShiftAlarm({
         entry: entryType,
         baby_id: babyId,
         reminder_id: reminderId,
-        snooze_minutes: snoozeMinutes
+        snooze_minutes: snoozeMinutes,
+        voice_text: getCareAlarmVoiceText(entryType)
       }
     },
     trigger: {
@@ -155,19 +157,19 @@ export function getCareReminderCopy(entryType: CareEntryType, babyName?: string)
 
   if (entryType === "breastfeeding" || entryType === "bottle") {
     return {
-      title: "Hadi anne, karnım acıktı 🍼",
+      title: "Hadi anne, beslenme vakti",
       body: `${prefix}planladığın beslenme hatırlatıcısının zamanı geldi.`
     };
   }
   if (entryType === "sleep") {
     return {
-      title: "Anne, uyku zamanımı kontrol eder misin? 🌙",
+      title: "Uyku zamanı",
       body: "Planladığın uyku hatırlatıcısının zamanı geldi."
     };
   }
   if (entryType === "diaper") {
     return {
-      title: "Anne, bezimi kontrol eder misin? 👶",
+      title: "Bez kontrolü zamanı",
       body: "Planladığın bez kontrolünün zamanı geldi."
     };
   }
@@ -179,12 +181,24 @@ export function getCareReminderCopy(entryType: CareEntryType, babyName?: string)
   }
   if (entryType === "pumping") {
     return {
-      title: "Anne, sağım planını kontrol et 🫶",
+      title: "Sağım zamanı",
       body: "Kurduğun sağım hatırlatıcısının zamanı geldi."
     };
   }
   return {
-    title: "Anne, bakım zamanımız geldi 💛",
+    title: "Bakım zamanı",
     body: "Kurduğun bakım hatırlatıcısının zamanı geldi."
   };
+}
+
+export function getCareAlarmVoiceText(entryType: CareEntryType) {
+  if (entryType === "breastfeeding") return "Emzirme vakti.";
+  if (entryType === "bottle") return "Beslenme vakti.";
+  if (entryType === "sleep") return "Uyku vakti.";
+  if (entryType === "diaper") return "Bez kontrolü vakti.";
+  if (entryType === "pumping") return "Sağım vakti.";
+  if (entryType === "medicine") return "İlaç veya vitamin planını kontrol etme vakti.";
+  if (entryType === "solid_food") return "Ek gıda vakti.";
+  if (entryType === "temperature") return "Ateş ölçümünü kontrol etme vakti.";
+  return "Bakım vakti.";
 }

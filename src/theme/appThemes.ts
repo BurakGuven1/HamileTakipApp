@@ -15,6 +15,7 @@ type AppTheme = {
   accent: string;
   accentSoft: string;
   label: string;
+  navigationPrimary: string;
   primary: string;
   primarySoft: string;
 };
@@ -24,6 +25,7 @@ export const appThemes: Record<Exclude<ThemePreference, "auto">, AppTheme> = {
     accent: colors.accent,
     accentSoft: colors.accentSoft,
     label: "Ada yeşili",
+    navigationPrimary: "#3F6F59",
     primary: colors.primary,
     primarySoft: colors.primarySoft
   },
@@ -31,6 +33,7 @@ export const appThemes: Record<Exclude<ThemePreference, "auto">, AppTheme> = {
     accent: semanticColor("#8A5B16", "#E9C47E"),
     accentSoft: semanticColor("rgba(138, 91, 22, 0.14)", "rgba(233, 196, 126, 0.14)"),
     label: "Sıcak gül",
+    navigationPrimary: "#A94F60",
     primary: semanticColor("#A94F60", "#F0A7B4"),
     primarySoft: semanticColor("rgba(169, 79, 96, 0.14)", "rgba(240, 167, 180, 0.14)")
   },
@@ -38,6 +41,7 @@ export const appThemes: Record<Exclude<ThemePreference, "auto">, AppTheme> = {
     accent: semanticColor("#456F98", "#9FC6EA"),
     accentSoft: semanticColor("rgba(69, 111, 152, 0.14)", "rgba(159, 198, 234, 0.14)"),
     label: "Bebek mavisi",
+    navigationPrimary: "#456F98",
     primary: semanticColor(accentColors.erkek.primary, "#9FC6EA"),
     primarySoft: semanticColor(accentColors.erkek.tint, "rgba(159, 198, 234, 0.14)")
   },
@@ -45,6 +49,7 @@ export const appThemes: Record<Exclude<ThemePreference, "auto">, AppTheme> = {
     accent: semanticColor("#9F3F5D", "#F0A7B4"),
     accentSoft: semanticColor("rgba(159, 63, 93, 0.14)", "rgba(240, 167, 180, 0.14)"),
     label: "Pamuk pembe",
+    navigationPrimary: "#A54664",
     primary: semanticColor(accentColors.kiz.primary, "#F0A7B4"),
     primarySoft: semanticColor(accentColors.kiz.tint, "rgba(240, 167, 180, 0.14)")
   },
@@ -52,6 +57,7 @@ export const appThemes: Record<Exclude<ThemePreference, "auto">, AppTheme> = {
     accent: semanticColor("#6F56A3", "#C7B4F4"),
     accentSoft: semanticColor("rgba(111, 86, 163, 0.14)", "rgba(199, 180, 244, 0.14)"),
     label: "Lavanta",
+    navigationPrimary: "#6F56A3",
     primary: semanticColor("#6F56A3", "#C7B4F4"),
     primarySoft: semanticColor("rgba(111, 86, 163, 0.14)", "rgba(199, 180, 244, 0.14)")
   },
@@ -59,6 +65,7 @@ export const appThemes: Record<Exclude<ThemePreference, "auto">, AppTheme> = {
     accent: "#F0A7B4",
     accentSoft: "rgba(240, 167, 180, 0.14)",
     label: "Koyu mod",
+    navigationPrimary: "#9ED0B5",
     primary: "#9ED0B5",
     primarySoft: "rgba(158, 208, 181, 0.14)"
   }
@@ -70,6 +77,7 @@ export const themeOptions = [
     accent: colors.accent,
     accentSoft: colors.accentSoft,
     label: "Bebeğe göre",
+    navigationPrimary: "#3F6F59",
     primary: colors.primary,
     primarySoft: colors.primarySoft
   },

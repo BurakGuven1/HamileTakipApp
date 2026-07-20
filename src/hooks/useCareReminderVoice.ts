@@ -7,11 +7,7 @@ export function useCareReminderVoice() {
     const subscription = Notifications.addNotificationReceivedListener(
       (notification) => {
         const content = notification.request.content;
-        if (
-          (content.data?.type !== "care_reminder" &&
-            content.data?.type !== "sleep_prediction") ||
-          !content.title
-        ) return;
+        if (content.data?.type !== "sleep_prediction" || !content.title) return;
 
         Speech.stop();
         Speech.speak(content.title, {

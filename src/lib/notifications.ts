@@ -18,8 +18,8 @@ Notifications.setNotificationHandler({
       notificationType === "care_alarm";
 
     return {
-      // Bakım alarmı ön plandaysa useCareReminderVoice Türkçe metni okur.
-      // Diğer bildirimlerde normal ses ve görünür banner davranışı korunur.
+      // Bakım alarmı ön plandaysa CareAlarmGate özel sesi, titreşimi ve
+      // Türkçe seslendirmeyi yönetir. Diğer bildirimler sistem sesini kullanır.
       shouldPlaySound: !isForegroundManagedAlert,
       shouldSetBadge: !isWaterReminder,
       shouldShowBanner: true,

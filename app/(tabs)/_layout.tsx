@@ -9,13 +9,13 @@ import {
   UserRound
 } from "lucide-react-native";
 import type { ColorValue } from "react-native";
-
 import { isCurrentUserFamilyFather } from "@/api/familyAccess";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
 type TabIconProps = {
   color: ColorValue;
+  focused?: boolean;
   size: number;
 };
 
@@ -32,8 +32,8 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: accentColor.primary,
-        tabBarInactiveTintColor: colors.textMuted,
+        tabBarActiveTintColor: accentColor.theme.navigationPrimary,
+        tabBarInactiveTintColor: accentColor.isDark ? "#C8C1CB" : "#655F57",
         tabBarLabelStyle: typography.tabLabel,
         tabBarStyle: {
           backgroundColor: colors.surface,
@@ -143,26 +143,30 @@ export default function TabsLayout() {
   );
 }
 
-function HomeIcon({ color, size }: TabIconProps) {
-  return <Home color={String(color)} size={size} strokeWidth={2.4} />;
+function HomeIcon({ color, focused, size }: TabIconProps) {
+  return <Home color={resolveIconColor(color, focused)} size={size} strokeWidth={2.4} />;
 }
 
-function BabyIcon({ color, size }: TabIconProps) {
-  return <Baby color={String(color)} size={size} strokeWidth={2.4} />;
+function BabyIcon({ color, focused, size }: TabIconProps) {
+  return <Baby color={resolveIconColor(color, focused)} size={size} strokeWidth={2.4} />;
 }
 
-function GalleryIcon({ color, size }: TabIconProps) {
-  return <Images color={String(color)} size={size} strokeWidth={2.4} />;
+function GalleryIcon({ color, focused, size }: TabIconProps) {
+  return <Images color={resolveIconColor(color, focused)} size={size} strokeWidth={2.4} />;
 }
 
-function LullabyIcon({ color, size }: TabIconProps) {
-  return <Music2 color={String(color)} size={size} strokeWidth={2.4} />;
+function LullabyIcon({ color, focused, size }: TabIconProps) {
+  return <Music2 color={resolveIconColor(color, focused)} size={size} strokeWidth={2.4} />;
 }
 
-function ForumIcon({ color, size }: TabIconProps) {
-  return <MessageCircleHeart color={String(color)} size={size} strokeWidth={2.4} />;
+function ForumIcon({ color, focused, size }: TabIconProps) {
+  return <MessageCircleHeart color={resolveIconColor(color, focused)} size={size} strokeWidth={2.4} />;
 }
 
-function ProfileIcon({ color, size }: TabIconProps) {
-  return <UserRound color={String(color)} size={size} strokeWidth={2.4} />;
+function ProfileIcon({ color, focused, size }: TabIconProps) {
+  return <UserRound color={resolveIconColor(color, focused)} size={size} strokeWidth={2.4} />;
+}
+
+function resolveIconColor(color: ColorValue, focused = false) {
+  return typeof color === "string" ? color : focused ? "#3F6F59" : "#655F57";
 }
