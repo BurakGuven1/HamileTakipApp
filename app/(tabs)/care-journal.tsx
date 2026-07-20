@@ -1,9 +1,10 @@
+import DateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter, type ErrorBoundaryProps } from "expo-router";
 import { Baby, BellRing, Check, Clock3, Droplets, HandHeart, LockKeyhole, Milk, Moon, Pill, RefreshCw, ShieldAlert, Sparkles, Thermometer, Trash2, Undo2, Users, WifiOff } from "lucide-react-native";
 import { Component, useEffect, useMemo, useState } from "react";
 import type { ComponentType, ErrorInfo, ReactNode } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { listBabies } from "@/api/babies";
 import { getCurrentProfile } from "@/api/profiles";
@@ -552,7 +553,7 @@ function AdvancedCareJournalContent() {
   const [medicineName, setMedicineName] = useState("");
   const [medicineLookupName, setMedicineLookupName] = useState("");
   const [medicineDose, setMedicineDose] = useState("");
-  const [reminderTime, setReminderTime] = useState("");
+  const [reminderTime, setReminderTime] = useState(createDefaultReminderTime);
   const [notes, setNotes] = useState("");
   const [entrySubmitAttempted, setEntrySubmitAttempted] = useState(false);
   const [feedingContent, setFeedingContent] = useState<"breast_milk" | "formula" | "water">("breast_milk");
@@ -835,6 +836,10 @@ function AdvancedCareJournalContent() {
     },
     onSuccess: async ({ action, result }) => {
       setTimerNow(Date.now());
+      if (action === "stop" && result.data.timer_type === "pumping") {
+        if (result.data.breast_side === "left") setPumpLeftAmount("");
+        if (result.data.breast_side === "right") setPumpRightAmount("");
+      }
       showSuccess(
         result.queued
           ? "Zamanlayıcı cihazda başladı; bağlantı gelince aileyle eşitlenecek."
@@ -871,7 +876,7 @@ function AdvancedCareJournalContent() {
   });
   const reminderMutation = useMutation({ mutationFn: async () => {
     if (!selectedBaby) throw new Error("Bebek profili gerekli.");
-    const scheduledFor = parseNextReminderTime(reminderTime);
+    const scheduledFor = normalizeNextReminderTime(reminderTime);
     const {
       cancelLocalCareReminder,
       getCareReminderCopy,
@@ -887,7 +892,7 @@ function AdvancedCareJournalContent() {
       await cancelLocalCareReminder(localId).catch(() => undefined);
       throw error;
     }
-  }, onSuccess: async () => { setReminderTime(""); showSuccess("Alarm kuruldu. Uygulama kapalıyken de bildirim gelecek."); await queryClient.invalidateQueries({ queryKey: ["care-reminders", selectedBaby?.id] }); }, onError: (e) => showError(e, "Alarm kurulamadı") });
+  }, onSuccess: async () => { setReminderTime(createDefaultReminderTime()); showSuccess("Alarm kuruldu. Uygulama kapalıyken de bildirim gelecek."); await queryClient.invalidateQueries({ queryKey: ["care-reminders", selectedBaby?.id] }); }, onError: (e) => showError(e, "Alarm kurulamadı") });
   const cancelReminderMutation = useMutation({ mutationFn: async (reminder: CareReminder) => { const { cancelLocalCareReminder } = await import("@/features/care-journal/reminders"); await cancelLocalCareReminder(reminder.local_notification_id).catch(() => undefined); return cancelCareReminder(reminder.id); }, onSuccess: async () => { showSuccess("Alarm iptal edildi."); await queryClient.invalidateQueries({ queryKey: ["care-reminders", selectedBaby?.id] }); }, onError: (e) => showError(e, "Alarm iptal edilemedi") });
 
   async function openPremium(feature: string) {
@@ -1182,13 +1187,27 @@ function AdvancedCareJournalContent() {
                         </View>
                         <Milk color={colors.sageGreen} size={26} />
                       </View>
-                      <Text style={typography.body}>Saklanan sütleri, son kullanım zamanını ve FIFO sırasını yönet.</Text>
+                      <Text style={typography.body}>Saklanan sütleri, son kullanım zamanını ve önce sağılanı önce kullanma sırasını yönet.</Text>
                       <Button disabled={milkInventoryLoading} label={milkInventoryLoading ? "Açılıyor..." : "Süt stoğunu aç"} variant="secondary" onPress={() => void openMilkInventory()} />
                     </View>
                   </Card>
                 ) : null}
                 <Card><View style={{ gap: spacing.md }}><Text style={typography.eyebrow}>Aile vardiyası</Text><Text style={typography.heading2}>Bakım görevleri</Text>{(Array.isArray(tasksQuery.data) ? tasksQuery.data : []).filter((t) => !t.completed_at).map((task) => <Pressable key={task.id} style={styles.taskRow} onPress={() => toggleTaskMutation.mutate(task)}><View style={styles.taskCheck}><Check color={colors.textMuted} size={16} /></View><View style={{ flex: 1 }}><Text style={typography.label}>{task.title}</Text>{task.assigned_to_name ? <Text style={styles.entryMeta}>{task.assigned_to_name}</Text> : null}</View></Pressable>)}<TextField label="Yeni görev" value={taskTitle} onChangeText={setTaskTitle} /><TextField label="Atanan kişi (isteğe bağlı)" value={taskAssignee} onChangeText={setTaskAssignee} /><Button label="Görev ekle" onPress={() => taskMutation.mutate()} /></View></Card>
-                <Card><View style={{ gap: spacing.md }}><Text style={typography.eyebrow}>Anne için</Text><Text style={typography.heading2}>Bugün nasılsın?</Text><Text style={typography.label}>Ruh hali</Text><Rating value={mood} onChange={setMood} /><Text style={typography.label}>Dinlenmişlik</Text><Rating value={rest} onChange={setRest} /><TextField label="Bugün kendin için ne yaptın?" value={selfCare} onChangeText={setSelfCare} /><Button label="Anne check-in’ini kaydet" onPress={() => checkinMutation.mutate()} /><Text style={styles.safetyNote}>Bu alan iyi oluş farkındalığı içindir; değerlendirme veya teşhis yapmaz. Kendin ya da bebeğin için acil bir endişen varsa sağlık profesyoneline başvur.</Text></View></Card>
+                {membershipQuery.isSuccess && !membershipQuery.data ? (
+                  <Card>
+                    <View style={{ gap: spacing.md }}>
+                      <Text style={typography.eyebrow}>Anne için</Text>
+                      <Text style={typography.heading2}>Bugün nasılsın?</Text>
+                      <Text style={typography.label}>Ruh hali</Text>
+                      <Rating value={mood} onChange={setMood} />
+                      <Text style={typography.label}>Dinlenmişlik</Text>
+                      <Rating value={rest} onChange={setRest} />
+                      <TextField label="Bugün kendin için ne yaptın?" value={selfCare} onChangeText={setSelfCare} />
+                      <Button disabled={checkinMutation.isPending} label={checkinMutation.isPending ? "Kaydediliyor..." : "Anne check-in’ini kaydet"} onPress={() => checkinMutation.mutate()} />
+                      <Text style={styles.safetyNote}>Bu alan iyi oluş farkındalığı içindir; değerlendirme veya teşhis yapmaz. Kendin ya da bebeğin için acil bir endişen varsa sağlık profesyoneline başvur.</Text>
+                    </View>
+                  </Card>
+                ) : null}
                 </View>
               ) : <PremiumUpsellCard onPress={() => void openPremium("care_insights")} />}
             </CareSectionBoundary>
@@ -1535,8 +1554,81 @@ function showRecentMedicineConfirmation(
   );
 }
 
-function ReminderCard({ cancelling, currentUserId, entryType, isPremium, onCancel, onSchedule, onTimeChange, reminderTime, reminders, scheduling }: { cancelling: boolean; currentUserId: string | null; entryType: CareEntryType; isPremium: boolean; onCancel: (reminder: CareReminder) => void; onSchedule: () => void; onTimeChange: (value: string) => void; reminderTime: string; reminders: CareReminder[]; scheduling: boolean }) {
-  return <Card style={styles.reminderCard}><View style={{ gap: spacing.md }}><View style={styles.cardTitleRow}><View style={{ flex: 1 }}><Text style={typography.eyebrow}>{isPremium ? "Premium · Aile senkronlu" : "Ücretsiz · 1 aktif alarm"}</Text><Text style={typography.heading2}>Bakım alarmı kur</Text></View><Clock3 color={colors.sageGreen} size={26} /></View><Text style={typography.body}>{entryLabel(entryType)} için saati gir. Alarm cihazında çalar; Premium’da diğer aile cihazlarına da push gider.</Text><TextField keyboardType="numbers-and-punctuation" label="Alarm saati (örn. 15:30)" placeholder="15:30" value={reminderTime} onChangeText={onTimeChange} /><Button disabled={scheduling || !reminderTime.trim()} label={scheduling ? "Alarm kuruluyor..." : `${entryLabel(entryType)} alarmı kur`} onPress={onSchedule} />{reminders.length > 0 ? <View style={{ gap: spacing.sm }}><Text style={typography.label}>Planlı alarmlar</Text>{reminders.map((reminder) => <View key={reminder.id} style={styles.reminderRow}><View style={{ flex: 1 }}><Text style={typography.label}>{entryLabel(reminder.entry_type)}</Text><Text style={styles.entryMeta}>{formatReminderDate(reminder.scheduled_for)}</Text></View>{reminder.created_by === currentUserId ? <Button disabled={cancelling} label="İptal" variant="ghost" onPress={() => onCancel(reminder)} /> : <Text style={styles.entryMeta}>Aile alarmı</Text>}</View>)}</View> : null}<Text style={styles.safetyNote}>Alarm saati uygulama tarafından önerilmez. Beslenme veya ilaç zamanını yalnızca kendi planına ve sağlık profesyonelinin önerisine göre belirle.</Text></View></Card>;
+function ReminderCard({ cancelling, currentUserId, entryType, isPremium, onCancel, onSchedule, onTimeChange, reminderTime, reminders, scheduling }: { cancelling: boolean; currentUserId: string | null; entryType: CareEntryType; isPremium: boolean; onCancel: (reminder: CareReminder) => void; onSchedule: () => void; onTimeChange: (value: Date) => void; reminderTime: Date; reminders: CareReminder[]; scheduling: boolean }) {
+  const appTheme = useAppTheme();
+  const [showAndroidPicker, setShowAndroidPicker] = useState(false);
+  const scheduledFor = normalizeNextReminderTime(reminderTime);
+
+  function handleTimeChange(event: DateTimePickerEvent, value?: Date) {
+    if (Platform.OS === "android") setShowAndroidPicker(false);
+    if (event.type === "dismissed" || !value) return;
+    const next = new Date(reminderTime);
+    next.setHours(value.getHours(), value.getMinutes(), 0, 0);
+    onTimeChange(next);
+  }
+
+  return (
+    <Card style={styles.reminderCard}>
+      <View style={{ gap: spacing.md }}>
+        <View style={styles.cardTitleRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={typography.eyebrow}>{isPremium ? "Premium · Aile senkronlu" : "Kişisel bakım alarmı"}</Text>
+            <Text style={typography.heading2}>Bakım alarmı kur</Text>
+          </View>
+          <Clock3 color={colors.sageGreen} size={26} />
+        </View>
+        <Text style={typography.body}>{entryLabel(entryType)} için saati seç. Alarm cihazında çalar; Premium’da diğer aile cihazlarına da bildirim gider.</Text>
+        <View style={styles.timePickerField}>
+          <Text style={typography.label}>Alarm saati</Text>
+          {Platform.OS === "ios" ? (
+            <DateTimePicker
+              accentColor={appTheme.primary}
+              display="spinner"
+              locale="tr-TR"
+              mode="time"
+              onChange={handleTimeChange}
+              themeVariant={appTheme.isDark ? "dark" : "light"}
+              value={reminderTime}
+            />
+          ) : (
+            <>
+              <Pressable
+                accessibilityHint="Telefonun saat seçicisini açar"
+                accessibilityLabel={`Alarm saati, ${formatClockTime(reminderTime)}`}
+                accessibilityRole="button"
+                onPress={() => setShowAndroidPicker(true)}
+                style={({ pressed }) => [styles.timePickerButton, pressed && styles.timePickerButtonPressed]}
+              >
+                <Clock3 color={appTheme.primary} size={21} />
+                <Text style={styles.timePickerValue}>{formatClockTime(reminderTime)}</Text>
+                <Text style={styles.timePickerAction}>Değiştir</Text>
+              </Pressable>
+              {showAndroidPicker ? (
+                <DateTimePicker display="clock" is24Hour mode="time" onChange={handleTimeChange} value={reminderTime} />
+              ) : null}
+            </>
+          )}
+          <Text style={styles.selectedReminderText}>Alarm: {formatSelectedReminderDate(scheduledFor)}</Text>
+        </View>
+        <Button disabled={scheduling} label={scheduling ? "Alarm kuruluyor..." : `${entryLabel(entryType)} alarmı kur`} onPress={onSchedule} />
+        {reminders.length > 0 ? (
+          <View style={{ gap: spacing.sm }}>
+            <Text style={typography.label}>Planlı alarmlar</Text>
+            {reminders.map((reminder) => (
+              <View key={reminder.id} style={styles.reminderRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={typography.label}>{entryLabel(reminder.entry_type)}</Text>
+                  <Text style={styles.entryMeta}>{formatReminderDate(reminder.scheduled_for)}</Text>
+                </View>
+                {reminder.created_by === currentUserId ? <Button disabled={cancelling} label="İptal" variant="ghost" onPress={() => onCancel(reminder)} /> : <Text style={styles.entryMeta}>Aile alarmı</Text>}
+              </View>
+            ))}
+          </View>
+        ) : null}
+        <Text style={styles.safetyNote}>Alarm saati uygulama tarafından önerilmez. Beslenme veya ilaç zamanını yalnızca kendi planına ve sağlık profesyonelinin önerisine göre belirle.</Text>
+      </View>
+    </Card>
+  );
 }
 
 function DoctorReportCard({ days, disabled, error, loading, onDaysChange, onRetry, onShare }: { days: ReportPeriod; disabled: boolean; error: boolean; loading: boolean; onDaysChange: (days: ReportPeriod) => void; onRetry: () => void; onShare: () => void }) {
@@ -1744,7 +1836,10 @@ function orderEntryTypesForFeedingMode(mode: FeedingMode) {
 }
 function relativeTime(value: string) { const timestamp = Date.parse(value); if (!Number.isFinite(timestamp)) return "Zaman bilinmiyor"; const minutes = Math.max(0, Math.round((Date.now() - timestamp) / 60_000)); if (minutes < 1) return "Şimdi"; if (minutes < 60) return `${minutes} dk önce`; const hours = Math.floor(minutes / 60); return `${hours} sa ${minutes % 60} dk önce`; }
 function formatTimer(milliseconds: number) { const total = Math.max(0, Math.floor(milliseconds / 1000)); const minutes = Math.floor(total / 60).toString().padStart(2, "0"); const seconds = (total % 60).toString().padStart(2, "0"); return `${minutes}:${seconds}`; }
-function parseNextReminderTime(value: string) { const match = value.trim().match(/^(\d{1,2})[:.](\d{2})$/); if (!match) throw new Error("Alarm saatini 15:30 biçiminde girmelisin."); const hour = Number(match[1]); const minute = Number(match[2]); if (hour > 23 || minute > 59) throw new Error("Geçerli bir alarm saati girmelisin."); const date = new Date(); date.setHours(hour, minute, 0, 0); if (date.getTime() <= Date.now() + 30_000) date.setDate(date.getDate() + 1); return date; }
+function createDefaultReminderTime() { const date = new Date(Date.now() + 30 * 60_000); date.setSeconds(0, 0); return date; }
+function normalizeNextReminderTime(value: Date) { const date = new Date(); date.setHours(value.getHours(), value.getMinutes(), 0, 0); if (date.getTime() <= Date.now() + 30_000) date.setDate(date.getDate() + 1); return date; }
+function formatClockTime(value: Date) { return new Intl.DateTimeFormat("tr-TR", { hour: "2-digit", minute: "2-digit" }).format(value); }
+function formatSelectedReminderDate(value: Date) { const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1); const day = value.toDateString() === tomorrow.toDateString() ? "Yarın" : "Bugün"; return `${day} ${formatClockTime(value)}`; }
 function formatReminderDate(value: string) { const date = validDate(value); return date ? new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(date) : "Zaman bilinmiyor"; }
 function formatTemperature(value: unknown) { const numericValue = typeof value === "number" ? value : Number(value); return Number.isFinite(numericValue) ? `${numericValue.toFixed(1)} °C` : "Ölçüm bilinmiyor"; }
 function validDate(value: string) { const date = new Date(value); return Number.isFinite(date.getTime()) ? date : null; }
@@ -1800,6 +1895,12 @@ const styles = StyleSheet.create({
   twoButtons: { flexDirection: "row", gap: spacing.sm },
   taskRow: { alignItems: "center", borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: "row", gap: spacing.sm, paddingVertical: spacing.sm },
   taskCheck: { alignItems: "center", borderColor: colors.border, borderRadius: radii.pill, borderWidth: 1, height: 28, justifyContent: "center", width: 28 },
+  timePickerField: { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radii.md, borderWidth: 1, gap: spacing.sm, padding: spacing.md },
+  timePickerButton: { alignItems: "center", backgroundColor: colors.background, borderRadius: radii.md, flexDirection: "row", gap: spacing.sm, minHeight: 52, paddingHorizontal: spacing.md },
+  timePickerButtonPressed: { opacity: 0.72 },
+  timePickerValue: { ...typography.heading2, color: colors.text, flex: 1, fontVariant: ["tabular-nums"] },
+  timePickerAction: { ...typography.label, color: colors.sageGreen },
+  selectedReminderText: { ...typography.label, color: colors.textMuted, textAlign: "center" },
   reminderRow: { alignItems: "center", borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: "row", gap: spacing.sm, paddingVertical: spacing.xs },
   lockBubble: { alignItems: "center", backgroundColor: colors.surface, borderRadius: radii.pill, height: 44, justifyContent: "center", width: 44 },
   timerBox: { alignItems: "center", backgroundColor: colors.background, borderRadius: radii.md, gap: spacing.xs, padding: spacing.lg },

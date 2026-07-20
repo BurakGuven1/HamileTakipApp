@@ -193,8 +193,21 @@ export async function mergePendingCareEntries(
   const localCreates = queue
     .filter((item) => item.kind === "entry" && item.action === "create")
     .map(queueItemToEntry);
+  const localTimerStops = queue
+    .filter((item) => item.kind === "stop_timer")
+    .map(queueTimerStopToEntry)
+    .filter((entry): entry is CareJournalViewEntry => Boolean(entry));
+  const syncedOperationIds = new Set(
+    serverEntries
+      .map((entry) => entry.client_operation_id)
+      .filter((operationId): operationId is string => Boolean(operationId))
+  );
 
-  return [...localCreates, ...visible]
+  return [
+    ...localCreates,
+    ...localTimerStops.filter((entry) => !syncedOperationIds.has(entry.client_operation_id ?? "")),
+    ...visible
+  ]
     .filter((entry, index, entries) => entries.findIndex((item) => item.id === entry.id) === index)
     .sort((left, right) => Date.parse(right.occurred_at) - Date.parse(left.occurred_at));
 }
@@ -402,7 +415,13 @@ export async function stopSharedTimerOfflineFirst(
     babyId: timer.baby_id,
     entityId: timer.id,
     kind: "stop_timer",
-    payload: { amountMl }
+    payload: {
+      amountMl,
+      breastSide: timer.breast_side,
+      sleepKind: timer.sleep_kind,
+      startedAt: timer.started_at,
+      timerType: timer.timer_type
+    }
   });
   const result = await submitOrQueue(item);
   return {
@@ -656,6 +675,30 @@ function queueItemToEntry(item: QueueItem): CareJournalViewEntry {
     updated_device_label: null,
     version: 1
   };
+}
+
+function queueTimerStopToEntry(item: QueueItem): CareJournalViewEntry | null {
+  const timerType = stringOrNull(item.payload.timerType);
+  const startedAt = stringOrNull(item.payload.startedAt);
+  if (!startedAt || !isTimerEntryType(timerType)) return null;
+
+  return queueItemToEntry({
+    ...item,
+    entityId: item.operationId,
+    kind: "entry",
+    payload: {
+      amount_ml: numberOrNull(item.payload.amountMl),
+      breast_side: stringOrNull(item.payload.breastSide),
+      ended_at: item.createdAt,
+      entry_type: timerType,
+      occurred_at: startedAt,
+      sleep_kind: stringOrNull(item.payload.sleepKind)
+    }
+  });
+}
+
+function isTimerEntryType(value: string | null): value is "breastfeeding" | "pumping" | "sleep" {
+  return value === "breastfeeding" || value === "pumping" || value === "sleep";
 }
 
 async function enqueue(item: QueueItem) {

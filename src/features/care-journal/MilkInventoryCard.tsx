@@ -115,7 +115,7 @@ export function MilkInventoryCard({ actorName, babyId }: { actorName: string | n
         <View style={styles.section}>
           <Text style={typography.label}>Tüketimi hızlı düş</Text>
           <TextField keyboardType="decimal-pad" label="Kullanılan (ml)" value={useAmount} onChangeText={setUseAmount} />
-          <Button variant="secondary" disabled={useStockMutation.isPending} label="FIFO ile en eski sütten düş" onPress={() => useStockMutation.mutate(undefined)} />
+          <Button variant="secondary" disabled={useStockMutation.isPending} label="En eski sütten kullan" onPress={() => useStockMutation.mutate(undefined)} />
         </View>
 
         <View style={{ gap: spacing.sm }}>
