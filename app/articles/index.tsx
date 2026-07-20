@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { listArticles } from "@/api/articles";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
+import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
 import { colors, radii, spacing, typography } from "@/theme";
 
@@ -39,9 +40,13 @@ export default function ArticlesScreen() {
 
         <View style={styles.articleList}>
           {articlesQuery.isLoading ? (
-            <EmptyState
-              title="Makaleler yükleniyor"
-              description="Yayınlanmış yazılar hazırlanıyor."
+            <QueryState compact loading description="Yayınlanmış yazılar hazırlanıyor…" />
+          ) : articlesQuery.isError ? (
+            <QueryState
+              description="Makaleler şu anda alınamadı."
+              onRetry={() => void articlesQuery.refetch()}
+              retrying={articlesQuery.isFetching}
+              title="Makaleler yüklenemedi"
             />
           ) : sortedArticles.length === 0 ? (
             <EmptyState
@@ -166,7 +171,7 @@ const styles = StyleSheet.create({
   },
   coverText: {
     ...typography.label,
-    color: colors.surfaceStrong
+    color: colors.onPrimary
   },
   articleCopy: {
     flex: 1,

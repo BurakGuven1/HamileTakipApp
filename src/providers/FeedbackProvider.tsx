@@ -105,7 +105,12 @@ export function FeedbackProvider({ children }: PropsWithChildren) {
               <Text style={styles.title}>{feedback.title}</Text>
               <Text style={styles.message}>{feedback.message}</Text>
             </View>
-            <Pressable accessibilityRole="button" onPress={hide} style={styles.close}>
+            <Pressable
+              accessibilityLabel="Bildirimi kapat"
+              accessibilityRole="button"
+              onPress={hide}
+              style={styles.close}
+            >
               <X color={colors.text} size={18} />
             </Pressable>
           </View>
@@ -172,8 +177,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.surface,
     borderRadius: radii.pill,
-    height: 32,
+    height: 44,
     justifyContent: "center",
-    width: 32
+    width: 44
   }
 });

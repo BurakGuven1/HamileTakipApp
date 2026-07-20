@@ -432,7 +432,7 @@ export default function OnboardingScreen() {
             ) : null}
             <Text style={typography.eyebrow}>Anne+ kurulum</Text>
           </View>
-          <Pressable accessibilityRole="button" onPress={skipCurrentStep}>
+          <Pressable accessibilityRole="button" onPress={skipCurrentStep} style={styles.skipButton}>
             <Text style={[styles.skipText, { color: appTheme.primary }]}>Şimdilik geç</Text>
           </Pressable>
         </View>
@@ -463,18 +463,9 @@ export default function OnboardingScreen() {
             </View>
           </View>
           <View style={styles.stepLabels}>
-            {steps.map((item, index) => (
-              <Text
-                key={item.id}
-                style={[
-                  styles.stepLabel,
-                  index <= activeIndex && styles.stepLabelActive,
-                  index <= activeIndex && { color: appTheme.primary }
-                ]}
-              >
-                {item.label}
-              </Text>
-            ))}
+            <Text style={[styles.stepLabel, { color: appTheme.primary }]}>
+              Adım {activeIndex + 1}/{steps.length} · {steps[activeIndex]?.label}
+            </Text>
           </View>
         </View>
 
@@ -833,7 +824,7 @@ function ThemeChoice({
       ]}
     >
       <View style={[styles.themeSwatch, { backgroundColor: color }]}>
-        {active ? <Check color={colors.surfaceStrong} size={20} /> : null}
+        {active ? <Check color={colors.onPrimary} size={20} /> : null}
       </View>
       <Text style={styles.themeLabel}>{label}</Text>
       {isSuggested ? (
@@ -904,13 +895,19 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radii.pill,
     borderWidth: 1,
-    height: 36,
+    height: 44,
     justifyContent: "center",
-    width: 36
+    width: 44
   },
   skipText: {
     ...typography.label,
     color: colors.primary
+  },
+  skipButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44,
+    paddingHorizontal: spacing.sm
   },
   progressWrap: {
     gap: spacing.sm
@@ -939,13 +936,13 @@ const styles = StyleSheet.create({
     borderColor: colors.primary
   },
   stepLabels: {
-    flexDirection: "row",
-    justifyContent: "space-between"
+    alignItems: "center"
   },
   stepLabel: {
     ...typography.label,
     color: colors.textMuted,
-    fontSize: 14
+    fontSize: 14,
+    textAlign: "center"
   },
   stepLabelActive: {
     color: colors.primary

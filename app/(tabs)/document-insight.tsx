@@ -268,7 +268,7 @@ export default function DocumentInsightScreen() {
                 style={styles.consentRow}
               >
                 <View style={[styles.checkbox, consentAccepted && { backgroundColor: appTheme.primary, borderColor: appTheme.primary }]}>
-                  {consentAccepted ? <Check color={colors.background} size={16} /> : null}
+                  {consentAccepted ? <Check color={colors.onPrimary} size={16} /> : null}
                 </View>
                 <Text style={styles.consentText}>
                   Belgenin cihazda okunacağını, kimlik alanlarının sonuçtan çıkarılacağını ve geçici dosyanın işlem sonunda silineceğini anlıyorum.
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
   page: { gap: spacing.lg },
   topBar: { alignItems: "center", flexDirection: "row", gap: spacing.md },
   titleCopy: { flex: 1 },
-  iconButton: { alignItems: "center", height: 42, justifyContent: "center", width: 42 },
+  iconButton: { alignItems: "center", height: 44, justifyContent: "center", width: 44 },
   stack: { gap: spacing.md },
   stackLarge: { gap: spacing.lg },
   sectionTitleRow: { alignItems: "center", flexDirection: "row", gap: spacing.sm },

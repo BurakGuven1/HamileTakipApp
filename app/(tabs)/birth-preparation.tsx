@@ -310,6 +310,7 @@ export default function BirthPreparationScreen() {
                 <Text style={typography.body}>Bir maddeye dokunarak işaretle.</Text>
               </View>
               <Pressable
+                accessibilityLabel={hideCompleted ? "Tamamlananları göster" : "Tamamlananları gizle"}
                 accessibilityRole="button"
                 onPress={() => setHideCompleted((value) => !value)}
                 style={styles.visibilityButton}
@@ -441,7 +442,7 @@ function ChecklistRow({
             item.is_completed && { backgroundColor: color }
           ]}
         >
-          {item.is_completed ? <Check color={colors.surface} size={18} strokeWidth={3} /> : null}
+          {item.is_completed ? <Check color={colors.onPrimary} size={18} strokeWidth={3} /> : null}
         </View>
         <View style={styles.itemCopy}>
           <Text style={[styles.itemTitle, item.is_completed && styles.itemTitleDone]}>
@@ -520,7 +521,7 @@ const styles = StyleSheet.create({
   segment: { backgroundColor: colors.surfaceMuted, borderRadius: radii.pill, flexDirection: "row", gap: spacing.xs, padding: spacing.xs },
   segmentButton: { alignItems: "center", borderRadius: radii.pill, flex: 1, flexDirection: "row", gap: spacing.sm, justifyContent: "center", minHeight: 48, paddingHorizontal: spacing.sm },
   segmentLabel: { ...typography.label, color: colors.textMuted },
-  segmentLabelActive: { color: colors.surface },
+  segmentLabelActive: { color: colors.onPrimary },
   progressContent: { alignItems: "center", flexDirection: "row", gap: spacing.md, justifyContent: "space-between" },
   progressCopy: { flex: 1, gap: spacing.xs },
   progressPercent: { ...typography.dataStrong, fontSize: 27, lineHeight: 34 },
@@ -543,7 +544,7 @@ const styles = StyleSheet.create({
   itemTitleDone: { color: colors.textMuted, textDecorationLine: "line-through" },
   itemDescription: { ...typography.body, color: colors.textMuted, fontSize: 13, lineHeight: 18 },
   completedBy: { ...typography.label, fontSize: 12 },
-  deleteButton: { alignItems: "center", backgroundColor: colors.accentSoft, borderRadius: radii.pill, height: 38, justifyContent: "center", width: 38 },
+  deleteButton: { alignItems: "center", backgroundColor: colors.accentSoft, borderRadius: radii.pill, height: 44, justifyContent: "center", width: 44 },
   compactEmpty: { alignItems: "center", gap: spacing.sm, paddingVertical: spacing.xl },
   centerText: { ...typography.body, color: colors.textMuted, textAlign: "center" },
   composer: { borderWidth: 1 },

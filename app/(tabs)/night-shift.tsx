@@ -405,7 +405,7 @@ export default function NightShiftScreen() {
             <View key={alarm.id} style={styles.alarmRow}>
               <AlarmClock color={palette.sage} size={21} />
               <View style={{ flex: 1 }}><Text style={styles.alarmTitle}>{alarm.title}</Text><Text style={styles.meta}>{formatDateTime(new Date(alarm.scheduled_for))} · {alarm.snooze_minutes} dk ertele</Text></View>
-              <Pressable accessibilityLabel="Alarmı sil" onPress={() => Alert.alert("Alarm iptal edilsin mi?", alarm.title, [{ text: "Vazgeç", style: "cancel" }, { text: "İptal et", style: "destructive", onPress: () => cancelAlarmMutation.mutate(alarm) }])}><Trash2 color={palette.rose} size={21} /></Pressable>
+              <Pressable accessibilityLabel="Alarmı sil" accessibilityRole="button" hitSlop={12} onPress={() => Alert.alert("Alarm iptal edilsin mi?", alarm.title, [{ text: "Vazgeç", style: "cancel" }, { text: "İptal et", style: "destructive", onPress: () => cancelAlarmMutation.mutate(alarm) }])}><Trash2 color={palette.rose} size={21} /></Pressable>
             </View>
           ))}
         </View>

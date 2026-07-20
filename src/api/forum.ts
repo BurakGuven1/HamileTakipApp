@@ -34,11 +34,12 @@ export async function listForumCategories() {
   });
 }
 
-export async function listPublicForumPosts(categoryId?: string) {
+export async function listPublicForumPosts(categoryId?: string, limit = 20) {
   let query = supabase
     .from("forum_posts_public")
     .select("*")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(limit + 1);
 
   if (categoryId) {
     query = query.eq("category_id", categoryId);
@@ -53,12 +54,13 @@ export async function listPublicForumPosts(categoryId?: string) {
   return data;
 }
 
-export async function listPublicForumComments(postId: string) {
+export async function listPublicForumComments(postId: string, limit = 30) {
   const { data, error } = await supabase
     .from("forum_comments_public")
     .select("*")
     .eq("post_id", postId)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .limit(limit + 1);
 
   if (error) {
     throw error;

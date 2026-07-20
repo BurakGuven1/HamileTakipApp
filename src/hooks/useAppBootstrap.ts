@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { router } from "expo-router";
 import { AppState } from "react-native";
 
 import {
@@ -21,7 +22,7 @@ export function useAppBootstrap() {
     async function bootstrap() {
       configureRevenueCat();
       clearAppNotificationBadge();
-      await bootstrapPushToken(true);
+      await bootstrapPushToken(false);
     }
 
     bootstrap().catch((error) => {
@@ -31,9 +32,11 @@ export function useAppBootstrap() {
     const { data: authSubscription } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (event === "SIGNED_IN" && session) {
-          bootstrapPushToken(true).catch((error) => {
+          bootstrapPushToken(false).catch((error) => {
             console.warn("Push token registration after sign-in failed", error);
           });
+        } else if (event === "SIGNED_OUT") {
+          router.replace("/sign-in");
         }
       }
     );

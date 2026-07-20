@@ -33,6 +33,7 @@ import { DatePickerField } from "@/components/DatePickerField";
 import { EmptyState } from "@/components/EmptyState";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
+import { QueryState } from "@/components/QueryState";
 import { formatDate, toDateOnly } from "@/lib/dates";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { useFeedback } from "@/providers/FeedbackProvider";
@@ -148,6 +149,31 @@ export default function PregnancyToolsScreen() {
       return;
     }
     setContractionDraft((value) => Math.max(0, value + delta));
+  }
+
+  if (profileQuery.isLoading) {
+    return <Screen scroll={false}><QueryState loading description="Hamilelik araçları hazırlanıyor…" /></Screen>;
+  }
+
+  const toolQueries = [weightsQuery, countersQuery, preparationItemsQuery];
+  const toolQueriesLoading = enabled && toolQueries.some((query) => query.isLoading);
+  const toolQueriesError = enabled && toolQueries.some((query) => query.isError);
+
+  if (profileQuery.isError || toolQueriesError) {
+    return (
+      <Screen scroll={false}>
+        <QueryState
+          description="Hamilelik kayıtların şu anda alınamadı."
+          onRetry={() => void Promise.all([profileQuery.refetch(), weightsQuery.refetch(), countersQuery.refetch(), preparationItemsQuery.refetch()])}
+          retrying={toolQueries.some((query) => query.isFetching) || profileQuery.isFetching}
+          title="Hamilelik araçları yüklenemedi"
+        />
+      </Screen>
+    );
+  }
+
+  if (toolQueriesLoading) {
+    return <Screen scroll={false}><QueryState loading description="Hamilelik kayıtların yükleniyor…" /></Screen>;
   }
 
   return (
@@ -397,15 +423,16 @@ function CounterPad({
       <Text style={styles.counterLabel}>{label}</Text>
       <Text style={[styles.counterValue, { color }]}>{value}</Text>
       <View style={styles.counterActions}>
-        <Pressable accessibilityRole="button" onPress={onMinus} style={styles.roundButton}>
+        <Pressable accessibilityLabel={`${label} değerini azalt`} accessibilityRole="button" onPress={onMinus} style={styles.roundButton}>
           <Minus color={colors.text} size={22} />
         </Pressable>
         <Pressable
+          accessibilityLabel={`${label} değerini artır`}
           accessibilityRole="button"
           onPress={onPlus}
           style={[styles.roundButton, { backgroundColor: color }]}
         >
-          <Plus color={colors.surfaceStrong} size={26} />
+          <Plus color={colors.onPrimary} size={26} />
         </Pressable>
       </View>
     </View>
@@ -448,6 +475,7 @@ function HistorySection({
                   {item.notes ? <Text style={styles.historyNote}>{item.notes}</Text> : null}
                 </View>
                 <Pressable
+                  accessibilityLabel="Kilo kaydını sil"
                   accessibilityRole="button"
                   onPress={() => onDeleteWeight(item.id)}
                   style={styles.iconButton}
@@ -637,8 +665,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.surfaceMuted,
     borderRadius: radii.pill,
-    height: 42,
+    height: 44,
     justifyContent: "center",
-    width: 42
+    width: 44
   }
 });

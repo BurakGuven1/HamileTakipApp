@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, Text, type View } from "react-native";
 import Animated, {
   Easing,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
   withRepeat,
   withSequence,
@@ -37,6 +38,7 @@ export const Button = forwardRef<View, ButtonProps>(function Button({
   ...pressableProps
 }: ButtonProps, ref) {
   const appTheme = useAppTheme();
+  const reducedMotion = useReducedMotion();
   const breathScale = useSharedValue(1);
   const pressScale = useSharedValue(1);
   const themedVariantStyle =
@@ -47,7 +49,7 @@ export const Button = forwardRef<View, ButtonProps>(function Button({
         : null;
 
   useEffect(() => {
-    if (!breathing || disabled) {
+    if (!breathing || disabled || reducedMotion) {
       breathScale.value = withTiming(1, { duration: 180 });
       return;
     }
@@ -60,7 +62,7 @@ export const Button = forwardRef<View, ButtonProps>(function Button({
       -1,
       false
     );
-  }, [breathing, breathScale, disabled]);
+  }, [breathing, breathScale, disabled, reducedMotion]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: breathScale.value * pressScale.value }]
@@ -78,11 +80,11 @@ export const Button = forwardRef<View, ButtonProps>(function Button({
         onPress?.(event);
       }}
       onPressIn={(event) => {
-        pressScale.value = withTiming(0.98, { duration: 110 });
+        pressScale.value = reducedMotion ? 1 : withTiming(0.98, { duration: 110 });
         onPressIn?.(event);
       }}
       onPressOut={(event) => {
-        pressScale.value = withTiming(1, { duration: 140 });
+        pressScale.value = reducedMotion ? 1 : withTiming(1, { duration: 140 });
         onPressOut?.(event);
       }}
       style={[
@@ -98,6 +100,7 @@ export const Button = forwardRef<View, ButtonProps>(function Button({
       <Text
         style={[
           typography.button,
+          variant === "primary" && styles.primaryText,
           variant === "secondary" && { color: appTheme.primary },
           variant === "ghost" && { color: appTheme.primary },
           disabled && styles.disabledText
@@ -122,6 +125,9 @@ const styles = StyleSheet.create({
   primary: {
     backgroundColor: colors.primary,
     borderColor: colors.primary
+  },
+  primaryText: {
+    color: colors.onPrimary
   },
   secondary: {
     backgroundColor: colors.transparent,

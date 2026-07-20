@@ -26,11 +26,13 @@ export default function SignInScreen() {
   const [familyCode, setFamilyCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [acceptedLegal, setAcceptedLegal] = useState(false);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
 
   const isFather = audience === "father";
   const isSignUp = !isFather && mode === "sign-up";
 
   async function submit() {
+    setSubmitAttempted(true);
     const cleanFamilyCode = familyCode.replace(/\D/g, "");
 
     if (isFather) {
@@ -203,11 +205,21 @@ export default function SignInScreen() {
                   autoCorrect={false}
                   keyboardType="email-address"
                   label="E-posta"
+                  error={
+                    submitAttempted && !email.trim().toLowerCase().includes("@")
+                      ? "Geçerli bir e-posta adresi yaz."
+                      : undefined
+                  }
                   value={email}
                   onChangeText={setEmail}
                 />
                 <TextField
                   label="Şifre"
+                  error={
+                    submitAttempted && password.length < 8
+                      ? "Şifre en az 8 karakter olmalı."
+                      : undefined
+                  }
                   secureTextEntry
                   value={password}
                   onChangeText={setPassword}
@@ -215,8 +227,10 @@ export default function SignInScreen() {
                 {isSignUp ? (
                   <View style={styles.legalConsent}>
                     <Pressable
+                      accessibilityLabel="Gizlilik politikası ve kullanım şartlarını kabul et"
                       accessibilityRole="checkbox"
                       accessibilityState={{ checked: acceptedLegal }}
+                      hitSlop={10}
                       onPress={() => setAcceptedLegal((value) => !value)}
                       style={styles.legalCheckbox}
                     >
@@ -326,6 +340,7 @@ function ModeButton({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ selected: active }}
       onPress={onPress}
       style={[styles.modeButton, active && styles.modeButtonActive]}
     >
@@ -366,6 +381,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: radii.pill,
     flex: 1,
+    justifyContent: "center",
+    minHeight: 44,
     paddingVertical: spacing.sm
   },
   modeButtonActive: {
@@ -395,10 +412,10 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 6,
     borderWidth: 1,
-    height: 24,
+    height: 28,
     justifyContent: "center",
     marginTop: 2,
-    width: 24
+    width: 28
   },
   legalCheckboxText: {
     ...typography.label,

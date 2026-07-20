@@ -13,6 +13,7 @@ import {
 import Animated, {
   Easing,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
   withRepeat,
   withSequence,
@@ -24,6 +25,7 @@ import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { Screen } from "@/components/Screen";
+import { QueryState } from "@/components/QueryState";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
@@ -130,6 +132,7 @@ export default function PregnancyExerciseScreen() {
   const [running, setRunning] = useState(false);
   const [completed, setCompleted] = useState(false);
   const pulse = useSharedValue(1);
+  const reducedMotion = useReducedMotion();
 
   const profileQuery = useQuery({
     queryKey: ["current-profile"],
@@ -149,6 +152,10 @@ export default function PregnancyExerciseScreen() {
   }, [programId]);
 
   useEffect(() => {
+    if (reducedMotion) {
+      pulse.value = withTiming(1, { duration: 120 });
+      return;
+    }
     pulse.value = withRepeat(
       withSequence(
         withTiming(isRest ? 1.08 : 1.18, {
@@ -163,7 +170,7 @@ export default function PregnancyExerciseScreen() {
       -1,
       false
     );
-  }, [isRest, pulse, phaseIndex]);
+  }, [isRest, pulse, phaseIndex, reducedMotion]);
 
   useEffect(() => {
     if (!running || completed || !currentPhase) return;
@@ -239,6 +246,22 @@ export default function PregnancyExerciseScreen() {
             description="Profilinde Hamileyim seçili olduğunda bu güvenli hareket ve nefes akışı açılır."
           />
         </View>
+      </Screen>
+    );
+  }
+
+  if (profileQuery.isLoading) {
+    return <Screen scroll={false}><QueryState loading description="Egzersiz planı hazırlanıyor…" /></Screen>;
+  }
+
+  if (profileQuery.isError) {
+    return (
+      <Screen scroll={false}>
+        <QueryState
+          description="Hamilelik profilin alınamadı."
+          onRetry={() => void profileQuery.refetch()}
+          retrying={profileQuery.isFetching}
+        />
       </Screen>
     );
   }
@@ -331,21 +354,22 @@ export default function PregnancyExerciseScreen() {
             </View>
 
             <View style={styles.controls}>
-              <Pressable accessibilityRole="button" onPress={resetProgram} style={styles.controlButton}>
+              <Pressable accessibilityLabel="Egzersizi baştan başlat" accessibilityRole="button" onPress={resetProgram} style={styles.controlButton}>
                 <RotateCcw color={colors.text} size={22} />
               </Pressable>
               <Pressable
+                accessibilityLabel={running ? "Egzersizi duraklat" : "Egzersizi başlat"}
                 accessibilityRole="button"
                 onPress={toggleRunning}
                 style={[styles.playButton, { backgroundColor: appTheme.primary }]}
               >
                 {running ? (
-                  <Pause color={colors.surfaceStrong} size={28} />
+                  <Pause color={colors.onPrimary} size={28} />
                 ) : (
-                  <Play color={colors.surfaceStrong} size={28} />
+                  <Play color={colors.onPrimary} size={28} />
                 )}
               </Pressable>
-              <Pressable accessibilityRole="button" onPress={goNext} style={styles.controlButton}>
+              <Pressable accessibilityLabel="Sonraki harekete geç" accessibilityRole="button" onPress={goNext} style={styles.controlButton}>
                 <SkipForward color={colors.text} size={22} />
               </Pressable>
             </View>

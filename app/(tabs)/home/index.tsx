@@ -27,7 +27,7 @@ import {
   Text,
   View
 } from "react-native";
-import Animated, { Easing, FadeIn, FadeOut } from "react-native-reanimated";
+import Animated, { Easing, FadeIn, FadeOut, useReducedMotion } from "react-native-reanimated";
 
 import { listBabies } from "@/api/babies";
 import { getCareHandoverSnapshot, getCurrentCareUserId, listCareJournalEntries, subscribeToCareCoordination, takeOverBabyCare, type CareJournalEntry } from "@/api/careJournal";
@@ -41,6 +41,7 @@ import {
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { MetricCard } from "@/components/MetricCard";
+import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
 import { Thread } from "@/components/Thread";
 import { syncCareQuickWidget } from "@/features/care-journal/widgetSync";
@@ -62,6 +63,7 @@ export default function HomeScreen() {
   const queryClient = useQueryClient();
   const { showError, showInfo } = useFeedback();
   const [showDaysUntilDue, setShowDaysUntilDue] = useState(false);
+  const reducedMotion = useReducedMotion();
   const profileQuery = useQuery({
     queryKey: ["current-profile"],
     queryFn: getCurrentProfile
@@ -200,7 +202,7 @@ export default function HomeScreen() {
   }, [firstBaby, profile, showInfo, weekInfo]);
 
   useEffect(() => {
-    if (!profile?.is_pregnant || !pregnancyProgress) {
+    if (!profile?.is_pregnant || !pregnancyProgress || reducedMotion) {
       setShowDaysUntilDue(false);
       return;
     }
@@ -210,7 +212,28 @@ export default function HomeScreen() {
     }, 4_000);
 
     return () => clearInterval(interval);
-  }, [pregnancyProgress, profile?.is_pregnant]);
+  }, [pregnancyProgress, profile?.is_pregnant, reducedMotion]);
+
+  if (profileQuery.isLoading || babiesQuery.isLoading || membershipQuery.isLoading) {
+    return (
+      <Screen scroll={false}>
+        <QueryState loading description="Ana sayfan hazırlanıyor…" />
+      </Screen>
+    );
+  }
+
+  if (profileQuery.isError || babiesQuery.isError || membershipQuery.isError) {
+    return (
+      <Screen scroll={false}>
+        <QueryState
+          description="Profil ve bebek bilgileri alınamadı. Bağlantını kontrol edip yeniden deneyebilirsin."
+          onRetry={() => void Promise.all([profileQuery.refetch(), babiesQuery.refetch(), membershipQuery.refetch()])}
+          retrying={profileQuery.isFetching || babiesQuery.isFetching || membershipQuery.isFetching}
+          title="Ana sayfa yüklenemedi"
+        />
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
@@ -228,9 +251,11 @@ export default function HomeScreen() {
                     { backgroundColor: appTheme.primarySoft }
                   ]}
                 >
-                  <Text style={styles.heroSizeEmoji}>
-                    {firstBaby ? "👶" : "✨"}
-                  </Text>
+                  {firstBaby ? (
+                    <Baby color={appTheme.primary} size={34} />
+                  ) : (
+                    <Sparkles color={appTheme.primary} size={34} />
+                  )}
                 </View>
                 <View style={styles.sizeVisualCopy}>
                   <Text style={[styles.sizeVisualEyebrow, { color: appTheme.primary }]}>Bugün</Text>
@@ -279,8 +304,8 @@ export default function HomeScreen() {
                 >
                   <Animated.Text
                     key={showDaysUntilDue ? "days-until-due" : "pregnancy-day"}
-                    entering={FadeIn.duration(700).easing(Easing.out(Easing.cubic))}
-                    exiting={FadeOut.duration(500).easing(Easing.inOut(Easing.quad))}
+                    entering={reducedMotion ? undefined : FadeIn.duration(260).easing(Easing.out(Easing.cubic))}
+                    exiting={reducedMotion ? undefined : FadeOut.duration(180).easing(Easing.inOut(Easing.quad))}
                     style={styles.pregnancyStatusText}
                   >
                     {showDaysUntilDue
@@ -351,7 +376,15 @@ export default function HomeScreen() {
           </Card>
         ) : null}
 
-        {firstBaby ? (
+        {firstBaby && careHandoverQuery.isLoading ? (
+          <QueryState compact loading description="Canlı aile bakımı yükleniyor…" />
+        ) : firstBaby && careHandoverQuery.isError ? (
+          <QueryState
+            description="Canlı bakım özeti alınamadı."
+            onRetry={() => void careHandoverQuery.refetch()}
+            retrying={careHandoverQuery.isFetching}
+          />
+        ) : firstBaby ? (
           <Card style={[styles.toolsCard, { backgroundColor: appTheme.primarySoft }]}>
             <View style={{ gap: spacing.md }}>
               <View style={styles.cardHeader}>
@@ -423,7 +456,9 @@ export default function HomeScreen() {
           <MetricCard
             label="Aşı tamamlama"
             value={
-              vaccinations.length > 0
+              vaccinationsQuery.isError
+                ? "—"
+                : vaccinations.length > 0
                 ? `${completedVaccines}/${vaccinations.length}`
                 : "0"
             }
@@ -435,7 +470,11 @@ export default function HomeScreen() {
             <View style={styles.cardHeader}>
               <View style={{ gap: spacing.xs, flex: 1 }}>
                 <Text style={typography.heading2}>Sıradaki hatırlatıcı</Text>
-                {nextVaccination ? (
+                {vaccinationsQuery.isLoading ? (
+                  <Text style={typography.body}>Aşı bilgileri yükleniyor…</Text>
+                ) : vaccinationsQuery.isError ? (
+                  <Text style={typography.body}>Aşı bilgileri şu anda alınamadı.</Text>
+                ) : nextVaccination ? (
                   <Text style={typography.body}>
                     {nextVaccination.vaccine_schedule?.vaccine_name ?? "Aşı"} /{" "}
                     {getRelativeDayLabel(nextVaccination.scheduled_date)} /{" "}
@@ -470,7 +509,16 @@ export default function HomeScreen() {
           </Link>
         </View>
 
-        <ScrollView
+        {featuredArticlesQuery.isLoading ? (
+          <QueryState compact loading description="Makaleler yükleniyor…" />
+        ) : featuredArticlesQuery.isError ? (
+          <QueryState
+            compact
+            description="Makaleler şu anda alınamadı."
+            onRetry={() => void featuredArticlesQuery.refetch()}
+            retrying={featuredArticlesQuery.isFetching}
+          />
+        ) : <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.articleRail}
@@ -478,7 +526,7 @@ export default function HomeScreen() {
           {featuredArticles.map((article) => (
             <ArticlePreview key={article.slug} article={article} />
           ))}
-        </ScrollView>
+        </ScrollView>}
 
         <View style={styles.quickGrid}>
           <QuickAction
@@ -580,7 +628,7 @@ function ArticlePreview({ article }: { article: Article }) {
           ) : (
             <View style={[styles.articleImage, { backgroundColor: article.accent }]}>
               <View style={styles.articleOrb} />
-              <BookOpen color={colors.surfaceStrong} size={24} />
+              <BookOpen color={colors.onPrimary} size={24} />
             </View>
           )}
           <View style={styles.articleCopy}>
@@ -999,7 +1047,7 @@ const styles = StyleSheet.create({
   },
   shareWeekButtonText: {
     ...typography.button,
-    color: colors.background
+    color: colors.onPrimary
   },
   metricRow: {
     flexDirection: "row",

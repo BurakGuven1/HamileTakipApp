@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
+import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
 import { Thread } from "@/components/Thread";
 import { useAppTheme } from "@/providers/AppThemeProvider";
@@ -148,9 +149,9 @@ export default function LullabyScreen() {
                   style={[styles.playButton, { backgroundColor: accentColor.primary }]}
                 >
                   {status.playing ? (
-                    <Pause color={colors.background} size={24} />
+                    <Pause color={colors.onPrimary} size={24} />
                   ) : (
-                    <Play color={colors.background} size={24} />
+                    <Play color={colors.onPrimary} size={24} />
                   )}
                 </Pressable>
               </View>
@@ -173,7 +174,13 @@ export default function LullabyScreen() {
         ) : null}
 
         {lullabiesQuery.isLoading ? (
-          <Text style={typography.body}>Ninniler yükleniyor...</Text>
+          <QueryState compact loading description="Ninniler yükleniyor…" />
+        ) : lullabiesQuery.isError ? (
+          <QueryState
+            description="Ninniler şu anda alınamadı."
+            onRetry={() => void lullabiesQuery.refetch()}
+            retrying={lullabiesQuery.isFetching}
+          />
         ) : lullabies.length === 0 ? (
           <EmptyState
             title="Henüz ninni yok"
@@ -317,7 +324,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted
   },
   filterTextActive: {
-    color: colors.background
+    color: colors.onPrimary
   },
   playerCard: {
     backgroundColor: colors.primarySoft

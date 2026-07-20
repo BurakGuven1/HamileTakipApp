@@ -1,5 +1,5 @@
 import { forwardRef, type PropsWithChildren } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { colors, spacing } from "@/theme";
@@ -16,17 +16,23 @@ export const Screen = forwardRef<ScrollView, ScreenProps>(function Screen(
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {scroll ? (
-        <ScrollView
-          ref={ref}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          {content}
-        </ScrollView>
-      ) : (
-        content
-      )}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.keyboardAvoiding}
+      >
+        {scroll ? (
+          <ScrollView
+            ref={ref}
+            contentContainerStyle={styles.scrollContent}
+            keyboardDismissMode="interactive"
+            keyboardShouldPersistTaps="handled"
+          >
+            {content}
+          </ScrollView>
+        ) : (
+          content
+        )}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 });
@@ -35,6 +41,9 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background
+  },
+  keyboardAvoiding: {
+    flex: 1
   },
   scrollContent: {
     flexGrow: 1

@@ -33,6 +33,7 @@ import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { DatePickerField } from "@/components/DatePickerField";
 import { EmptyState } from "@/components/EmptyState";
+import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
 import { Thread } from "@/components/Thread";
@@ -342,6 +343,27 @@ export default function BabyScreen() {
     setEditGrowthNotes("");
   }
 
+  if (profileQuery.isLoading || babiesQuery.isLoading) {
+    return (
+      <Screen scroll={false}>
+        <QueryState loading description="Bebek bilgileri hazırlanıyor…" />
+      </Screen>
+    );
+  }
+
+  if (profileQuery.isError || babiesQuery.isError) {
+    return (
+      <Screen scroll={false}>
+        <QueryState
+          description="Profil veya bebek bilgileri alınamadı. Bağlantını kontrol edip yeniden deneyebilirsin."
+          onRetry={() => void Promise.all([profileQuery.refetch(), babiesQuery.refetch()])}
+          retrying={profileQuery.isFetching || babiesQuery.isFetching}
+          title="Bebek ekranı yüklenemedi"
+        />
+      </Screen>
+    );
+  }
+
   return (
     <Screen>
       <View style={styles.container}>
@@ -577,7 +599,15 @@ export default function BabyScreen() {
           </View>
         ) : section === "vaccines" ? (
           <View style={{ gap: spacing.md }}>
-            {!selectedBaby ? (
+            {vaccinationsQuery.isLoading ? (
+              <QueryState compact loading description="Aşı takvimi yükleniyor…" />
+            ) : vaccinationsQuery.isError ? (
+              <QueryState
+                description="Aşı takvimi alınamadı."
+                onRetry={() => void vaccinationsQuery.refetch()}
+                retrying={vaccinationsQuery.isFetching}
+              />
+            ) : !selectedBaby ? (
               <EmptyState
                 title="Aşı takvimi için bebek profili gerekli"
                 description="Bebek doğum tarihi girildiğinde takvim otomatik hesaplanır."
@@ -672,7 +702,15 @@ export default function BabyScreen() {
           </View>
         ) : (
           <View style={{ gap: spacing.md }}>
-            {!selectedBaby ? (
+            {growthQuery.isLoading ? (
+              <QueryState compact loading description="Büyüme kayıtları yükleniyor…" />
+            ) : growthQuery.isError ? (
+              <QueryState
+                description="Büyüme kayıtları alınamadı."
+                onRetry={() => void growthQuery.refetch()}
+                retrying={growthQuery.isFetching}
+              />
+            ) : !selectedBaby ? (
               <EmptyState
                 title="Büyüme takibi için bebek profili gerekli"
                 description="Bebek profilini ekledikten sonra kilo, boy ve baş çevresi ölçümlerini izleyebilirsin."
@@ -909,6 +947,7 @@ function GrowthRecordRow({
           onPress={onEdit}
         />
         <Pressable
+          accessibilityLabel="Büyüme kaydını sil"
           accessibilityRole="button"
           disabled={disabled}
           onPress={onDelete}
@@ -1015,7 +1054,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted
   },
   babyChipTextActive: {
-    color: colors.surface
+    color: colors.onPrimary
   },
   summaryCard: {
     backgroundColor: colors.surface
@@ -1140,8 +1179,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.accentSoft,
     borderRadius: radii.pill,
-    height: 38,
+    height: 44,
     justifyContent: "center",
-    width: 38
+    width: 44
   }
 });

@@ -135,7 +135,7 @@ export function MilkInventoryCard({ actorName, babyId }: { actorName: string | n
 }
 
 function Metric({ label, value }: { label: string; value: string }) { return <View style={styles.metric}><Text style={styles.meta}>{label}</Text><Text style={typography.label}>{value}</Text></View>; }
-function MiniChoice({ active, label, onPress }: { active: boolean; label: string; onPress: () => void }) { return <Pressable onPress={onPress} style={[styles.choice, active && styles.choiceActive]}><Text style={[typography.label, active && { color: colors.surface }]}>{label}</Text></Pressable>; }
+function MiniChoice({ active, label, onPress }: { active: boolean; label: string; onPress: () => void }) { return <Pressable accessibilityRole="button" accessibilityState={{ selected: active }} onPress={onPress} style={[styles.choice, active && styles.choiceActive]}><Text style={[typography.label, active && { color: colors.onPrimary }]}>{label}</Text></Pressable>; }
 function locationLabel(value: MilkContainer["storage_location"]) { return value === "freezer" ? "Dondurucu" : value === "thawed" ? "Çözündü" : "Buzdolabı"; }
 function expiryText(value: string) { const hours = Math.round((Date.parse(value) - Date.now()) / 3_600_000); return hours <= 0 ? "süresi doldu" : hours < 48 ? `${hours} saat kaldı` : `${Math.ceil(hours / 24)} gün kaldı`; }
 

@@ -2,9 +2,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
-import { Camera, Images, Plus } from "lucide-react-native";
+import { Camera, Images } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { listBabies } from "@/api/babies";
 import {
@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
+import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
 import { PremiumFeatureBoundary } from "@/features/subscription/PremiumFeatureBoundary";
@@ -140,9 +141,68 @@ function GalleryContent() {
 
   const photos = photosQuery.data ?? [];
 
+  function confirmDelete(photo: BabyPhoto) {
+    Alert.alert(
+      "Fotoğraf silinsin mi?",
+      "Bu fotoğraf anı galerisinden ve güvenli depolamadan kalıcı olarak silinecek.",
+      [
+        { text: "Vazgeç", style: "cancel" },
+        {
+          text: "Fotoğrafı sil",
+          style: "destructive",
+          onPress: () => deletePhotoMutation.mutate(photo)
+        }
+      ]
+    );
+  }
+
+  if (babiesQuery.isLoading) {
+    return (
+      <Screen scroll={false}>
+        <QueryState loading description="Anı galerisi hazırlanıyor…" />
+      </Screen>
+    );
+  }
+
+  if (babiesQuery.isError) {
+    return (
+      <Screen scroll={false}>
+        <QueryState
+          description="Bebek bilgileri alınamadığı için galeri açılamadı."
+          onRetry={() => void babiesQuery.refetch()}
+          retrying={babiesQuery.isFetching}
+          title="Galeri yüklenemedi"
+        />
+      </Screen>
+    );
+  }
+
   return (
-    <Screen>
-      <View style={styles.container}>
+    <Screen scroll={false}>
+      <FlatList
+        contentContainerStyle={styles.container}
+        data={selectedBaby && !photosQuery.isError ? photos : []}
+        keyExtractor={(photo) => photo.id}
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
+        onRefresh={() => void photosQuery.refetch()}
+        refreshing={photosQuery.isRefetching}
+        style={styles.list}
+        renderItem={({ item: photo, index }) => (
+          <PhotoTimelineItem
+            disabled={updatePhotoMutation.isPending || deletePhotoMutation.isPending}
+            last={index === photos.length - 1}
+            photo={photo}
+            primaryColor={accentColor.primary}
+            tintColor={accentColor.tint}
+            onDelete={() => confirmDelete(photo)}
+            onUpdateCaption={(caption) =>
+              updatePhotoMutation.mutate({ caption, id: photo.id })
+            }
+          />
+        )}
+        ListHeaderComponent={(
+          <View style={styles.headerContent}>
         <View style={[styles.hero, { backgroundColor: accentColor.accentSoft }]}>
           <View style={[styles.iconBubble, { backgroundColor: colors.surface }]}>
             <Images color={accentColor.primary} size={28} />
@@ -163,6 +223,7 @@ function GalleryContent() {
               <Pressable
                 key={baby.id}
                 accessibilityRole="button"
+                accessibilityState={{ selected: baby.id === selectedBaby?.id }}
                 onPress={() => setSelectedBabyId(baby.id)}
                 style={[
                   styles.babyChip,
@@ -191,7 +252,7 @@ function GalleryContent() {
             description="Önce Bebek sekmesinden bebek profilini oluştur."
           />
         ) : (
-          <>
+          <View style={styles.galleryContent}>
             <View style={styles.actionRow}>
               <Button
                 label={uploadMutation.isPending ? "Yükleniyor..." : "Galeriden seç"}
@@ -208,36 +269,32 @@ function GalleryContent() {
               />
             </View>
 
-            {photos.length === 0 ? (
-              <EmptyState
-                actionLabel="Fotoğraf seç"
-                description="Fotoğraflar burada tarihe göre bir yol çizgisi üzerinde listelenecek."
-                title="İlk anıyı ekle"
-                onActionPress={() => uploadMutation.mutate("library")}
+            {photosQuery.isLoading ? (
+              <QueryState compact loading description="Fotoğraflar yükleniyor…" />
+            ) : null}
+            {photosQuery.isError ? (
+              <QueryState
+                description="Fotoğraflar alınamadı. Mevcut anıların silinmedi; bağlantını kontrol edip yeniden deneyebilirsin."
+                onRetry={() => void photosQuery.refetch()}
+                retrying={photosQuery.isFetching}
+                title="Fotoğraflar yüklenemedi"
               />
-            ) : (
-              <View style={styles.timeline}>
-                {photos.map((photo, index) => (
-                  <PhotoTimelineItem
-                    key={photo.id}
-                    disabled={
-                      updatePhotoMutation.isPending || deletePhotoMutation.isPending
-                    }
-                    last={index === photos.length - 1}
-                    photo={photo}
-                    primaryColor={accentColor.primary}
-                    tintColor={accentColor.tint}
-                    onDelete={() => deletePhotoMutation.mutate(photo)}
-                    onUpdateCaption={(caption) =>
-                      updatePhotoMutation.mutate({ caption, id: photo.id })
-                    }
-                  />
-                ))}
-              </View>
-            )}
-          </>
+            ) : null}
+          </View>
         )}
-      </View>
+          </View>
+        )}
+        ListEmptyComponent={
+          selectedBaby && !photosQuery.isLoading && !photosQuery.isError ? (
+            <EmptyState
+              actionLabel="Fotoğraf seç"
+              description="Fotoğraflar burada tarihe göre bir yol çizgisi üzerinde listelenecek."
+              title="İlk anıyı ekle"
+              onActionPress={() => uploadMutation.mutate("library")}
+            />
+          ) : null
+        }
+      />
     </Screen>
   );
 }
@@ -282,13 +339,25 @@ function PhotoTimelineItem({
         <View style={{ gap: spacing.sm }}>
           {signedUrlQuery.data ? (
             <Image
+              accessibilityLabel={
+                photo.caption?.trim()
+                  ? `${photo.caption}, ${formatDate(photo.taken_at)}`
+                  : `Bebek anı fotoğrafı, ${formatDate(photo.taken_at)}`
+              }
               contentFit="cover"
               source={{ uri: signedUrlQuery.data }}
               style={styles.photo}
             />
+          ) : signedUrlQuery.isError ? (
+            <QueryState
+              compact
+              description="Fotoğraf görüntüsü alınamadı."
+              onRetry={() => void signedUrlQuery.refetch()}
+              retrying={signedUrlQuery.isFetching}
+            />
           ) : (
             <View style={styles.photoPlaceholder}>
-              <Plus color={primaryColor} size={24} />
+              <QueryState compact loading description="Fotoğraf hazırlanıyor…" />
             </View>
           )}
           <Text style={styles.photoDate}>{formatDate(photo.taken_at)}</Text>
@@ -320,7 +389,17 @@ function PhotoTimelineItem({
 }
 
 const styles = StyleSheet.create({
+  list: {
+    flex: 1
+  },
   container: {
+    gap: spacing.lg,
+    paddingBottom: spacing.xl
+  },
+  headerContent: {
+    gap: spacing.lg
+  },
+  galleryContent: {
     gap: spacing.lg
   },
   hero: {
@@ -351,6 +430,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radii.pill,
     borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 44,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm
   },
@@ -363,7 +444,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted
   },
   babyChipTextActive: {
-    color: colors.surface
+    color: colors.onPrimary
   },
   actionRow: {
     flexDirection: "row",

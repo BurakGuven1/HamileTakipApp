@@ -50,12 +50,12 @@ export default function RootLayout() {
 
   return (
     <AppProviders>
-      <StatusBar style="dark" />
+      <StatusBar style="auto" />
       <Stack
         screenOptions={{
           headerShown: false,
           animation: "ios_from_right",
-          animationDuration: 420,
+          animationDuration: 300,
           gestureEnabled: true,
           fullScreenGestureEnabled: true,
           contentStyle: { backgroundColor: colors.background }

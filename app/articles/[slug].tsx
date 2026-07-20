@@ -8,6 +8,7 @@ import { getArticleBySlug } from "@/api/articles";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
+import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
 import { colors, radii, spacing, typography } from "@/theme";
 
@@ -30,9 +31,27 @@ export default function ArticleDetailScreen() {
               <Text style={styles.backText}>Makalelere dön</Text>
             </View>
           </Pressable>
-          <EmptyState
-            title="Makale yükleniyor"
-            description="Yazı ve kapak görseli hazırlanıyor."
+          <QueryState loading description="Yazı ve kapak görseli hazırlanıyor…" />
+        </View>
+      </Screen>
+    );
+  }
+
+  if (articleQuery.isError) {
+    return (
+      <Screen>
+        <View style={styles.container}>
+          <Pressable accessibilityRole="button" onPress={() => router.back()}>
+            <View style={styles.backRow}>
+              <ArrowLeft color={colors.primary} size={20} />
+              <Text style={styles.backText}>Makalelere dön</Text>
+            </View>
+          </Pressable>
+          <QueryState
+            description="Bu yazı şu anda alınamadı."
+            onRetry={() => void articleQuery.refetch()}
+            retrying={articleQuery.isFetching}
+            title="Makale yüklenemedi"
           />
         </View>
       </Screen>
@@ -124,7 +143,7 @@ function ArticleHeroImage({
     <View style={[styles.heroFallback, { backgroundColor: accent }]}>
       <View style={styles.heroOrbLarge} />
       <View style={styles.heroOrbSmall} />
-      <BookOpen color={colors.surfaceStrong} size={34} />
+      <BookOpen color={colors.onPrimary} size={34} />
       <Text style={styles.heroFallbackText}>{period}</Text>
     </View>
   );
@@ -180,7 +199,7 @@ const styles = StyleSheet.create({
   },
   heroFallbackText: {
     ...typography.heading2,
-    color: colors.surfaceStrong
+    color: colors.onPrimary
   },
   period: {
     ...typography.eyebrow,

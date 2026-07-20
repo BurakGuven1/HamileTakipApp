@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import * as Haptics from "expo-haptics";
 import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import {
@@ -7,17 +8,38 @@ import {
   Droplets,
   ExternalLink,
   Info,
+  Minus,
   Pill,
+  Plus,
   ShieldAlert
 } from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  AppState,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
+} from "react-native";
+import Svg, { Path } from "react-native-svg";
 
 import { getCurrentProfile } from "@/api/profiles";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { Screen } from "@/components/Screen";
+import {
+  DEFAULT_DAILY_WATER_GLASSES,
+  getDailyWaterIntake,
+  getMillisecondsUntilNextLocalDay,
+  MAX_DAILY_WATER_GLASSES,
+  MIN_DAILY_WATER_GLASSES,
+  setDailyWaterGoal,
+  setDailyWaterProgress,
+  type DailyWaterIntake
+} from "@/features/pregnancy/dailyWaterIntake";
 import {
   getGuidanceForMonth,
   getPregnancyMonth,
@@ -49,6 +71,12 @@ export default function PregnancyNutritionScreen() {
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [waterRemindersEnabled, setWaterRemindersEnabledState] = useState(false);
   const [updatingReminders, setUpdatingReminders] = useState(false);
+  const [waterIntake, setWaterIntake] = useState<DailyWaterIntake | null>(null);
+  const [draftWaterGoal, setDraftWaterGoal] = useState(
+    DEFAULT_DAILY_WATER_GLASSES
+  );
+  const [editingWaterGoal, setEditingWaterGoal] = useState(false);
+  const [savingWaterIntake, setSavingWaterIntake] = useState(false);
 
   useEffect(() => {
     setSelectedMonth(currentMonth);
@@ -59,6 +87,53 @@ export default function PregnancyNutritionScreen() {
       .then(setWaterRemindersEnabledState)
       .catch(() => setWaterRemindersEnabledState(false));
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    let midnightTimer: ReturnType<typeof setTimeout> | undefined;
+
+    async function refreshDailyWaterIntake() {
+      try {
+        const dailyIntake = await getDailyWaterIntake();
+        if (!active) return;
+
+        setWaterIntake(dailyIntake);
+        setDraftWaterGoal(
+          dailyIntake.goal ?? DEFAULT_DAILY_WATER_GLASSES
+        );
+        if (dailyIntake.goal === null) {
+          setEditingWaterGoal(true);
+        }
+      } catch (error) {
+        if (active) {
+          showError(error, "Günlük su takibi yüklenemedi");
+        }
+      }
+    }
+
+    function scheduleMidnightReset() {
+      midnightTimer = setTimeout(() => {
+        if (!active) return;
+        void refreshDailyWaterIntake();
+        scheduleMidnightReset();
+      }, getMillisecondsUntilNextLocalDay());
+    }
+
+    void refreshDailyWaterIntake();
+    scheduleMidnightReset();
+
+    const appStateSubscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        void refreshDailyWaterIntake();
+      }
+    });
+
+    return () => {
+      active = false;
+      if (midnightTimer) clearTimeout(midnightTimer);
+      appStateSubscription.remove();
+    };
+  }, [showError]);
 
   async function toggleWaterReminders() {
     setUpdatingReminders(true);
@@ -75,6 +150,50 @@ export default function PregnancyNutritionScreen() {
       showError(error, "Su hatırlatmaları güncellenemedi");
     } finally {
       setUpdatingReminders(false);
+    }
+  }
+
+  async function saveWaterGoal() {
+    if (savingWaterIntake) return;
+    setSavingWaterIntake(true);
+
+    try {
+      const nextIntake = await setDailyWaterGoal(draftWaterGoal);
+      setWaterIntake(nextIntake);
+      setEditingWaterGoal(false);
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
+        () => undefined
+      );
+    } catch (error) {
+      showError(error, "Günlük su hedefi kaydedilemedi");
+    } finally {
+      setSavingWaterIntake(false);
+    }
+  }
+
+  async function updateWaterProgress(glassNumber: number) {
+    if (!waterIntake?.goal || savingWaterIntake) return;
+
+    const previousIntake = waterIntake;
+    const nextConsumed =
+      glassNumber <= waterIntake.consumed ? glassNumber - 1 : glassNumber;
+    const optimisticIntake = {
+      ...waterIntake,
+      consumed: nextConsumed
+    };
+
+    setWaterIntake(optimisticIntake);
+    setSavingWaterIntake(true);
+
+    try {
+      const savedIntake = await setDailyWaterProgress(nextConsumed);
+      setWaterIntake(savedIntake);
+      await Haptics.selectionAsync().catch(() => undefined);
+    } catch (error) {
+      setWaterIntake(previousIntake);
+      showError(error, "Su ilerlemesi kaydedilemedi");
+    } finally {
+      setSavingWaterIntake(false);
     }
   }
 
@@ -147,6 +266,29 @@ export default function PregnancyNutritionScreen() {
             artabilir. WHO Avrupa sıcak havalarda gebeler için günde 2–3 litre suyu,
             sıcakta biraz daha fazlasını hatırlatır.
           </Text>
+          <DailyWaterTracker
+            draftGoal={draftWaterGoal}
+            editingGoal={editingWaterGoal}
+            intake={waterIntake}
+            onCancelGoalEdit={() => {
+              setDraftWaterGoal(
+                waterIntake?.goal ?? DEFAULT_DAILY_WATER_GLASSES
+              );
+              setEditingWaterGoal(false);
+            }}
+            onChangeGoal={setDraftWaterGoal}
+            onEditGoal={() => {
+              setDraftWaterGoal(
+                waterIntake?.goal ?? DEFAULT_DAILY_WATER_GLASSES
+              );
+              setEditingWaterGoal(true);
+            }}
+            onSaveGoal={() => void saveWaterGoal()}
+            onSelectGlass={(glassNumber) =>
+              void updateWaterProgress(glassNumber)
+            }
+            saving={savingWaterIntake}
+          />
           <View style={styles.reminderBox}>
             <BellRing color={appTheme.primary} size={24} />
             <View style={{ flex: 1, gap: 2 }}>
@@ -286,6 +428,251 @@ export default function PregnancyNutritionScreen() {
   );
 }
 
+function DailyWaterTracker({
+  draftGoal,
+  editingGoal,
+  intake,
+  onCancelGoalEdit,
+  onChangeGoal,
+  onEditGoal,
+  onSaveGoal,
+  onSelectGlass,
+  saving
+}: {
+  draftGoal: number;
+  editingGoal: boolean;
+  intake: DailyWaterIntake | null;
+  onCancelGoalEdit: () => void;
+  onChangeGoal: (goal: number) => void;
+  onEditGoal: () => void;
+  onSaveGoal: () => void;
+  onSelectGlass: (glassNumber: number) => void;
+  saving: boolean;
+}) {
+  const appTheme = useAppTheme();
+
+  if (!intake) {
+    return (
+      <View style={styles.waterTrackerLoading}>
+        <ActivityIndicator color={appTheme.primary} />
+        <Text style={styles.smallText}>Bugünkü su hedefin yükleniyor…</Text>
+      </View>
+    );
+  }
+
+  if (editingGoal || intake.goal === null) {
+    const canDecrease = draftGoal > MIN_DAILY_WATER_GLASSES;
+    const canIncrease = draftGoal < MAX_DAILY_WATER_GLASSES;
+    const hasExistingGoal = intake.goal !== null;
+
+    return (
+      <View style={styles.waterTrackerBox}>
+        <View style={styles.waterTrackerHeading}>
+          <Text style={typography.heading3}>
+            Bugün kaç bardak su içmek istersin?
+          </Text>
+          <Text style={styles.smallText}>
+            Günlük hedefini 7–16 bardak arasında seç. İlerlemen gece 00.00’da
+            sıfırlanır.
+          </Text>
+        </View>
+
+        <View style={styles.goalStepper}>
+          <Pressable
+            accessibilityLabel="Günlük su hedefini bir bardak azalt"
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !canDecrease || saving }}
+            disabled={!canDecrease || saving}
+            onPress={() => onChangeGoal(draftGoal - 1)}
+            style={({ pressed }) => [
+              styles.goalStepperButton,
+              (!canDecrease || saving) && styles.controlDisabled,
+              pressed && styles.controlPressed
+            ]}
+          >
+            <Minus color={colors.text} size={22} />
+          </Pressable>
+
+          <View
+            accessibilityLabel={`Günlük hedef ${draftGoal} bardak`}
+            style={styles.goalValue}
+          >
+            <Text style={[styles.goalNumber, { color: appTheme.primary }]}>
+              {draftGoal}
+            </Text>
+            <Text style={styles.goalUnit}>bardak</Text>
+          </View>
+
+          <Pressable
+            accessibilityLabel="Günlük su hedefini bir bardak artır"
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !canIncrease || saving }}
+            disabled={!canIncrease || saving}
+            onPress={() => onChangeGoal(draftGoal + 1)}
+            style={({ pressed }) => [
+              styles.goalStepperButton,
+              (!canIncrease || saving) && styles.controlDisabled,
+              pressed && styles.controlPressed
+            ]}
+          >
+            <Plus color={colors.text} size={22} />
+          </Pressable>
+        </View>
+
+        <Button
+          disabled={saving}
+          label={
+            saving
+              ? "Kaydediliyor…"
+              : hasExistingGoal
+                ? "Hedefi güncelle"
+                : "Bugünkü hedefi başlat"
+          }
+          onPress={onSaveGoal}
+        />
+
+        {hasExistingGoal ? (
+          <Pressable
+            accessibilityRole="button"
+            disabled={saving}
+            onPress={onCancelGoalEdit}
+            style={({ pressed }) => [
+              styles.cancelGoalButton,
+              pressed && styles.controlPressed
+            ]}
+          >
+            <Text style={[styles.changeGoalText, { color: appTheme.primary }]}>
+              Vazgeç
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
+    );
+  }
+
+  const percentage = Math.round((intake.consumed / intake.goal) * 100);
+  const remaining = intake.goal - intake.consumed;
+
+  return (
+    <View style={styles.waterTrackerBox}>
+      <View style={styles.progressHeading}>
+        <View style={{ flex: 1, gap: spacing.xs }}>
+          <Text style={typography.heading3}>Bugünkü su ilerlemen</Text>
+          <Text style={styles.smallText}>
+            Birkaç bardak içtiysen ilerideki boş bardağa dokunabilirsin.
+          </Text>
+        </View>
+        <Text style={[styles.progressCount, { color: appTheme.primary }]}>
+          {intake.consumed}/{intake.goal}
+        </Text>
+      </View>
+
+      <View
+        accessibilityLabel={`Günlük su hedefinin yüzde ${percentage} kadarı tamamlandı`}
+        accessibilityRole="progressbar"
+        accessibilityValue={{
+          max: intake.goal,
+          min: 0,
+          now: intake.consumed
+        }}
+        style={styles.progressTrack}
+      >
+        <View
+          style={[
+            styles.progressFill,
+            {
+              backgroundColor: appTheme.primary,
+              width: `${percentage}%` as `${number}%`
+            }
+          ]}
+        />
+      </View>
+
+      <View style={styles.waterGlassGrid}>
+        {Array.from({ length: intake.goal }, (_, index) => {
+          const glassNumber = index + 1;
+          const filled = glassNumber <= intake.consumed;
+
+          return (
+            <Pressable
+              key={glassNumber}
+              accessibilityHint={
+                filled
+                  ? "Bu bardaktan sonraki ilerlemeyi geri alır."
+                  : "Bu bardağa kadar olan ilerlemeyi dolu işaretler."
+              }
+              accessibilityLabel={`${glassNumber}. bardak, ${filled ? "içildi" : "boş"}`}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: saving, selected: filled }}
+              disabled={saving}
+              onPress={() => onSelectGlass(glassNumber)}
+              style={({ pressed }) => [
+                styles.waterGlassButton,
+                filled && {
+                  backgroundColor: appTheme.tint,
+                  borderColor: appTheme.primary
+                },
+                saving && styles.controlDisabled,
+                pressed && styles.controlPressed
+              ]}
+            >
+              <WaterGlassIcon color={appTheme.primary} filled={filled} />
+              <Text
+                style={[
+                  styles.waterGlassNumber,
+                  filled && { color: appTheme.primary }
+                ]}
+              >
+                {glassNumber}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <Text style={styles.progressMessage}>
+        {remaining === 0
+          ? "Bugünkü hedefine ulaştın. Ellerine sağlık!"
+          : `Bugünkü hedefin için ${remaining} bardak kaldı.`}
+      </Text>
+
+      <Pressable
+        accessibilityRole="button"
+        disabled={saving}
+        onPress={onEditGoal}
+        style={({ pressed }) => [
+          styles.changeGoalButton,
+          pressed && styles.controlPressed
+        ]}
+      >
+        <Text style={[styles.changeGoalText, { color: appTheme.primary }]}>
+          Bugünkü hedefi değiştir
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function WaterGlassIcon({ color, filled }: { color: string; filled: boolean }) {
+  return (
+    <Svg height={38} viewBox="0 0 40 48" width={32}>
+      <Path
+        d="M7 5h26l-3.2 35.5a3 3 0 0 1-3 2.5H13.2a3 3 0 0 1-3-2.5L7 5Z"
+        fill={colors.surfaceStrong}
+        stroke={filled ? color : colors.textMuted}
+        strokeLinejoin="round"
+        strokeWidth={2.2}
+      />
+      {filled ? (
+        <Path
+          d="M8.4 13c3.7-2.2 7 2.2 10.8 0 3.7-2.2 7.2 2.2 12.4 0l-2.5 27.2c-.1 1-1 1.8-2 1.8H12.9c-1 0-1.9-.8-2-1.8L8.4 13Z"
+          fill={color}
+        />
+      ) : null}
+    </Svg>
+  );
+}
+
 function GuidanceCard({
   item,
   onOpenSource
@@ -369,6 +756,121 @@ const styles = StyleSheet.create({
   },
   heroText: { ...typography.body, color: colors.text },
   waterCard: { gap: spacing.md },
+  waterTrackerLoading: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceStrong,
+    borderRadius: radii.md,
+    gap: spacing.sm,
+    justifyContent: "center",
+    minHeight: 120,
+    padding: spacing.lg
+  },
+  waterTrackerBox: {
+    backgroundColor: colors.surfaceStrong,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: spacing.md,
+    padding: spacing.md
+  },
+  waterTrackerHeading: { gap: spacing.xs },
+  goalStepper: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.lg,
+    justifyContent: "center"
+  },
+  goalStepperButton: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    height: 48,
+    justifyContent: "center",
+    width: 48
+  },
+  goalValue: {
+    alignItems: "center",
+    minWidth: 88
+  },
+  goalNumber: {
+    fontFamily: fonts.dataBold,
+    fontSize: 36,
+    lineHeight: 42
+  },
+  goalUnit: {
+    color: colors.textMuted,
+    fontFamily: fonts.bodyBold,
+    fontSize: 13,
+    lineHeight: 18
+  },
+  progressHeading: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: spacing.md
+  },
+  progressCount: {
+    fontFamily: fonts.dataBold,
+    fontSize: 22,
+    lineHeight: 28
+  },
+  progressTrack: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.pill,
+    height: 10,
+    overflow: "hidden"
+  },
+  progressFill: {
+    borderRadius: radii.pill,
+    height: "100%"
+  },
+  waterGlassGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    justifyContent: "center"
+  },
+  waterGlassButton: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceStrong,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 64,
+    paddingVertical: spacing.xs,
+    width: 52
+  },
+  waterGlassNumber: {
+    color: colors.textMuted,
+    fontFamily: fonts.dataBold,
+    fontSize: 12,
+    lineHeight: 14
+  },
+  progressMessage: {
+    ...typography.bodyStrong,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center"
+  },
+  changeGoalButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44
+  },
+  cancelGoalButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44
+  },
+  changeGoalText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 14,
+    lineHeight: 20
+  },
+  controlDisabled: { opacity: 0.45 },
+  controlPressed: { opacity: 0.68 },
   cardHeader: {
     alignItems: "center",
     flexDirection: "row",
@@ -411,7 +913,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: "center"
   },
-  monthChipTextSelected: { color: colors.background },
+  monthChipTextSelected: { color: colors.onPrimary },
   pillIcon: {
     alignItems: "center",
     borderRadius: radii.pill,

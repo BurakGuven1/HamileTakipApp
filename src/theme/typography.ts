@@ -51,7 +51,7 @@ export const typography = {
     lineHeight: 21
   },
   button: {
-    color: colors.background,
+    color: colors.onPrimary,
     fontFamily: fonts.bodyBold,
     fontSize: 16,
     lineHeight: 20

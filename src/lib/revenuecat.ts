@@ -1,9 +1,7 @@
 import { Platform } from "react-native";
 import Purchases, {
   LOG_LEVEL,
-  type CustomerInfo,
-  type MakePurchaseResult,
-  type PurchasesPackage
+  type CustomerInfo
 } from "react-native-purchases";
 
 import { env, getRevenueCatApiKey } from "@/config/env";
@@ -117,52 +115,6 @@ export function getSubscriptionStatusFromCustomerInfo(
   };
 }
 
-export async function getPaywallPackages(): Promise<PurchasesPackage[]> {
-  if (!configured) {
-    configureRevenueCat();
-  }
-
-  if (!configured) {
-    return [];
-  }
-
-  const offerings = await Purchases.getOfferings();
-  return offerings.current?.availablePackages ?? [];
-}
-
-export async function purchasePremiumPackage(
-  identifier: string
-): Promise<MakePurchaseResult | null> {
-  await trackEvent("purchase_started", { product_id: identifier });
-
-  const packages = await getPaywallPackages();
-  const selectedPackage = packages.find(
-    (purchasePackage) => purchasePackage.identifier === identifier
-  );
-
-  if (!selectedPackage) {
-    await trackEvent("purchase_cancelled", {
-      product_id: identifier,
-      reason: "package_not_found"
-    });
-    return null;
-  }
-
-  try {
-    const result = await Purchases.purchasePackage(selectedPackage);
-    await trackEvent("purchase_completed", {
-      product_id: result.productIdentifier
-    });
-    return result;
-  } catch (error: unknown) {
-    await trackEvent("purchase_cancelled", {
-      product_id: identifier,
-      user_cancelled: isPurchaseUserCancelled(error)
-    });
-    throw error;
-  }
-}
-
 export async function restorePremiumPurchases() {
   if (!configured) {
     configureRevenueCat();
@@ -179,13 +131,4 @@ export async function restorePremiumPurchases() {
   });
 
   return customerInfo;
-}
-
-export function isPurchaseUserCancelled(error: unknown) {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "userCancelled" in error &&
-    Boolean((error as { userCancelled?: boolean }).userCancelled)
-  );
 }

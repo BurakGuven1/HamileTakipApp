@@ -14,7 +14,6 @@ import {
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
@@ -39,6 +38,7 @@ import { Badge } from "@/components/Badge";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
+import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
 import { PremiumFeatureBoundary } from "@/features/subscription/PremiumFeatureBoundary";
@@ -62,9 +62,7 @@ export default function ForumScreen() {
   if (fatherRoleQuery.isPending) {
     return (
       <Screen scroll={false}>
-        <View style={styles.roleGateLoading}>
-          <ActivityIndicator color={appTheme.primary} />
-        </View>
+        <QueryState loading description="Forum erişimi doğrulanıyor…" />
       </Screen>
     );
   }
@@ -72,9 +70,11 @@ export default function ForumScreen() {
   if (fatherRoleQuery.isError) {
     return (
       <Screen scroll={false}>
-        <EmptyState
+        <QueryState
           title="Erişim doğrulanamadı"
-          description="Anne forumuna erişim bilgisi şu anda doğrulanamıyor. Lütfen bağlantını kontrol edip tekrar dene."
+          description="Anne forumuna erişim bilgisi şu anda doğrulanamıyor. Bağlantını kontrol edip tekrar dene."
+          onRetry={() => void fatherRoleQuery.refetch()}
+          retrying={fatherRoleQuery.isFetching}
         />
       </Screen>
     );
@@ -114,6 +114,10 @@ function ForumContent() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [commentText, setCommentText] = useState("");
+  const [postSubmitAttempted, setPostSubmitAttempted] = useState(false);
+  const [commentSubmitAttempted, setCommentSubmitAttempted] = useState(false);
+  const [postLimit, setPostLimit] = useState(20);
+  const [commentLimit, setCommentLimit] = useState(30);
 
   const profileQuery = useQuery({
     queryKey: ["current-profile"],
@@ -126,8 +130,8 @@ function ForumContent() {
   });
 
   const postsQuery = useQuery({
-    queryKey: ["forum-posts", selectedCategoryId],
-    queryFn: () => listPublicForumPosts(selectedCategoryId)
+    queryKey: ["forum-posts", selectedCategoryId, postLimit],
+    queryFn: () => listPublicForumPosts(selectedCategoryId, postLimit)
   });
 
   const activePost = useMemo(
@@ -147,6 +151,10 @@ function ForumContent() {
   }, [activePostId]);
 
   useEffect(() => {
+    setPostLimit(20);
+  }, [selectedCategoryId]);
+
+  useEffect(() => {
     getBlockedForumNicknames().then(setBlockedNicknames).catch(() => undefined);
   }, []);
 
@@ -155,10 +163,14 @@ function ForumContent() {
   }, []);
 
   const commentsQuery = useQuery({
-    queryKey: ["forum-comments", activePostId],
-    queryFn: () => listPublicForumComments(activePostId as string),
+    queryKey: ["forum-comments", activePostId, commentLimit],
+    queryFn: () => listPublicForumComments(activePostId as string, commentLimit),
     enabled: Boolean(activePostId)
   });
+
+  useEffect(() => {
+    setCommentLimit(30);
+  }, [activePostId]);
 
   const createPostMutation = useMutation({
     mutationFn: async () => {
@@ -192,6 +204,7 @@ function ForumContent() {
       setTitle("");
       setContent("");
       setComposerOpen(false);
+      setPostSubmitAttempted(false);
       setActivePostId(post.id);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
         () => undefined
@@ -224,6 +237,7 @@ function ForumContent() {
     onSuccess: async () => {
       setCommentText("");
       setCommentComposerOpen(false);
+      setCommentSubmitAttempted(false);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["forum-comments", activePostId] }),
         queryClient.invalidateQueries({ queryKey: ["forum-posts"] })
@@ -294,11 +308,15 @@ function ForumContent() {
     }
   }
 
-  const posts = (postsQuery.data ?? []).filter(
+  const rawPosts = postsQuery.data ?? [];
+  const hasMorePosts = rawPosts.length > postLimit;
+  const posts = rawPosts.slice(0, postLimit).filter(
     (post) => !blockedNicknames.includes(post.forum_nickname)
   );
   const categories = categoriesQuery.data ?? [];
-  const comments = (commentsQuery.data ?? []).filter(
+  const rawComments = commentsQuery.data ?? [];
+  const hasMoreComments = rawComments.length > commentLimit;
+  const comments = rawComments.slice(0, commentLimit).filter(
     (comment) => !blockedNicknames.includes(comment.forum_nickname)
   );
 
@@ -364,12 +382,22 @@ function ForumContent() {
             <View style={{ gap: spacing.md }}>
               <Text style={typography.heading2}>Deneyimini paylaş</Text>
               <TextField
+                error={
+                  postSubmitAttempted && title.trim().length < 4
+                    ? "Başlık en az 4 karakter olmalı."
+                    : undefined
+                }
                 label="Başlık"
                 value={title}
                 onChangeText={setTitle}
                 placeholder="Örn. 12. haftada mide bulantısı"
               />
               <TextField
+                error={
+                  postSubmitAttempted && content.trim().length < 8
+                    ? "İçerik en az 8 karakter olmalı."
+                    : undefined
+                }
                 label="İçerik"
                 value={content}
                 onChangeText={setContent}
@@ -381,14 +409,26 @@ function ForumContent() {
               <Button
                 label={createPostMutation.isPending ? "Paylaşılıyor..." : "Paylaş"}
                 disabled={createPostMutation.isPending}
-                onPress={() => createPostMutation.mutate()}
+                onPress={() => {
+                  setPostSubmitAttempted(true);
+                  createPostMutation.mutate();
+                }}
               />
             </View>
           </Card>
         ) : null}
 
         {postsQuery.isLoading || categoriesQuery.isLoading ? (
-          <ActivityIndicator color={appTheme.primary} />
+          <QueryState compact loading description="Forum akışı yükleniyor…" />
+        ) : postsQuery.isError || categoriesQuery.isError ? (
+          <QueryState
+            description="Forum akışı alınamadı. Bağlantını kontrol edip yeniden deneyebilirsin."
+            onRetry={() => {
+              void Promise.all([postsQuery.refetch(), categoriesQuery.refetch()]);
+            }}
+            retrying={postsQuery.isFetching || categoriesQuery.isFetching}
+            title="Forum yüklenemedi"
+          />
         ) : posts.length === 0 ? (
           <EmptyState
             title="Bu kategoride ilk sen yaz"
@@ -416,6 +456,13 @@ function ForumContent() {
                 />
               ))}
             </View>
+            {hasMorePosts ? (
+              <Button
+                label="Daha eski gönderileri göster"
+                variant="secondary"
+                onPress={() => setPostLimit((value) => value + 20)}
+              />
+            ) : null}
 
             {activePost ? (
               <Card style={styles.detailCard}>
@@ -479,6 +526,11 @@ function ForumContent() {
                   {commentComposerOpen ? (
                     <View style={styles.commentComposer}>
                       <TextField
+                        error={
+                          commentSubmitAttempted && commentText.trim().length < 2
+                            ? "Yorum en az 2 karakter olmalı."
+                            : undefined
+                        }
                         label="Yorumun"
                         value={commentText}
                         onChangeText={setCommentText}
@@ -501,19 +553,30 @@ function ForumContent() {
                           }
                           disabled={createCommentMutation.isPending}
                           style={styles.composerButton}
-                          onPress={() => createCommentMutation.mutate()}
+                          onPress={() => {
+                            setCommentSubmitAttempted(true);
+                            createCommentMutation.mutate();
+                          }}
                         />
                       </View>
                     </View>
                   ) : null}
 
                   {commentsQuery.isLoading ? (
-                    <ActivityIndicator color={appTheme.primary} />
+                    <QueryState compact loading description="Yorumlar yükleniyor…" />
+                  ) : commentsQuery.isError ? (
+                    <QueryState
+                      compact
+                      description="Yorumlar alınamadı."
+                      onRetry={() => void commentsQuery.refetch()}
+                      retrying={commentsQuery.isFetching}
+                    />
                   ) : comments.length === 0 ? (
                     <Text style={styles.metaText}>Henüz yorum yok.</Text>
                   ) : (
-                    <View style={{ gap: spacing.sm }}>
-                      {comments.map((comment) => (
+                    <>
+                      <View style={{ gap: spacing.sm }}>
+                        {comments.map((comment) => (
                         <CommentRow
                           key={comment.id}
                           comment={comment}
@@ -529,8 +592,16 @@ function ForumContent() {
                           onBlock={() => blockNickname(comment.forum_nickname)}
                           disabled={commentLikeMutation.isPending}
                         />
-                      ))}
-                    </View>
+                        ))}
+                      </View>
+                      {hasMoreComments ? (
+                        <Button
+                          label="Daha eski yorumları göster"
+                          variant="secondary"
+                          onPress={() => setCommentLimit((value) => value + 30)}
+                        />
+                      ) : null}
+                    </>
                   )}
                 </View>
               </Card>
@@ -572,6 +643,7 @@ function Chip({ active, icon, label, onPress }: ChipProps) {
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ selected: active }}
       onPress={onPress}
       style={[
         styles.chip,
@@ -776,6 +848,7 @@ function ActionButton({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled, selected: active }}
       disabled={disabled}
       onPress={onPress}
       style={[
@@ -836,6 +909,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radii.pill,
     borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 44,
     flexDirection: "row",
     gap: spacing.xs,
     paddingHorizontal: spacing.md,
@@ -850,7 +925,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted
   },
   chipTextActive: {
-    color: colors.surface
+    color: colors.onPrimary
   },
   composer: {
     borderColor: colors.accent,
@@ -906,6 +981,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.surfaceMuted,
     borderRadius: radii.pill,
+    minHeight: 44,
     flexDirection: "row",
     gap: spacing.xs,
     paddingHorizontal: spacing.md,

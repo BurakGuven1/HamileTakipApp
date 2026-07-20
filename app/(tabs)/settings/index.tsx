@@ -907,6 +907,10 @@ function PreferenceRow({
         <Text style={styles.preferenceDescription}>{description}</Text>
       </View>
       <Switch
+        accessibilityLabel={label}
+        accessibilityHint={description}
+        accessibilityRole="switch"
+        accessibilityState={{ checked: value, disabled }}
         disabled={disabled}
         ios_backgroundColor={colors.border}
         thumbColor={colors.surface}

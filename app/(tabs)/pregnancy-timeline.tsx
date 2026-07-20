@@ -4,11 +4,13 @@ import { Link, router } from "expo-router";
 import { ArrowLeft, CalendarDays, CheckCircle2, Info } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useReducedMotion } from "react-native-reanimated";
 
 import { listArticles } from "@/api/articles";
 import { getCurrentProfile } from "@/api/profiles";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
+import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
 import { getPregnancyWeekInfo } from "@/features/pregnancy/weekInfo";
 import {
@@ -27,6 +29,7 @@ const TIMELINE_WIDTH = TIMELINE_TOTAL_WEEKS * WEEK_CELL_WIDTH;
 
 export default function PregnancyTimelineScreen() {
   const accentColor = useAppTheme();
+  const reducedMotion = useReducedMotion();
   const weekScroller = useRef<ScrollView>(null);
   const profileQuery = useQuery({
     queryKey: ["current-profile"],
@@ -57,8 +60,28 @@ export default function PregnancyTimelineScreen() {
   useEffect(() => {
     setSelectedWeek(currentWeek);
     const x = Math.max(0, (currentWeek - 2) * WEEK_CELL_WIDTH);
-    setTimeout(() => weekScroller.current?.scrollTo({ x, animated: true }), 250);
-  }, [currentWeek]);
+    const timeout = setTimeout(
+      () => weekScroller.current?.scrollTo({ x, animated: !reducedMotion }),
+      reducedMotion ? 0 : 250
+    );
+    return () => clearTimeout(timeout);
+  }, [currentWeek, reducedMotion]);
+
+  if (profileQuery.isLoading) {
+    return <Screen scroll={false}><QueryState loading description="Hamilelik çizelgesi hazırlanıyor…" /></Screen>;
+  }
+
+  if (profileQuery.isError) {
+    return (
+      <Screen scroll={false}>
+        <QueryState
+          description="Hamilelik profilin alınamadı."
+          onRetry={() => void profileQuery.refetch()}
+          retrying={profileQuery.isFetching}
+        />
+      </Screen>
+    );
+  }
 
   if (profile && !profile.is_pregnant) {
     return (
@@ -168,7 +191,7 @@ export default function PregnancyTimelineScreen() {
                           styles.milestoneDot,
                           {
                             backgroundColor: selected
-                              ? colors.surfaceStrong
+                              ? colors.onPrimary
                               : hasArticle
                                 ? appTheme.primary
                                 : appTheme.accent
@@ -228,7 +251,14 @@ export default function PregnancyTimelineScreen() {
             </View>
 
             {articlesQuery.isLoading ? (
-              <Text style={typography.body}>Makaleler yükleniyor.</Text>
+              <QueryState compact loading description="Makaleler yükleniyor…" />
+            ) : articlesQuery.isError ? (
+              <QueryState
+                compact
+                description="Bu haftaya ait makaleler alınamadı."
+                onRetry={() => void articlesQuery.refetch()}
+                retrying={articlesQuery.isFetching}
+              />
             ) : selectedArticles.length === 0 ? (
               <Text style={typography.body}>
                 Bu hafta için zamanlanmış makale yok.
@@ -444,7 +474,7 @@ const styles = StyleSheet.create({
     lineHeight: 27
   },
   weekNumberSelected: {
-    color: colors.surfaceStrong
+    color: colors.onPrimary
   },
   weekLabel: {
     ...typography.label,
@@ -526,7 +556,7 @@ const styles = StyleSheet.create({
   },
   articleFallbackText: {
     ...typography.label,
-    color: colors.surfaceStrong
+    color: colors.onPrimary
   },
   bandCanvas: {
     gap: spacing.sm,
@@ -560,7 +590,7 @@ const styles = StyleSheet.create({
   },
   bandText: {
     ...typography.label,
-    color: colors.surfaceStrong,
+    color: colors.onPrimary,
     textAlign: "center"
   },
   activeBandCard: {

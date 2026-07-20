@@ -52,6 +52,7 @@ import {
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
+import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
 import type { ReportPeriod } from "@/features/care-journal/report";
@@ -77,11 +78,19 @@ const ENTRY_TYPES: { label: string; type: CareEntryType }[] = [
 ];
 
 export default function CareJournalScreen() {
-  return <CareJournalScreenContent />;
+  return <AdvancedCareJournalContent />;
 }
 
-export function ErrorBoundary(_props: ErrorBoundaryProps) {
-  return <CareJournalScreenContent />;
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  return (
+    <Screen scroll={false}>
+      <QueryState
+        description={error.message || "Bakım günlüğü beklenmeyen bir nedenle açılamadı."}
+        onRetry={retry}
+        title="Bakım günlüğü açılamadı"
+      />
+    </Screen>
+  );
 }
 
 type EssentialEntryType = CareEntryType;
@@ -528,7 +537,7 @@ class CareSectionBoundary extends Component<
   }
 }
 
-function LegacyAdvancedCareJournalContent() {
+function AdvancedCareJournalContent() {
   const queryClient = useQueryClient();
   const appTheme = useAppTheme();
   const { showError, showInfo, showSuccess } = useFeedback();
@@ -545,6 +554,7 @@ function LegacyAdvancedCareJournalContent() {
   const [medicineDose, setMedicineDose] = useState("");
   const [reminderTime, setReminderTime] = useState("");
   const [notes, setNotes] = useState("");
+  const [entrySubmitAttempted, setEntrySubmitAttempted] = useState(false);
   const [feedingContent, setFeedingContent] = useState<"breast_milk" | "formula" | "water">("breast_milk");
   const [sleepKind, setSleepKind] = useState<"day" | "night">("day");
   const [foodName, setFoodName] = useState("");
@@ -760,6 +770,7 @@ function LegacyAdvancedCareJournalContent() {
       setFoodAmount("");
       setTemperature("");
       setFirstTry(false);
+      setEntrySubmitAttempted(false);
       setUndoAction({ expiresAt: Date.now() + 15_000, label: "Kayıt eklendi", operationId: result.operationId });
       showSuccess(result.queued ? "İnternet gelince aile günlüğüyle eşitlenecek." : "Bakım kaydı aile günlüğüne eklendi.");
       await invalidateCareEntries();
@@ -944,6 +955,29 @@ function LegacyAdvancedCareJournalContent() {
     );
   }
 
+  if (babiesQuery.isLoading || profileQuery.isLoading || membershipQuery.isLoading) {
+    return (
+      <Screen scroll={false}>
+        <QueryState loading description="Bakım günlüğü hazırlanıyor…" />
+      </Screen>
+    );
+  }
+
+  if (babiesQuery.isError || profileQuery.isError || membershipQuery.isError) {
+    return (
+      <Screen scroll={false}>
+        <QueryState
+          description="Bebek ve profil bilgileri alınamadı. Kayıtların silinmedi; bağlantını kontrol edip yeniden deneyebilirsin."
+          onRetry={() => {
+            void Promise.all([babiesQuery.refetch(), profileQuery.refetch(), membershipQuery.refetch()]);
+          }}
+          retrying={babiesQuery.isFetching || profileQuery.isFetching || membershipQuery.isFetching}
+          title="Bakım bilgileri yüklenemedi"
+        />
+      </Screen>
+    );
+  }
+
   return (
     <Screen>
       <View style={styles.container}>
@@ -985,7 +1019,14 @@ function LegacyAdvancedCareJournalContent() {
 
             <CareSectionBoundary title="Canlı aile bakımı">
               <View style={{ gap: spacing.lg }}>
-                <CareHandoverCard
+                {handoverQuery.isError || activityQuery.isError ? (
+                  <QueryState
+                    compact
+                    description="Canlı aile bakım bilgisi alınamadı."
+                    onRetry={() => void Promise.all([handoverQuery.refetch(), activityQuery.refetch()])}
+                    retrying={handoverQuery.isFetching || activityQuery.isFetching}
+                  />
+                ) : <CareHandoverCard
                   activity={Array.isArray(activityQuery.data) ? activityQuery.data : []}
                   babyName={selectedBaby?.name ?? "Bebek"}
                   currentUserId={currentUserQuery.data ?? null}
@@ -994,14 +1035,21 @@ function LegacyAdvancedCareJournalContent() {
                   onTakeOver={() => handoverMutation.mutate()}
                   snapshot={handoverSnapshot}
                   takingOver={handoverMutation.isPending}
-                />
-                <SleepPredictionCard
+                />}
+                {sleepPredictionQuery.isError ? (
+                  <QueryState
+                    compact
+                    description="Uyku öngörüsü şu anda alınamadı."
+                    onRetry={() => void sleepPredictionQuery.refetch()}
+                    retrying={sleepPredictionQuery.isFetching}
+                  />
+                ) : <SleepPredictionCard
                   isPremium={isPremium}
                   loading={sleepPredictionQuery.isLoading}
                   now={predictionNow}
                   onOpenPremium={() => void openPremium("sleep_prediction")}
                   prediction={sleepPredictionQuery.data ?? null}
-                />
+                />}
 
                 {isPremium && (feedingMode === "pumping" || feedingMode === "mixed") ? (
                   <PumpingFocusCard
@@ -1059,14 +1107,24 @@ function LegacyAdvancedCareJournalContent() {
                 {entryType === "bottle" ? <View style={styles.chips}><ChoiceChip active={feedingContent === "breast_milk"} label="Anne sütü" onPress={() => setFeedingContent("breast_milk")} /><ChoiceChip active={feedingContent === "formula"} label="Mama" onPress={() => setFeedingContent("formula")} /><ChoiceChip active={feedingContent === "water"} label="Su" onPress={() => setFeedingContent("water")} /></View> : null}
                 {entryType === "sleep" ? <View style={styles.chips}><ChoiceChip active={sleepKind === "day"} label="Gündüz uykusu" onPress={() => setSleepKind("day")} /><ChoiceChip active={sleepKind === "night"} label="Gece uykusu" onPress={() => setSleepKind("night")} /></View> : null}
                 {entryType === "bottle" || entryType === "pumping" ? (
-                  <TextField keyboardType="decimal-pad" label="Miktar (ml)" value={amount} onChangeText={setAmount} />
+                  <TextField
+                    error={
+                      entrySubmitAttempted && (!amount.trim() || !Number.isFinite(Number(amount.replace(",", "."))) || Number(amount.replace(",", ".")) <= 0)
+                        ? "Miktarı ml olarak doğru gir."
+                        : undefined
+                    }
+                    keyboardType="decimal-pad"
+                    label="Miktar (ml)"
+                    value={amount}
+                    onChangeText={setAmount}
+                  />
                 ) : null}
                 {entryType === "breastfeeding" || entryType === "sleep" ? (
                   <><View style={styles.timerBox}><Text style={styles.timerValue}>{activeTimer?.timer_type === entryType ? formatTimer(timerNow - Date.parse(activeTimer.started_at)) : "00:00"}</Text><Text style={styles.entryMeta}>{activeTimer ? `${activeTimer.started_by_name || "Bir bakıcı"} başlattı · tüm ailede canlı` : activePumpLeft || activePumpRight ? "Önce aktif sağımı bitir" : "Aile senkronlu zamanlayıcı"}</Text></View><Button variant="secondary" label={activeTimer?.timer_type === entryType ? "Bitir ve kaydet" : "Zamanlayıcıyı başlat"} disabled={timerMutation.isPending || Boolean(activePumpLeft || activePumpRight) || Boolean(activeTimer && activeTimer.timer_type !== entryType)} onPress={() => { if (activeTimer?.timer_type === entryType) timerMutation.mutate({ action: "stop", timer: activeTimer }); else timerMutation.mutate({ action: "start", type: entryType }); }} /><TextField keyboardType="number-pad" label="Ya da süreyi dakika gir" value={duration} onChangeText={setDuration} /></>
                 ) : null}
                 {entryType === "medicine" ? (
                   <>
-                    <TextField label="İlaç / vitamin adı" value={medicineName} onChangeText={setMedicineName} />
+                    <TextField error={entrySubmitAttempted && !medicineName.trim() ? "İlaç veya vitamin adını gir." : undefined} label="İlaç / vitamin adı" value={medicineName} onChangeText={setMedicineName} />
                     <TextField label="Doz (örn. 3 damla)" value={medicineDose} onChangeText={setMedicineDose} />
                     {recentMedicineQuery.data ? (
                       <MedicineSafetyNotice dose={recentMedicineQuery.data} />
@@ -1076,15 +1134,22 @@ function LegacyAdvancedCareJournalContent() {
                     </Text>
                   </>
                 ) : null}
-                {entryType === "solid_food" ? <><TextField label="Besin" value={foodName} onChangeText={setFoodName} /><TextField label="Miktar (örn. 3 kaşık)" value={foodAmount} onChangeText={setFoodAmount} /><ChoiceChip active={firstTry} label={firstTry ? "İlk deneme ✓" : "İlk deneme"} onPress={() => setFirstTry((value) => !value)} /></> : null}
-                {entryType === "temperature" ? <><TextField keyboardType="decimal-pad" label="Ateş (°C)" placeholder="36,7" value={temperature} onChangeText={setTemperature} /><Text style={typography.label}>Ölçüm yeri</Text><View style={styles.chips}><ChoiceChip active={temperatureSite === "armpit"} label="Koltuk altı" onPress={() => setTemperatureSite("armpit")} /><ChoiceChip active={temperatureSite === "forehead"} label="Alın" onPress={() => setTemperatureSite("forehead")} /><ChoiceChip active={temperatureSite === "ear"} label="Kulak" onPress={() => setTemperatureSite("ear")} /><ChoiceChip active={temperatureSite === "other"} label="Diğer" onPress={() => setTemperatureSite("other")} /></View><Text style={styles.safetyNote}>Bu alan yalnızca ölçümü kaydeder; ateş değerlendirmesi veya tıbbi yönlendirme yapmaz.</Text></> : null}
+                {entryType === "solid_food" ? <><TextField error={entrySubmitAttempted && !foodName.trim() ? "Besin adını gir." : undefined} label="Besin" value={foodName} onChangeText={setFoodName} /><TextField label="Miktar (örn. 3 kaşık)" value={foodAmount} onChangeText={setFoodAmount} /><ChoiceChip active={firstTry} label={firstTry ? "İlk deneme ✓" : "İlk deneme"} onPress={() => setFirstTry((value) => !value)} /></> : null}
+                {entryType === "temperature" ? <><TextField error={entrySubmitAttempted && (!Number.isFinite(Number(temperature.replace(",", "."))) || Number(temperature.replace(",", ".")) < 30 || Number(temperature.replace(",", ".")) > 45) ? "30,0–45,0 °C arasında bir değer gir." : undefined} keyboardType="decimal-pad" label="Ateş (°C)" placeholder="36,7" value={temperature} onChangeText={setTemperature} /><Text style={typography.label}>Ölçüm yeri</Text><View style={styles.chips}><ChoiceChip active={temperatureSite === "armpit"} label="Koltuk altı" onPress={() => setTemperatureSite("armpit")} /><ChoiceChip active={temperatureSite === "forehead"} label="Alın" onPress={() => setTemperatureSite("forehead")} /><ChoiceChip active={temperatureSite === "ear"} label="Kulak" onPress={() => setTemperatureSite("ear")} /><ChoiceChip active={temperatureSite === "other"} label="Diğer" onPress={() => setTemperatureSite("other")} /></View><Text style={styles.safetyNote}>Bu alan yalnızca ölçümü kaydeder; ateş değerlendirmesi veya tıbbi yönlendirme yapmaz.</Text></> : null}
                 <TextField label="Not (isteğe bağlı)" maxLength={500} value={notes} onChangeText={setNotes} />
-                <Button disabled={addMutation.isPending} label={addMutation.isPending ? "Kaydediliyor..." : `${entryLabel(entryType)} kaydet`} onPress={() => addMutation.mutate(false)} />
+                <Button disabled={addMutation.isPending} label={addMutation.isPending ? "Kaydediliyor..." : `${entryLabel(entryType)} kaydet`} onPress={() => { setEntrySubmitAttempted(true); addMutation.mutate(false); }} />
               </View>
             </Card>
 
             <CareSectionBoundary title="Bakım alarmları">
-              <ReminderCard currentUserId={currentUserQuery.data ?? null} entryType={entryType} isPremium={isPremium} reminders={Array.isArray(remindersQuery.data) ? remindersQuery.data : []} reminderTime={reminderTime} onTimeChange={setReminderTime} scheduling={reminderMutation.isPending} cancelling={cancelReminderMutation.isPending} onSchedule={() => reminderMutation.mutate()} onCancel={(reminder) => cancelReminderMutation.mutate(reminder)} />
+              {remindersQuery.isError ? (
+                <QueryState
+                  compact
+                  description="Planlı bakım alarmları alınamadı."
+                  onRetry={() => void remindersQuery.refetch()}
+                  retrying={remindersQuery.isFetching}
+                />
+              ) : <ReminderCard currentUserId={currentUserQuery.data ?? null} entryType={entryType} isPremium={isPremium} reminders={Array.isArray(remindersQuery.data) ? remindersQuery.data : []} reminderTime={reminderTime} onTimeChange={setReminderTime} scheduling={reminderMutation.isPending} cancelling={cancelReminderMutation.isPending} onSchedule={() => reminderMutation.mutate()} onCancel={(reminder) => cancelReminderMutation.mutate(reminder)} />}
             </CareSectionBoundary>
 
             <CareSectionBoundary title="Premium bakım araçları">
@@ -1117,8 +1182,17 @@ function LegacyAdvancedCareJournalContent() {
             <View style={{ gap: spacing.md }}>
               <Text style={typography.heading2}>Günlük zaman akışı</Text>
               {undoAction ? <View style={styles.undoBar}><View style={{ flex: 1 }}><Text style={typography.label}>{undoAction.label}</Text><Text style={styles.entryMeta}>15 saniye içinde geri alabilirsin.</Text></View><Button disabled={undoMutation.isPending} label="Geri al" variant="ghost" onPress={() => undoMutation.mutate()} /></View> : null}
-              {entriesQuery.isLoading ? <Text style={typography.body}>Kayıtlar yükleniyor...</Text> : null}
-              {!entriesQuery.isLoading && entries.length === 0 ? (
+              {entriesQuery.isLoading ? <QueryState compact loading description="Kayıtlar yükleniyor…" /> : null}
+              {entriesQuery.isError ? (
+                <QueryState
+                  compact
+                  description="Zaman akışı alınamadı. Çevrimdışı kayıtların korunuyor."
+                  onRetry={() => void entriesQuery.refetch()}
+                  retrying={entriesQuery.isFetching}
+                  title="Kayıtlar yüklenemedi"
+                />
+              ) : null}
+              {!entriesQuery.isLoading && !entriesQuery.isError && entries.length === 0 ? (
                 <EmptyState title="Henüz kayıt yok" description="İlk bakım kaydını eklediğinde aile zaman akışı burada oluşacak." />
               ) : null}
               {entries.slice(0, isPremium ? historyLimit : 30).map((entry) => (
@@ -1521,7 +1595,7 @@ function EntryCard({ deleting, entry, onDelete }: { deleting: boolean; entry: Ca
 
 function ChoiceChip({ active, label, onPress }: { active: boolean; label: string; onPress: () => void }) {
   const appTheme = useAppTheme();
-  return <Pressable onPress={onPress} style={[styles.chip, active && { backgroundColor: appTheme.primary, borderColor: appTheme.primary }]}><Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text></Pressable>;
+  return <Pressable accessibilityRole="button" accessibilityState={{ selected: active }} onPress={onPress} style={[styles.chip, active && { backgroundColor: appTheme.primary, borderColor: appTheme.primary }]}><Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text></Pressable>;
 }
 
 function entryIcon(type: CareEntryType) {
@@ -1670,9 +1744,9 @@ const styles = StyleSheet.create({
   nightShiftText: { color: "#A7B8B1", fontSize: 13, lineHeight: 18 },
   nightShiftTitle: { color: "#EEF3F1", fontSize: 20, fontWeight: "800" },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  chip: { borderColor: colors.border, borderRadius: radii.pill, borderWidth: 1, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  chip: { borderColor: colors.border, borderRadius: radii.pill, borderWidth: 1, justifyContent: "center", minHeight: 44, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   chipText: { ...typography.label, color: colors.text },
-  chipTextActive: { color: colors.surface },
+  chipTextActive: { color: colors.onPrimary },
   summaryGrid: { flexDirection: "row", gap: spacing.sm },
   summaryItem: { alignItems: "center", backgroundColor: colors.background, borderRadius: radii.md, flex: 1, gap: spacing.xs, padding: spacing.sm },
   summaryLabel: { ...typography.label, color: colors.textMuted, textAlign: "center" },
