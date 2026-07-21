@@ -23,38 +23,38 @@ export const typography = {
   heading2: {
     color: colors.text,
     fontFamily: fonts.displaySemiBold,
-    fontSize: 21,
-    lineHeight: 28
+    fontSize: 23,
+    lineHeight: 30
   },
   heading3: {
     color: colors.text,
     fontFamily: fonts.displaySemiBold,
-    fontSize: 18,
-    lineHeight: 24
+    fontSize: 19,
+    lineHeight: 26
   },
   body: {
     color: colors.textMuted,
     fontFamily: fonts.bodyRegular,
-    fontSize: 16,
-    lineHeight: 24
+    fontSize: 17,
+    lineHeight: 25
   },
   bodyStrong: {
     color: colors.text,
     fontFamily: fonts.bodySemiBold,
-    fontSize: 16,
-    lineHeight: 24
+    fontSize: 17,
+    lineHeight: 25
   },
   label: {
     color: colors.text,
     fontFamily: fonts.bodyBold,
-    fontSize: 15,
-    lineHeight: 21
+    fontSize: 16,
+    lineHeight: 22
   },
   button: {
     color: colors.onPrimary,
     fontFamily: fonts.bodyBold,
-    fontSize: 16,
-    lineHeight: 20
+    fontSize: 17,
+    lineHeight: 22
   },
   eyebrow: {
     color: colors.primary,

@@ -2,8 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Link, router } from "expo-router";
 import {
+  Activity,
   Baby,
   BookOpen,
+  BookOpenCheck,
   CalendarHeart,
   ChevronRight,
   Clock3,
@@ -15,9 +17,11 @@ import {
   Music2,
   Milk,
   Moon,
+  Salad,
   Ruler,
   Sparkles,
-  Syringe
+  Syringe,
+  Wrench
 } from "lucide-react-native";
 import { useEffect, useState, type ReactNode } from "react";
 import {
@@ -357,24 +361,38 @@ export default function HomeScreen() {
           </Card>
         ) : null}
 
-        {profile?.is_pregnant ? (
-          <Card style={[styles.toolsCard, { backgroundColor: appTheme.accentSoft }]}>
-            <View style={{ gap: spacing.md }}>
-              <View style={styles.cardHeader}>
-                <View style={{ flex: 1, gap: spacing.xs }}>
-                  <Text style={typography.heading2}>Hamilelik araçları</Text>
-                  <Text style={typography.body}>
-                    Kilo takibi, tekme sayacı, kasılma sayacı ve hamile egzersizi.
-                  </Text>
-                </View>
-                <HeartPulse color={appTheme.primary} size={30} />
-              </View>
-              <Link href="/pregnancy-tools" asChild>
-                <Button label="Araçları aç" />
-              </Link>
+        <View style={styles.shortcutsSection}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionTitleCopy}>
+              <Text style={typography.eyebrow}>Tek dokunuşla</Text>
+              <Text style={typography.heading2}>Kısayollar</Text>
             </View>
-          </Card>
-        ) : null}
+            <View style={[styles.shortcutSpark, { backgroundColor: appTheme.accentSoft }]}>
+              <Sparkles color={appTheme.accent} size={20} />
+            </View>
+          </View>
+          <View style={styles.shortcutGrid}>
+            {profile?.is_pregnant ? (
+              <>
+                <ShortcutCard href="/pregnancy-tools" icon={<Wrench color={appTheme.primary} size={26} />} title="Takip araçları" tint={appTheme.primarySoft} />
+                <ShortcutCard href="/pregnancy-nutrition" icon={<Salad color={colors.sageGreen} size={26} />} title="Beslenme & su" tint={colors.primarySoft} />
+                <ShortcutCard href="/pregnancy-exercise" icon={<Activity color={colors.dustyRose} size={26} />} title="Hareket" tint={colors.accentSoft} />
+                <ShortcutCard href="/birth-preparation" icon={<BookOpenCheck color={colors.honeyGold} size={26} />} title="Doğuma hazırlık" tint={colors.highlightSoft} />
+              </>
+            ) : (
+              <>
+                <ShortcutCard href="/care-journal" icon={<CalendarHeart color={appTheme.primary} size={26} />} title="Bakım günlüğü" tint={appTheme.primarySoft} />
+                <ShortcutCard href="/baby" icon={<Ruler color={colors.sageGreen} size={26} />} title="Büyüme & aşı" tint={colors.primarySoft} />
+                <ShortcutCard href="/lullaby" icon={<Music2 color={colors.dustyRose} size={26} />} title="Ninniler" tint={colors.accentSoft} />
+              </>
+            )}
+            <ShortcutCard href="/document-insight" icon={<FileSearch color={colors.honeyGold} size={26} />} title="Belgeyi Anla" tint={colors.highlightSoft} />
+            <ShortcutCard href="/gallery" icon={<Images color={appTheme.accent} size={26} />} premium title="Anı galerisi" tint={appTheme.accentSoft} />
+            {!membershipQuery.data ? (
+              <ShortcutCard href="/forum" icon={<HeartPulse color={appTheme.primary} size={26} />} premium title="Anne forumu" tint={appTheme.primarySoft} />
+            ) : null}
+          </View>
+        </View>
 
         {firstBaby && careHandoverQuery.isLoading ? (
           <QueryState compact loading description="Canlı aile bakımı yükleniyor…" />
@@ -410,7 +428,6 @@ export default function HomeScreen() {
               ) : (
                 <Button disabled={handoverMutation.isPending} label={handoverMutation.isPending ? "Devralınıyor..." : "Bakımı devraldım"} onPress={() => handoverMutation.mutate()} />
               )}
-              <Button testID="open-care-journal" label="Tüm bakım günlüğü" variant="ghost" onPress={() => router.push("/care-journal")} />
             </View>
           </Card>
         ) : null}
@@ -434,22 +451,6 @@ export default function HomeScreen() {
             </View>
           </Card>
         ) : null}
-
-        <Card style={[styles.toolsCard, { backgroundColor: colors.highlightSoft }]}>
-          <View style={{ gap: spacing.md }}>
-            <View style={styles.cardHeader}>
-              <View style={{ flex: 1, gap: spacing.xs }}>
-                <Text style={typography.eyebrow}>Gizlilik odaklı</Text>
-                <Text style={typography.heading2}>Belgeyi Anla</Text>
-                <Text style={typography.body}>
-                  Tahlil ve rapordaki değerleri cihazında, yalnızca belgenin kendi referans aralıklarıyla düzenle. Tıbbi yorum yapmaz.
-                </Text>
-              </View>
-              <FileSearch color={appTheme.primary} size={30} />
-            </View>
-            <Button label="Belge ekle" onPress={() => router.push("/document-insight")} variant="secondary" />
-          </View>
-        </Card>
 
         <View style={styles.metricRow}>
           <MetricCard label="Bebek profili" value={`${babies.length}`} />
@@ -528,32 +529,6 @@ export default function HomeScreen() {
           ))}
         </ScrollView>}
 
-        <View style={styles.quickGrid}>
-          <QuickAction
-            href="/baby"
-            icon={<Syringe color={appTheme.accent} size={24} />}
-            title="Aşı"
-            body="Takvim ve hatırlatma"
-          />
-          <QuickAction
-            href="/baby"
-            icon={<Ruler color={appTheme.accent} size={24} />}
-            title="Büyüme"
-            body="Ölçüm takibi"
-          />
-          <QuickAction
-            href="/gallery"
-            icon={<Images color={appTheme.accent} size={24} />}
-            title="Anı ekle"
-            body="Fotoğraf zaman çizelgesi"
-          />
-          <QuickAction
-            href="/lullaby"
-            icon={<Music2 color={appTheme.accent} size={24} />}
-            title="Ninni"
-            body="Sakin uyku akışı"
-          />
-        </View>
       </View>
     </Screen>
   );
@@ -641,27 +616,41 @@ function ArticlePreview({ article }: { article: Article }) {
   );
 }
 
-function QuickAction({
+function ShortcutCard({
   href,
   icon,
+  premium = false,
   title,
-  body
+  tint
 }: {
-  href: "/baby" | "/gallery" | "/lullaby";
+  href: "/baby" | "/birth-preparation" | "/care-journal" | "/document-insight" | "/forum" | "/gallery" | "/lullaby" | "/pregnancy-exercise" | "/pregnancy-nutrition" | "/pregnancy-tools";
   icon: ReactNode;
+  premium?: boolean;
   title: string;
-  body: string;
+  tint: string;
 }) {
   return (
     <Link href={href} asChild>
-      <Pressable style={styles.quickPressable}>
-        <Card style={styles.quickCard}>
-          <View style={{ gap: spacing.sm }}>
-            {icon}
-            <Text style={styles.quickTitle}>{title}</Text>
-            <Text style={styles.quickBody}>{body}</Text>
+      <Pressable
+        accessibilityLabel={`${title}${premium ? ", Premium" : ""}`}
+        accessibilityRole="button"
+        style={({ pressed }) => [styles.shortcutPressable, pressed && styles.shortcutPressed]}
+      >
+        <View style={styles.shortcutCard}>
+          <View style={[styles.shortcutVisual, { backgroundColor: tint }]}>
+            <View style={styles.shortcutOrb}>{icon}</View>
+            {premium ? (
+              <View style={styles.premiumBadge}>
+                <Sparkles color={colors.honeyGold} size={12} />
+                <Text style={styles.premiumBadgeText}>Premium</Text>
+              </View>
+            ) : null}
           </View>
-        </Card>
+          <View style={styles.shortcutCopy}>
+            <Text numberOfLines={2} style={styles.shortcutTitle}>{title}</Text>
+            <ChevronRight color={colors.textMuted} size={18} />
+          </View>
+        </View>
       </Pressable>
     </Link>
   );
@@ -1058,6 +1047,90 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between"
   },
+  sectionTitleCopy: {
+    flex: 1,
+    gap: 2
+  },
+  shortcutsSection: {
+    gap: spacing.md
+  },
+  shortcutSpark: {
+    alignItems: "center",
+    borderRadius: radii.pill,
+    height: 44,
+    justifyContent: "center",
+    width: 44
+  },
+  shortcutGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.md
+  },
+  shortcutPressable: {
+    flexBasis: "47%",
+    flexGrow: 0,
+    minWidth: 128
+  },
+  shortcutPressed: {
+    opacity: 0.74
+  },
+  shortcutCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    minHeight: 168,
+    overflow: "hidden"
+  },
+  shortcutVisual: {
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 108,
+    overflow: "hidden",
+    padding: spacing.md
+  },
+  shortcutOrb: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderRadius: radii.pill,
+    height: 54,
+    justifyContent: "center",
+    width: 54
+  },
+  premiumBadge: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceStrong,
+    borderColor: colors.highlight,
+    borderRadius: radii.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 5,
+    position: "absolute",
+    right: spacing.sm,
+    top: spacing.sm
+  },
+  premiumBadgeText: {
+    ...typography.label,
+    color: colors.highlight,
+    fontSize: 12,
+    lineHeight: 16
+  },
+  shortcutCopy: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs,
+    justifyContent: "space-between",
+    minHeight: 60,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm
+  },
+  shortcutTitle: {
+    ...typography.label,
+    color: colors.text,
+    flex: 1
+  },
   sectionHint: {
     ...typography.body,
     fontSize: 15,
@@ -1113,25 +1186,4 @@ const styles = StyleSheet.create({
     ...typography.label,
     color: colors.text
   },
-  quickGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm
-  },
-  quickPressable: {
-    flexBasis: "48%",
-    flexGrow: 1
-  },
-  quickCard: {
-    minHeight: 128
-  },
-  quickTitle: {
-    ...typography.label,
-    color: colors.text
-  },
-  quickBody: {
-    ...typography.body,
-    fontSize: 15,
-    lineHeight: 21
-  }
 });
