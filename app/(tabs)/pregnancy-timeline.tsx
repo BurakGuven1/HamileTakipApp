@@ -10,7 +10,10 @@ import { listArticles } from "@/api/articles";
 import { getCurrentProfile } from "@/api/profiles";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
+import { ExpandableText } from "@/components/ExpandableText";
+import { PregnancyJourneyArtwork } from "@/components/PregnancyJourneyArtwork";
 import { QueryState } from "@/components/QueryState";
+import { Reveal } from "@/components/Reveal";
 import { Screen } from "@/components/Screen";
 import { getPregnancyWeekInfo } from "@/features/pregnancy/weekInfo";
 import {
@@ -102,18 +105,20 @@ export default function PregnancyTimelineScreen() {
       <View style={styles.container}>
         <BackButton />
 
-        <View style={[styles.hero, { backgroundColor: appTheme.primarySoft }]}>
-          <View style={[styles.heroIcon, { backgroundColor: appTheme.accentSoft }]}>
-            <CalendarDays color={appTheme.primary} size={28} />
+        <Reveal>
+          <View style={[styles.hero, { backgroundColor: appTheme.primarySoft }]}>
+            <View style={[styles.heroIcon, { backgroundColor: appTheme.accentSoft }]}>
+              <CalendarDays color={appTheme.primary} size={28} />
+            </View>
+            <Text style={typography.eyebrow}>Hamilelik çizelgesi</Text>
+            <Text style={typography.heading1}>Hafta hafta yol haritası</Text>
+            <Text numberOfLines={3} style={styles.heroText}>
+              Güncel haftana odaklanan, soldan sağa ilerleyen gelişim ve takip
+              çizelgesi. Bilgiler genel rehberdir; kişisel takip planın doktorunla
+              netleşmelidir.
+            </Text>
           </View>
-          <Text style={typography.eyebrow}>Hamilelik çizelgesi</Text>
-          <Text style={typography.heading1}>Hafta hafta yol haritası</Text>
-          <Text style={styles.heroText}>
-            Güncel haftana odaklanan, soldan sağa ilerleyen gelişim ve takip
-            çizelgesi. Bilgiler genel rehberdir; kişisel takip planın doktorunla
-            netleşmelidir.
-          </Text>
-        </View>
+        </Reveal>
 
         <Card>
           <View style={{ gap: spacing.lg }}>
@@ -220,6 +225,8 @@ export default function PregnancyTimelineScreen() {
               <Info color={appTheme.primary} size={28} />
             </View>
 
+            <PregnancyJourneyArtwork height={196} week={selectedWeek} />
+
             {weekInfo ? (
               <View style={styles.statRow}>
                 <MiniStat label="Boy" value={weekInfo.lengthCm} />
@@ -231,7 +238,13 @@ export default function PregnancyTimelineScreen() {
               <View key={`${item.week}-${item.title}`} style={styles.milestoneCard}>
                 <Text style={styles.milestoneType}>{typeLabel(item.type)}</Text>
                 <Text style={styles.milestoneTitle}>{item.title}</Text>
-                <Text style={styles.milestoneBody}>{item.body}</Text>
+                <ExpandableText
+                  collapsedLines={2}
+                  lessLabel="Gelişim notunu kapat"
+                  moreLabel="Gelişim notunu aç"
+                  style={styles.milestoneBody}
+                  text={item.body}
+                />
                 <Text style={styles.sourceText}>Kaynak: {item.source}</Text>
               </View>
             ))}
@@ -291,7 +304,7 @@ export default function PregnancyTimelineScreen() {
                           : `${article.timelineStartWeek ?? "?"}-${article.timelineEndWeek ?? "?"}. hafta`}
                       </Text>
                       <Text style={styles.milestoneTitle}>{article.title}</Text>
-                      <Text style={typography.body}>{article.excerpt}</Text>
+                      <Text numberOfLines={2} style={typography.body}>{article.excerpt}</Text>
                     </View>
                   </Pressable>
                 </Link>
@@ -351,7 +364,13 @@ export default function PregnancyTimelineScreen() {
                     <View style={[styles.bandColorDot, { backgroundColor: band.color }]} />
                     <View style={{ flex: 1, gap: spacing.xs }}>
                       <Text style={styles.activeBandTitle}>{band.title}</Text>
-                      <Text style={typography.body}>{band.note}</Text>
+                      <ExpandableText
+                        collapsedLines={2}
+                        lessLabel="Takip notunu kapat"
+                        moreLabel="Takip notunu aç"
+                        style={typography.body}
+                        text={band.note}
+                      />
                       <Text style={styles.sourceText}>Kaynak: {band.source}</Text>
                     </View>
                   </View>

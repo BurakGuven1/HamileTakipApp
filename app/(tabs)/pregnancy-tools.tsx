@@ -14,7 +14,7 @@ import {
   Weight
 } from "lucide-react-native";
 import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import {
   addPregnancyCounterDelta,
@@ -34,6 +34,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
 import { QueryState } from "@/components/QueryState";
+import { Reveal } from "@/components/Reveal";
 import { formatDate, toDateOnly } from "@/lib/dates";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { useFeedback } from "@/providers/FeedbackProvider";
@@ -179,17 +180,19 @@ export default function PregnancyToolsScreen() {
   return (
     <Screen>
       <View style={styles.container}>
-        <View style={[styles.hero, { backgroundColor: appTheme.primarySoft }]}>
-          <View style={[styles.heroIcon, { backgroundColor: appTheme.accentSoft }]}>
-            <HeartPulse color={appTheme.primary} size={28} />
+        <Reveal>
+          <View style={[styles.hero, { backgroundColor: appTheme.primarySoft }]}>
+            <View style={[styles.heroIcon, { backgroundColor: appTheme.accentSoft }]}>
+              <HeartPulse color={appTheme.primary} size={28} />
+            </View>
+            <Text style={typography.eyebrow}>Hamilelik araçları</Text>
+            <Text style={typography.heading1}>Günlük takip merkezi</Text>
+            <Text numberOfLines={3} style={styles.heroText}>
+              Kilo değişimi, tekme sayısı, kasılma sayısı ve güvenli egzersiz akışı
+              hamilelik profilinde birlikte tutulur.
+            </Text>
           </View>
-          <Text style={typography.eyebrow}>Hamilelik araçları</Text>
-          <Text style={typography.heading1}>Günlük takip merkezi</Text>
-          <Text style={styles.heroText}>
-            Kilo değişimi, tekme sayısı, kasılma sayısı ve güvenli egzersiz akışı
-            hamilelik profilinde birlikte tutulur.
-          </Text>
-        </View>
+        </Reveal>
 
         {!enabled ? (
           <EmptyState
@@ -198,12 +201,25 @@ export default function PregnancyToolsScreen() {
           />
         ) : (
           <>
-            <Card style={[styles.preparationCard, { backgroundColor: appTheme.primarySoft }]}>
+            <Reveal delay={90} style={styles.launchSection}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionTitleCopy}>
+                  <Text style={typography.heading2}>Bugün neye ihtiyacın var?</Text>
+                  <Text style={styles.sectionHint}>Kartları yana kaydırarak keşfet</Text>
+                </View>
+                <Activity color={appTheme.accent} size={24} />
+              </View>
+              <ScrollView
+                horizontal
+                contentContainerStyle={styles.featureRail}
+                showsHorizontalScrollIndicator={false}
+              >
+            <Card style={[styles.preparationCard, styles.featureCardWide, { backgroundColor: appTheme.primarySoft }]}>
               <View style={styles.cardHeader}>
                 <View style={{ flex: 1, gap: spacing.xs }}>
                   <Text style={typography.eyebrow}>Anne + baba ortak</Text>
                   <Text style={typography.heading2}>Doğuma hazırlık</Text>
-                  <Text style={typography.body}>
+                  <Text numberOfLines={2} style={typography.body}>
                     Doğum çantası ve doğum planını tek, sade listede birlikte tamamlayın.
                   </Text>
                 </View>
@@ -237,11 +253,11 @@ export default function PregnancyToolsScreen() {
               </Link>
             </Card>
 
-            <Card style={[styles.exerciseCard, { backgroundColor: appTheme.accentSoft }]}>
+            <Card style={[styles.exerciseCard, styles.featureCard, { backgroundColor: appTheme.accentSoft }]}>
               <View style={styles.cardHeader}>
                 <View style={{ flex: 1, gap: spacing.xs }}>
                   <Text style={typography.heading2}>Hamile egzersizi</Text>
-                  <Text style={typography.body}>
+                  <Text numberOfLines={2} style={typography.body}>
                     7 hareket, otomatik mola, nefes ritmi ve duraklatılabilir sayaç.
                   </Text>
                 </View>
@@ -252,13 +268,13 @@ export default function PregnancyToolsScreen() {
               </Link>
             </Card>
 
-            <Card>
+            <Card style={styles.featureCard}>
               <View style={{ gap: spacing.md }}>
                 <View style={styles.cardHeader}>
                   <View style={{ flex: 1, gap: spacing.xs }}>
                     <Text style={typography.eyebrow}>Ücretsiz</Text>
                     <Text style={typography.heading2}>Su ve takviye rehberi</Text>
-                    <Text style={typography.body}>
+                    <Text numberOfLines={3} style={typography.body}>
                       Günlük su hatırlatmalarını aç; gebelik ayına göre Sağlık
                       Bakanlığı ve WHO kaynaklı genel takviye zamanlarını incele.
                     </Text>
@@ -271,12 +287,12 @@ export default function PregnancyToolsScreen() {
               </View>
             </Card>
 
-            <Card>
+            <Card style={styles.featureCard}>
               <View style={{ gap: spacing.md }}>
                 <View style={styles.cardHeader}>
                   <View style={{ flex: 1, gap: spacing.xs }}>
                     <Text style={typography.heading2}>Hamilelik çizelgesi</Text>
-                    <Text style={typography.body}>
+                    <Text numberOfLines={3} style={typography.body}>
                       Haftalık gelişim, folik asit dönemi, hareket farkındalığı ve
                       kontrol pencereleri tek timeline üzerinde.
                     </Text>
@@ -288,6 +304,8 @@ export default function PregnancyToolsScreen() {
                 </Link>
               </View>
             </Card>
+              </ScrollView>
+            </Reveal>
 
             <Card>
               <View style={{ gap: spacing.lg }}>
@@ -535,6 +553,37 @@ const styles = StyleSheet.create({
   heroText: {
     ...typography.body,
     color: colors.text
+  },
+  launchSection: {
+    gap: spacing.md
+  },
+  sectionHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between"
+  },
+  sectionTitleCopy: {
+    flex: 1,
+    gap: spacing.xs
+  },
+  sectionHint: {
+    ...typography.body,
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 20
+  },
+  featureRail: {
+    alignItems: "stretch",
+    gap: spacing.md,
+    paddingRight: spacing.lg
+  },
+  featureCard: {
+    justifyContent: "space-between",
+    width: 284
+  },
+  featureCardWide: {
+    width: 316
   },
   cardHeader: {
     alignItems: "center",

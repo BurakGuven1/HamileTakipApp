@@ -29,6 +29,8 @@ import { getCurrentProfile } from "@/api/profiles";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
+import { ExpandableText } from "@/components/ExpandableText";
+import { Reveal } from "@/components/Reveal";
 import { Screen } from "@/components/Screen";
 import {
   DEFAULT_DAILY_WATER_GLASSES,
@@ -240,18 +242,20 @@ export default function PregnancyNutritionScreen() {
       <View style={styles.container}>
         <BackButton />
 
-        <View style={[styles.hero, { backgroundColor: appTheme.theme.primarySoft }]}>
-          <View style={[styles.heroIcon, { backgroundColor: appTheme.tint }]}>
-            <Droplets color={appTheme.primary} size={30} />
+        <Reveal>
+          <View style={[styles.hero, { backgroundColor: appTheme.theme.primarySoft }]}>
+            <View style={[styles.heroIcon, { backgroundColor: appTheme.tint }]}>
+              <Droplets color={appTheme.primary} size={30} />
+            </View>
+            <Text style={typography.eyebrow}>Ücretsiz gebelik desteği</Text>
+            <Text style={typography.heading1}>Su ve takviye rehberi</Text>
+            <Text numberOfLines={3} style={styles.heroText}>
+              Şu an hesaplanan dönem: {currentMonth}. ay, {currentWeek}. hafta.
+              Bilgiler genel halk sağlığı rehberidir; reçete veya kişisel tedavi planı
+              değildir.
+            </Text>
           </View>
-          <Text style={typography.eyebrow}>Ücretsiz gebelik desteği</Text>
-          <Text style={typography.heading1}>Su ve takviye rehberi</Text>
-          <Text style={styles.heroText}>
-            Şu an hesaplanan dönem: {currentMonth}. ay, {currentWeek}. hafta.
-            Bilgiler genel halk sağlığı rehberidir; reçete veya kişisel tedavi planı
-            değildir.
-          </Text>
-        </View>
+        </Reveal>
 
         <Card style={[styles.waterCard, { backgroundColor: appTheme.theme.primarySoft }]}>
           <View style={styles.cardHeader}>
@@ -261,11 +265,13 @@ export default function PregnancyNutritionScreen() {
             </View>
             <Droplets color={appTheme.primary} size={30} />
           </View>
-          <Text style={styles.bodyText}>
-            Suyu gün içine yay. Sıcak hava, egzersiz, ateş, kusma veya ishalde ihtiyaç
-            artabilir. WHO Avrupa sıcak havalarda gebeler için günde 2–3 litre suyu,
-            sıcakta biraz daha fazlasını hatırlatır.
-          </Text>
+          <ExpandableText
+            collapsedLines={2}
+            lessLabel="Su notunu kapat"
+            moreLabel="Su hedefi hakkında"
+            style={styles.bodyText}
+            text="Suyu gün içine yay. Sıcak hava, egzersiz, ateş, kusma veya ishalde ihtiyaç artabilir. WHO Avrupa sıcak havalarda gebeler için günde 2–3 litre suyu, sıcakta biraz daha fazlasını hatırlatır."
+          />
           <DailyWaterTracker
             draftGoal={draftWaterGoal}
             editingGoal={editingWaterGoal}
@@ -378,18 +384,16 @@ export default function PregnancyNutritionScreen() {
             </View>
             <ShieldAlert color={colors.danger} size={30} />
           </View>
-          <Text style={styles.bodyText}>
-            Kalsiyum desteği WHO’ya göre özellikle besinle kalsiyum alımının düşük
-            olduğu topluluklarda ve klinik değerlendirmeyle düşünülür. İyot ve B12;
-            beslenme, tiroit durumu, vegan beslenme, emilim sorunu ve kan sonuçlarına
-            göre değerlendirilir.
-          </Text>
-          <Text style={styles.bodyText}>
-            Rutin yüksek doz A vitamini kullanma; prenatal ürünleri üst üste alma.
-            WHO, rutin A vitamini desteğini yalnızca ciddi toplum düzeyi eksiklikte
-            önerir; C+E, B6 ve çoklu mikrobesin ürünleri de herkese otomatik öneri
-            değildir.
-          </Text>
+          <ExpandableText
+            collapsedLines={3}
+            lessLabel="Uyarıyı kapat"
+            moreLabel="Nedenini oku"
+            style={styles.bodyText}
+            text={
+              "Kalsiyum desteği WHO’ya göre özellikle besinle kalsiyum alımının düşük olduğu topluluklarda ve klinik değerlendirmeyle düşünülür. İyot ve B12; beslenme, tiroit durumu, vegan beslenme, emilim sorunu ve kan sonuçlarına göre değerlendirilir.\n\n" +
+              "Rutin yüksek doz A vitamini kullanma; prenatal ürünleri üst üste alma. WHO, rutin A vitamini desteğini yalnızca ciddi toplum düzeyi eksiklikte önerir; C+E, B6 ve çoklu mikrobesin ürünleri de herkese otomatik öneri değildir."
+            }
+          />
           <Text style={styles.safetyFinePrint}>
             Demir ve kalsiyum takviyeleri birbirinin emilimini etkileyebilir. İkisi de
             reçetelendiyse kullanım saatini doktor veya eczacıyla netleştir.
@@ -416,7 +420,7 @@ export default function PregnancyNutritionScreen() {
               >
                 <View style={{ flex: 1, gap: 2 }}>
                   <Text style={styles.sourcePublisher}>{source.publisher}</Text>
-                  <Text style={styles.sourceTitle}>{source.title}</Text>
+                  <Text numberOfLines={2} style={styles.sourceTitle}>{source.title}</Text>
                 </View>
                 <ExternalLink color={appTheme.primary} size={18} />
               </Pressable>
@@ -699,7 +703,13 @@ function GuidanceCard({
           <Text style={styles.amountLabel}>GENEL PROGRAM BİLGİSİ</Text>
           <Text style={styles.amountText}>{item.amount}</Text>
         </View>
-        <Text style={styles.bodyText}>{item.body}</Text>
+        <ExpandableText
+          collapsedLines={3}
+          lessLabel="Özeti kapat"
+          moreLabel="Detaylı bilgiyi aç"
+          style={styles.bodyText}
+          text={item.body}
+        />
         <View style={styles.warningBox}>
           <ShieldAlert color={colors.danger} size={20} />
           <Text style={styles.warningText}>{item.warning}</Text>
