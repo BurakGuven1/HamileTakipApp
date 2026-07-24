@@ -264,7 +264,7 @@ export default function PregnancyToolsScreen() {
                 <Dumbbell color={appTheme.primary} size={30} />
               </View>
               <Link href="/pregnancy-exercise" asChild>
-                <Button breathing label="Egzersizi başlat" />
+                <Button label="Egzersizi başlat" />
               </Link>
             </Card>
 

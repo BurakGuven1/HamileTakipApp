@@ -69,21 +69,29 @@ export const colors = {
   background: semanticColor("#FBF6EF", "#171419", "?android:attr/colorBackground"),
   surface: semanticColor("#FFFCF8", "#211D24", "?android:attr/colorBackgroundFloating"),
   surfaceStrong: semanticColor("#FFFCF8", "#29242C", "?android:attr/colorBackgroundFloating"),
-  surfaceMuted: semanticColor(alpha(rgb.mistGray, 0.12), "rgba(255, 255, 255, 0.08)"),
+  surfaceMuted: semanticColor(
+    alpha(rgb.mistGray, 0.12),
+    "rgba(255, 255, 255, 0.08)",
+    "?android:attr/colorControlHighlight"
+  ),
   primary: semanticColor("#3F6F59", "#9ED0B5"),
   primarySoft: semanticColor(alpha(rgb.sageGreen, 0.13), "rgba(158, 208, 181, 0.14)"),
   accent: semanticColor("#A94F60", "#F0A7B4"),
   accentSoft: semanticColor(alpha(rgb.dustyRose, 0.14), "rgba(240, 167, 180, 0.14)"),
   text: semanticColor("#372F3D", "#F5EFF7", "?android:attr/textColorPrimary"),
   textMuted: semanticColor("#655F57", "#C8C1CB", "?android:attr/textColorSecondary"),
-  border: semanticColor("rgba(101, 95, 87, 0.38)", "rgba(245, 239, 247, 0.22)"),
+  border: semanticColor(
+    "rgba(101, 95, 87, 0.38)",
+    "rgba(245, 239, 247, 0.22)",
+    "?android:attr/listDivider"
+  ),
   highlight: semanticColor("#8A5B16", "#E9C47E"),
   highlightSoft: semanticColor(alpha(rgb.honeyGold, 0.15), "rgba(233, 196, 126, 0.14)"),
   danger: semanticColor("#A33F52", "#FF9AAA"),
   success: semanticColor("#376B4C", "#8FD1A8"),
   onPrimary: semanticColor("#FFFCF8", "#171419", "?android:attr/textColorPrimaryInverse"),
-  lengthTint: semanticColor("#F7EBEC", "#35272C"),
-  weightTint: semanticColor("#FBF3E4", "#352F24"),
+  lengthTint: semanticColor("#F7EBEC", "#35272C", "?android:attr/colorControlHighlight"),
+  weightTint: semanticColor("#FBF3E4", "#352F24", "?android:attr/colorControlHighlight"),
   overlay: semanticColor(alpha(rgb.nightPlum, 0.08), "rgba(0, 0, 0, 0.34)"),
   transparent: "transparent"
 } as const;

@@ -58,6 +58,7 @@ export default function BabyScreen() {
   const [selectedBabyId, setSelectedBabyId] = useState<string>();
   const [formOpen, setFormOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [growthFormOpen, setGrowthFormOpen] = useState(false);
   const [name, setName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [gender, setGender] = useState<BabyGender>("belirtilmemis");
@@ -265,7 +266,8 @@ export default function BabyScreen() {
       setHeadCircumference("");
       setGrowthNotes("");
       setGrowthDate(toDateOnly(new Date()));
-      showSuccess("Büyüme kaydı eklendi.");
+      setGrowthFormOpen(false);
+      showSuccess("Büyüme kaydı eklendi.", "Eklendi");
       await queryClient.invalidateQueries({ queryKey: ["growth-records", selectedBaby?.id] });
     },
     onError: (error) => showError(error, "Büyüme kaydı eklenemedi")
@@ -346,7 +348,7 @@ export default function BabyScreen() {
   if (profileQuery.isLoading || babiesQuery.isLoading) {
     return (
       <Screen scroll={false}>
-        <QueryState loading description="Bebek bilgileri hazırlanıyor…" />
+        <QueryState loading description="Bebeğinin yaşam ipliği hazırlanıyor…" shape="baby" />
       </Screen>
     );
   }
@@ -355,7 +357,7 @@ export default function BabyScreen() {
     return (
       <Screen scroll={false}>
         <QueryState
-          description="Profil veya bebek bilgileri alınamadı. Bağlantını kontrol edip yeniden deneyebilirsin."
+          description="Profil veya bebek bilgileri alınamadı. Bağlantını kontrol et ve yeniden dene."
           onRetry={() => void Promise.all([profileQuery.refetch(), babiesQuery.refetch()])}
           retrying={profileQuery.isFetching || babiesQuery.isFetching}
           title="Bebek ekranı yüklenemedi"
@@ -401,7 +403,7 @@ export default function BabyScreen() {
           </Card>
         ) : null}
 
-        <View style={styles.sectionSwitch}>
+        <View accessibilityRole="tablist" style={styles.sectionSwitch}>
           <SegmentButton
             active={section === "profile"}
             activeColor={appTheme.primary}
@@ -427,7 +429,9 @@ export default function BabyScreen() {
             {babies.map((baby) => (
               <Pressable
                 key={baby.id}
+                accessibilityLabel={`${baby.name} profilini göster`}
                 accessibilityRole="button"
+                accessibilityState={{ selected: baby.id === selectedBaby?.id }}
                 onPress={() => setSelectedBabyId(baby.id)}
                 style={[
                   styles.babyChip,
@@ -465,12 +469,22 @@ export default function BabyScreen() {
                     <HeartPulse color={appTheme.primary} size={28} />
                   </View>
                   <Thread
+                    accessibilityLabel={`${selectedBaby.name} için doğumdan bugüne yaşam ipliği`}
                     color={appTheme.primary}
-                    height={64}
+                    height={72}
+                    markers={[
+                      { kind: "knot", position: 0.08 },
+                      { kind: "loop", position: 0.88 }
+                    ]}
                     mutedColor={appTheme.primarySoft}
-                    progress={0.85}
-                    variant="chart"
+                    progress={1}
+                    semantic="timeline"
+                    variant="progress"
                   />
+                  <View style={styles.threadLegend}>
+                    <Text style={styles.threadLegendText}>Doğum düğümü</Text>
+                    <Text style={styles.threadLegendText}>Bugün</Text>
+                  </View>
                   <View style={styles.infoGrid}>
                     <InfoPill label="Doğum" value={formatDate(selectedBaby.birth_date)} />
                     <InfoPill label="Cinsiyet" value={formatGender(selectedBaby.gender)} />
@@ -488,8 +502,11 @@ export default function BabyScreen() {
               </Card>
             ) : (
               <EmptyState
-                title="Henüz bebek profili yok"
-                description="Bebek profilini ekleyince aşı takvimi otomatik oluşur."
+                actionHint="Bebek adı ve doğum tarihini ekleme formunu açar"
+                actionLabel="Bebek profili oluştur"
+                description="Doğum bilgisi ilk düğümü oluşturur; aşı ve büyüme kayıtları aynı iplikte devam eder."
+                title="İlk düğümü birlikte atalım"
+                onActionPress={() => setFormOpen(true)}
               />
             )}
 
@@ -509,29 +526,32 @@ export default function BabyScreen() {
                   />
                   <View style={{ gap: spacing.sm }}>
                     <Text style={typography.label}>Cinsiyet</Text>
-                    <View style={styles.genderRow}>
+                    <View accessibilityRole="radiogroup" style={styles.genderRow}>
                       <SegmentButton
                         active={editGender === "kiz"}
                         activeColor={appTheme.primary}
                         label="Kız"
+                        role="radio"
                         onPress={() => setEditGender("kiz")}
                       />
                       <SegmentButton
                         active={editGender === "erkek"}
                         activeColor={appTheme.primary}
                         label="Erkek"
+                        role="radio"
                         onPress={() => setEditGender("erkek")}
                       />
                       <SegmentButton
                         active={editGender === "belirtilmemis"}
                         activeColor={appTheme.primary}
                         label="Belirtmem"
+                        role="radio"
                         onPress={() => setEditGender("belirtilmemis")}
                       />
                     </View>
                   </View>
                   <Button
-                    label={updateBabyMutation.isPending ? "Kaydediliyor..." : "Değişiklikleri kaydet"}
+                    label={updateBabyMutation.isPending ? "Kaydediliyor…" : "Değişiklikleri kaydet"}
                     disabled={updateBabyMutation.isPending}
                     onPress={() => updateBabyMutation.mutate()}
                   />
@@ -557,23 +577,26 @@ export default function BabyScreen() {
                   />
                   <View style={{ gap: spacing.sm }}>
                     <Text style={typography.label}>Cinsiyet</Text>
-                    <View style={styles.genderRow}>
+                    <View accessibilityRole="radiogroup" style={styles.genderRow}>
                       <SegmentButton
                         active={gender === "kiz"}
                         activeColor={appTheme.primary}
                         label="Kız"
+                        role="radio"
                         onPress={() => setGender("kiz")}
                       />
                       <SegmentButton
                         active={gender === "erkek"}
                         activeColor={appTheme.primary}
                         label="Erkek"
+                        role="radio"
                         onPress={() => setGender("erkek")}
                       />
                       <SegmentButton
                         active={gender === "belirtilmemis"}
                         activeColor={appTheme.primary}
                         label="Belirtmem"
+                        role="radio"
                         onPress={() => setGender("belirtilmemis")}
                       />
                     </View>
@@ -581,7 +604,7 @@ export default function BabyScreen() {
                   <Button
                     label={
                       createBabyMutation.isPending
-                        ? "Kaydediliyor..."
+                        ? "Kaydediliyor…"
                         : "Bebek profilini kaydet"
                     }
                     disabled={createBabyMutation.isPending}
@@ -589,28 +612,33 @@ export default function BabyScreen() {
                   />
                 </View>
               </Card>
-            ) : (
+            ) : babies.length > 0 ? (
               <Button
-                label={babies.length > 0 ? "Başka bebek ekle" : "Bebek profili oluştur"}
-                variant={babies.length > 0 ? "secondary" : "primary"}
+                label="Başka bebek ekle"
+                variant="secondary"
                 onPress={() => setFormOpen(true)}
               />
-            )}
+            ) : null}
           </View>
         ) : section === "vaccines" ? (
           <View style={{ gap: spacing.md }}>
             {vaccinationsQuery.isLoading ? (
-              <QueryState compact loading description="Aşı takvimi yükleniyor…" />
+              <QueryState compact loading description="Aşı ipliği hazırlanıyor…" shape="baby" />
             ) : vaccinationsQuery.isError ? (
               <QueryState
-                description="Aşı takvimi alınamadı."
+                description="Aşı takvimi alınamadı. Bağlantını kontrol et ve yeniden dene."
                 onRetry={() => void vaccinationsQuery.refetch()}
                 retrying={vaccinationsQuery.isFetching}
               />
             ) : !selectedBaby ? (
               <EmptyState
-                title="Aşı takvimi için bebek profili gerekli"
-                description="Bebek doğum tarihi girildiğinde takvim otomatik hesaplanır."
+                actionLabel="Bebek profili oluştur"
+                description="Doğum tarihi eklendiğinde önerilen aşı ilmekleri otomatik yerleşir."
+                title="Aşı ipliğini başlat"
+                onActionPress={() => {
+                  setSection("profile");
+                  setFormOpen(true);
+                }}
               />
             ) : (
               <>
@@ -625,12 +653,39 @@ export default function BabyScreen() {
                     </View>
                     <Syringe color={appTheme.primary} size={28} />
                   </View>
+                  <Thread
+                    accessibilityLabel={`${selectedBaby.name} için ${vaccinations.length} aşının ${completedCount} tanesi tamamlandı`}
+                    color={appTheme.primary}
+                    height={68}
+                    markers={vaccinations.map((vaccination, index) => ({
+                      kind: vaccination.completed ? ("knot" as const) : ("loop" as const),
+                      position: (index + 1) / (vaccinations.length + 1)
+                    }))}
+                    mutedColor={colors.border}
+                    progress={
+                      vaccinations.length > 0 ? completedCount / vaccinations.length : 0
+                    }
+                    variant="progress"
+                  />
                 </Card>
 
-                {vaccinations.map((vaccination) => (
+                {vaccinations.length === 0 ? (
+                  <EmptyState
+                    actionLabel="Takvimi yenile"
+                    description="Bebeğinin doğum tarihine uygun aşı düğümleri geldiğinde bu ipliğe yerleşir."
+                    onActionPress={() => void vaccinationsQuery.refetch()}
+                    title="Aşı düğümleri hazırlanıyor"
+                  />
+                ) : vaccinations.map((vaccination) => (
                   <View key={vaccination.id} style={{ gap: spacing.sm }}>
                     <Pressable
+                      accessibilityHint="Aşının tamamlandı durumunu değiştirir"
+                      accessibilityLabel={`${vaccination.vaccine_schedule?.vaccine_name ?? "Aşı"}, ${vaccination.completed ? "tamamlandı" : "bekliyor"}`}
                       accessibilityRole="button"
+                      accessibilityState={{
+                        checked: vaccination.completed,
+                        disabled: toggleVaccinationMutation.isPending
+                      }}
                       disabled={toggleVaccinationMutation.isPending}
                       onPress={() => toggleVaccinationMutation.mutate(vaccination)}
                       style={[
@@ -679,7 +734,7 @@ export default function BabyScreen() {
                           <Button
                             label={
                               updateVaccinationNotesMutation.isPending
-                                ? "Kaydediliyor..."
+                                ? "Kaydediliyor…"
                                 : "Notu kaydet"
                             }
                             disabled={updateVaccinationNotesMutation.isPending}
@@ -703,17 +758,22 @@ export default function BabyScreen() {
         ) : (
           <View style={{ gap: spacing.md }}>
             {growthQuery.isLoading ? (
-              <QueryState compact loading description="Büyüme kayıtları yükleniyor…" />
+              <QueryState compact loading description="Büyüme ipliği hazırlanıyor…" shape="baby" />
             ) : growthQuery.isError ? (
               <QueryState
-                description="Büyüme kayıtları alınamadı."
+                description="Büyüme kayıtları alınamadı. Bağlantını kontrol et ve yeniden dene."
                 onRetry={() => void growthQuery.refetch()}
                 retrying={growthQuery.isFetching}
               />
             ) : !selectedBaby ? (
               <EmptyState
-                title="Büyüme takibi için bebek profili gerekli"
-                description="Bebek profilini ekledikten sonra kilo, boy ve baş çevresi ölçümlerini izleyebilirsin."
+                actionLabel="Bebek profili oluştur"
+                description="Bebek profilini eklediğinde ilk ölçüm düğümünü oluşturabilirsin."
+                title="Büyüme ipliğini başlat"
+                onActionPress={() => {
+                  setSection("profile");
+                  setFormOpen(true);
+                }}
               />
             ) : (
               <>
@@ -731,10 +791,16 @@ export default function BabyScreen() {
                       <HeartPulse color={appTheme.primary} size={28} />
                     </View>
                     <Thread
+                      accessibilityLabel={`${selectedBaby.name} için ${growthRecords.length} büyüme kaydı`}
                       color={appTheme.primary}
                       height={64}
+                      markers={growthRecords.slice(-6).map((_, index, records) => ({
+                        kind: "knot" as const,
+                        position: (index + 1) / (records.length + 1)
+                      }))}
                       mutedColor={appTheme.primarySoft}
-                      progress={growthRecords.length > 0 ? 0.9 : 0.35}
+                      progress={1}
+                      semantic="timeline"
                       variant="chart"
                     />
                     {latestGrowth ? (
@@ -747,57 +813,78 @@ export default function BabyScreen() {
                   </View>
                 </Card>
 
-                <Card>
-                  <View style={{ gap: spacing.md }}>
-                    <Text style={typography.heading2}>Yeni ölçüm ekle</Text>
-                    <DatePickerField
-                      label="Ölçüm tarihi"
-                      value={growthDate}
-                      onChange={setGrowthDate}
-                    />
-                    <View style={styles.measureGrid}>
+                {growthFormOpen ? (
+                  <Card>
+                    <View style={{ gap: spacing.md }}>
+                      <Text style={typography.heading2}>Yeni ölçüm ekle</Text>
+                      <DatePickerField
+                        label="Ölçüm tarihi"
+                        value={growthDate}
+                        onChange={setGrowthDate}
+                      />
+                      <View style={styles.measureGrid}>
+                        <TextField
+                          containerStyle={styles.measureField}
+                          keyboardType="decimal-pad"
+                          label="Kilo (kg)"
+                          value={weight}
+                          onChangeText={setWeight}
+                        />
+                        <TextField
+                          containerStyle={styles.measureField}
+                          keyboardType="decimal-pad"
+                          label="Boy (cm)"
+                          value={height}
+                          onChangeText={setHeight}
+                        />
+                      </View>
                       <TextField
-                        containerStyle={styles.measureField}
                         keyboardType="decimal-pad"
-                        label="Kilo (kg)"
-                        value={weight}
-                        onChangeText={setWeight}
+                        label="Baş çevresi (cm)"
+                        value={headCircumference}
+                        onChangeText={setHeadCircumference}
                       />
                       <TextField
-                        containerStyle={styles.measureField}
-                        keyboardType="decimal-pad"
-                        label="Boy (cm)"
-                        value={height}
-                        onChangeText={setHeight}
+                        label="Not"
+                        multiline
+                        value={growthNotes}
+                        onChangeText={setGrowthNotes}
                       />
+                      <View style={styles.formActions}>
+                        <Button
+                          label="Vazgeç"
+                          style={styles.formButton}
+                          variant="ghost"
+                          onPress={() => setGrowthFormOpen(false)}
+                        />
+                        <Button
+                          label={createGrowthMutation.isPending ? "Ekleniyor…" : "Ölçümü ekle"}
+                          disabled={createGrowthMutation.isPending}
+                          style={styles.formButton}
+                          onPress={() => createGrowthMutation.mutate()}
+                        />
+                      </View>
                     </View>
-                    <TextField
-                      keyboardType="decimal-pad"
-                      label="Baş çevresi (cm)"
-                      value={headCircumference}
-                      onChangeText={setHeadCircumference}
-                    />
-                    <TextField
-                      label="Not"
-                      multiline
-                      value={growthNotes}
-                      onChangeText={setGrowthNotes}
-                    />
-                    <Button
-                      label={createGrowthMutation.isPending ? "Ekleniyor..." : "Ölçümü kaydet"}
-                      disabled={createGrowthMutation.isPending}
-                      onPress={() => createGrowthMutation.mutate()}
-                    />
-                  </View>
-                </Card>
+                  </Card>
+                ) : null}
 
                 {growthRecords.length === 0 ? (
                   <EmptyState
-                    title="Henüz ölçüm yok"
-                    description="Kilo, boy veya baş çevresi eklediğinde kayıtların burada görünür."
+                    actionLabel="İlk ölçümü ekle"
+                    description="Kilo, boy veya baş çevresi değerlerinden biri ilk büyüme düğümünü oluşturur."
+                    title="İlk ölçümle ipliği başlat"
+                    onActionPress={() => setGrowthFormOpen(true)}
                   />
                 ) : (
-                  <View style={{ gap: spacing.sm }}>
+                  <View style={{ gap: spacing.md }}>
+                    {!growthFormOpen ? (
+                      <Button
+                        label="Yeni ölçüm ekle"
+                        variant="secondary"
+                        onPress={() => setGrowthFormOpen(true)}
+                      />
+                    ) : null}
+                    <View style={{ gap: spacing.sm }}>
                     {growthRecords
                       .slice()
                       .reverse()
@@ -854,7 +941,7 @@ export default function BabyScreen() {
                                 <Button
                                   label={
                                     updateGrowthMutation.isPending
-                                      ? "Kaydediliyor..."
+                                      ? "Kaydediliyor…"
                                       : "Güncelle"
                                   }
                                   disabled={updateGrowthMutation.isPending}
@@ -866,6 +953,7 @@ export default function BabyScreen() {
                           ) : null}
                         </View>
                       ))}
+                    </View>
                   </View>
                 )}
               </>
@@ -881,16 +969,19 @@ function SegmentButton({
   active,
   activeColor,
   label,
+  role = "tab",
   onPress
 }: {
   active: boolean;
   activeColor: string;
   label: string;
+  role?: "radio" | "tab";
   onPress: () => void;
 }) {
   return (
     <Pressable
-      accessibilityRole="button"
+      accessibilityRole={role}
+      accessibilityState={role === "radio" ? { checked: active } : { selected: active }}
       onPress={onPress}
       style={[styles.segmentButton, active && styles.segmentButtonActive]}
     >
@@ -1018,6 +1109,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: radii.pill,
     flex: 1,
+    justifyContent: "center",
+    minHeight: 48,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm
   },
@@ -1038,10 +1131,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm
   },
   babyChip: {
+    alignItems: "center",
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderRadius: radii.pill,
     borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 48,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm
   },
@@ -1068,6 +1164,17 @@ const styles = StyleSheet.create({
   summaryText: {
     ...typography.body,
     color: colors.primary
+  },
+  threadLegend: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: -spacing.md
+  },
+  threadLegendText: {
+    ...typography.label,
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 17
   },
   infoGrid: {
     flexDirection: "row",
@@ -1100,10 +1207,13 @@ const styles = StyleSheet.create({
   },
   measureGrid: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing.md
   },
   measureField: {
-    flex: 1
+    flexBasis: 136,
+    flexGrow: 1,
+    minWidth: 132
   },
   vaccineSummary: {
     backgroundColor: colors.primarySoft

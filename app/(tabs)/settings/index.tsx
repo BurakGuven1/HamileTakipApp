@@ -26,7 +26,6 @@ import { Card } from "@/components/Card";
 import { DatePickerField } from "@/components/DatePickerField";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
-import { Thread } from "@/components/Thread";
 import {
   getWaterRemindersEnabled,
   setWaterRemindersEnabled,
@@ -400,9 +399,6 @@ export default function SettingsScreen() {
     <Screen ref={scrollRef}>
       <View style={styles.container}>
         <View style={[styles.hero, { backgroundColor: appTheme.primarySoft }]}>
-          <View style={styles.heroThread}>
-            <Thread height={96} progress={0.76} variant="decorative" />
-          </View>
           <Text style={typography.heading1}>Profil</Text>
           <Text style={typography.body}>
             Profil, bildirim, abonelik ve hesap güvenliği tek yerde.
@@ -950,13 +946,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     overflow: "hidden",
     padding: spacing.lg
-  },
-  heroThread: {
-    bottom: -22,
-    left: spacing.lg,
-    opacity: 0.3,
-    position: "absolute",
-    right: -spacing.lg
   },
   profileCard: {
     backgroundColor: colors.primarySoft

@@ -23,7 +23,7 @@ import {
   Syringe,
   Wrench
 } from "lucide-react-native";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import {
   Pressable,
   ScrollView,
@@ -31,7 +31,7 @@ import {
   Text,
   View
 } from "react-native";
-import Animated, { Easing, FadeIn, FadeOut, useReducedMotion } from "react-native-reanimated";
+import { useReducedMotion } from "react-native-reanimated";
 
 import { listBabies } from "@/api/babies";
 import { getCareHandoverSnapshot, getCurrentCareUserId, listCareJournalEntries, subscribeToCareCoordination, takeOverBabyCare, type CareJournalEntry } from "@/api/careJournal";
@@ -44,7 +44,7 @@ import {
 } from "@/api/vaccinations";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
-import { ExpandableText } from "@/components/ExpandableText";
+import { EmptyState } from "@/components/EmptyState";
 import { MetricCard } from "@/components/MetricCard";
 import { PregnancyJourneyArtwork } from "@/components/PregnancyJourneyArtwork";
 import { QueryState } from "@/components/QueryState";
@@ -70,7 +70,6 @@ const motherBabyIllustration = require("../../../assets/illustrations/mother-bab
 export default function HomeScreen() {
   const queryClient = useQueryClient();
   const { showError, showInfo } = useFeedback();
-  const [showDaysUntilDue, setShowDaysUntilDue] = useState(false);
   const reducedMotion = useReducedMotion();
   const profileQuery = useQuery({
     queryKey: ["current-profile"],
@@ -209,23 +208,10 @@ export default function HomeScreen() {
     return () => clearTimeout(timer);
   }, [firstBaby, profile, showInfo, weekInfo]);
 
-  useEffect(() => {
-    if (!profile?.is_pregnant || !pregnancyProgress || reducedMotion) {
-      setShowDaysUntilDue(false);
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setShowDaysUntilDue((current) => !current);
-    }, 4_000);
-
-    return () => clearInterval(interval);
-  }, [pregnancyProgress, profile?.is_pregnant, reducedMotion]);
-
   if (profileQuery.isLoading || babiesQuery.isLoading || membershipQuery.isLoading) {
     return (
       <Screen scroll={false}>
-        <QueryState loading description="Ana sayfan hazırlanıyor…" />
+        <QueryState loading description="Aile ipliğin hazırlanıyor…" shape="home" />
       </Screen>
     );
   }
@@ -234,7 +220,7 @@ export default function HomeScreen() {
     return (
       <Screen scroll={false}>
         <QueryState
-          description="Profil ve bebek bilgileri alınamadı. Bağlantını kontrol edip yeniden deneyebilirsin."
+          description="Profil ve bebek bilgileri alınamadı. Bağlantını kontrol et ve yeniden dene."
           onRetry={() => void Promise.all([profileQuery.refetch(), babiesQuery.refetch(), membershipQuery.refetch()])}
           retrying={profileQuery.isFetching || babiesQuery.isFetching || membershipQuery.isFetching}
           title="Ana sayfa yüklenemedi"
@@ -269,7 +255,16 @@ export default function HomeScreen() {
                 ) : (
                   <>
                     <View style={styles.visualThread}>
-                      <Thread height={126} mutedColor={appTheme.accent} progress={0.84} variant="decorative" />
+                      <Thread
+                        accessibilityLabel="İlk aile düğümünü eklemek için açık ilmek"
+                        color={appTheme.primary}
+                        height={126}
+                        markers={[{ kind: "loop", position: 0.18 }]}
+                        mutedColor={appTheme.accentSoft}
+                        progress={0.19}
+                        semantic="timeline"
+                        variant="progress"
+                      />
                     </View>
                     <View style={styles.sizeVisual}>
                       <View
@@ -290,7 +285,7 @@ export default function HomeScreen() {
                 <View style={styles.visualFooter}>
                   <View style={styles.heroFooterCopy}>
                     <Text style={styles.heroTitle}>{heroTitle}</Text>
-                    <Text numberOfLines={2} style={styles.heroText}>{heroBody}</Text>
+                    <Text style={styles.heroText}>{heroBody}</Text>
                   </View>
                   <Link href="/articles" asChild>
                     <Pressable accessibilityRole="button" style={styles.openArticlesButton}>
@@ -324,18 +319,41 @@ export default function HomeScreen() {
                 {pregnancyProgress ? (
                   <View
                     accessibilityLiveRegion="polite"
-                    style={[styles.pregnancyStatusBox, { backgroundColor: appTheme.primarySoft }]}
+                    style={[styles.livingThreadStage, { backgroundColor: appTheme.primarySoft }]}
                   >
-                    <Animated.Text
-                      key={showDaysUntilDue ? "days-until-due" : "pregnancy-day"}
-                      entering={reducedMotion ? undefined : FadeIn.duration(260).easing(Easing.out(Easing.cubic))}
-                      exiting={reducedMotion ? undefined : FadeOut.duration(180).easing(Easing.inOut(Easing.quad))}
-                      style={styles.pregnancyStatusText}
-                    >
-                      {showDaysUntilDue
-                        ? `${pregnancyProgress.daysUntilDue} gün kaldı`
-                        : `${pregnancyProgress.day}. günlük hamile`}
-                    </Animated.Text>
+                    <View style={styles.livingThreadHeading}>
+                      <View style={styles.livingThreadCopy}>
+                        <Text style={[styles.livingThreadEyebrow, { color: appTheme.primary }]}>
+                          Yaşayan İplik
+                        </Text>
+                        <Text style={styles.livingThreadTitle}>
+                          {week}. hafta düğümü
+                        </Text>
+                      </View>
+                      <Text style={[styles.livingThreadValue, { color: appTheme.primary }]}>
+                        %{Math.round((week / 40) * 100)}
+                      </Text>
+                    </View>
+                    <Thread
+                      accessibilityLabel={`Gebelik ipliği, 40 haftanın ${week} haftası tamamlandı`}
+                      color={appTheme.primary}
+                      height={72}
+                      markers={[
+                        { kind: "knot", position: week / 40 },
+                        { kind: "loop", position: Math.min(0.98, (week + 4) / 40) }
+                      ]}
+                      mutedColor={colors.border}
+                      progress={week / 40}
+                      variant="progress"
+                    />
+                    <View style={styles.livingThreadFooter}>
+                      <Text style={styles.livingThreadMeta}>
+                        {pregnancyProgress.day}. gün
+                      </Text>
+                      <Text style={styles.livingThreadMeta}>
+                        Doğuma {pregnancyProgress.daysUntilDue} gün
+                      </Text>
+                    </View>
                   </View>
                 ) : null}
 
@@ -370,14 +388,18 @@ export default function HomeScreen() {
                   />
                 </View>
                 <View style={[styles.developmentBox, { backgroundColor: appTheme.primarySoft }]}>
-                  <Text style={styles.developmentTitle}>{weekInfo.milestone}</Text>
-                  <ExpandableText
-                    collapsedLines={2}
-                    lessLabel="Notu kapat"
-                    moreLabel="Haftanın notunu aç"
-                    style={styles.developmentText}
-                    text={weekInfo.note}
-                  />
+                  <View style={styles.developmentHeading}>
+                    <View style={[styles.developmentIcon, { backgroundColor: colors.surfaceStrong }]}>
+                      <BookOpen color={appTheme.primary} size={18} strokeWidth={2.2} />
+                    </View>
+                    <View style={styles.developmentHeadingCopy}>
+                      <Text style={[styles.developmentEyebrow, { color: appTheme.primary }]}>
+                        Haftanın notu
+                      </Text>
+                      <Text style={styles.developmentTitle}>{weekInfo.milestone}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.developmentText}>{weekInfo.note}</Text>
                 </View>
                 <Link href="/pregnancy-timeline" asChild>
                   <Button label="Hafta hafta yol haritasını aç" variant="secondary" />
@@ -398,34 +420,111 @@ export default function HomeScreen() {
               <Sparkles color={appTheme.accent} size={20} />
             </View>
           </View>
-          <View style={styles.shortcutGrid}>
-            {profile?.is_pregnant ? (
-              <>
-                <ShortcutCard featured href="/pregnancy-tools" icon={<Wrench color={appTheme.primary} size={30} />} title="Takip araçları" tint={appTheme.primarySoft} />
-                <ShortcutCard href="/pregnancy-nutrition" icon={<Salad color={colors.sageGreen} size={26} />} title="Beslenme & su" tint={colors.primarySoft} />
-                <ShortcutCard href="/pregnancy-exercise" icon={<Activity color={colors.dustyRose} size={26} />} title="Hareket" tint={colors.accentSoft} />
-                <ShortcutCard href="/birth-preparation" icon={<BookOpenCheck color={colors.honeyGold} size={26} />} title="Doğuma hazırlık" tint={colors.highlightSoft} />
-              </>
-            ) : (
-              <>
-                <ShortcutCard featured href="/care-journal" icon={<CalendarHeart color={appTheme.primary} size={30} />} title="Bakım günlüğü" tint={appTheme.primarySoft} />
-                <ShortcutCard href="/baby" icon={<Ruler color={colors.sageGreen} size={26} />} title="Büyüme & aşı" tint={colors.primarySoft} />
-                <ShortcutCard href="/lullaby" icon={<Music2 color={colors.dustyRose} size={26} />} title="Ninniler" tint={colors.accentSoft} />
-              </>
-            )}
-            <ShortcutCard href="/document-insight" icon={<FileSearch color={colors.honeyGold} size={26} />} title="Belgeyi Anla" tint={colors.highlightSoft} />
-            <ShortcutCard href="/gallery" icon={<Images color={appTheme.accent} size={26} />} premium title="Anı galerisi" tint={appTheme.accentSoft} />
-            {!membershipQuery.data ? (
-              <ShortcutCard href="/forum" icon={<HeartPulse color={appTheme.primary} size={26} />} premium title="Anne forumu" tint={appTheme.primarySoft} />
-            ) : null}
+          <View style={styles.shortcutGroups}>
+            <View style={styles.shortcutGroup}>
+              <Text style={styles.shortcutGroupTitle}>
+                {profile?.is_pregnant ? "Gebelik takibi" : "Bebek bakımı"}
+              </Text>
+              <View style={styles.shortcutPanel}>
+                {profile?.is_pregnant ? (
+                  <>
+                    <ShortcutCard
+                      featured
+                      href="/pregnancy-tools"
+                      icon={<Wrench color={appTheme.primary} size={25} />}
+                      subtitle="Tekmeler, su ve günlük ölçümler"
+                      title="Takip araçları"
+                      tint={appTheme.primarySoft}
+                    />
+                    <ShortcutCard
+                      href="/pregnancy-nutrition"
+                      icon={<Salad color={colors.sageGreen} size={23} />}
+                      subtitle="Güvenli öneriler ve su takibi"
+                      title="Beslenme & su"
+                      tint={colors.primarySoft}
+                    />
+                    <ShortcutCard
+                      href="/pregnancy-exercise"
+                      icon={<Activity color={colors.dustyRose} size={23} />}
+                      subtitle="Haftana uygun hareket önerileri"
+                      title="Hareket"
+                      tint={colors.accentSoft}
+                    />
+                    <ShortcutCard
+                      href="/birth-preparation"
+                      icon={<BookOpenCheck color={colors.honeyGold} size={23} />}
+                      subtitle="Plan, çanta ve hazırlık adımları"
+                      title="Doğuma hazırlık"
+                      tint={colors.highlightSoft}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <ShortcutCard
+                      featured
+                      href="/care-journal"
+                      icon={<CalendarHeart color={appTheme.primary} size={25} />}
+                      subtitle="Uyku, beslenme ve bez takibi"
+                      title="Bakım günlüğü"
+                      tint={appTheme.primarySoft}
+                    />
+                    <ShortcutCard
+                      href="/baby"
+                      icon={<Ruler color={colors.sageGreen} size={23} />}
+                      subtitle="Ölçümler ve yaklaşan aşılar"
+                      title="Büyüme & aşı"
+                      tint={colors.primarySoft}
+                    />
+                    <ShortcutCard
+                      href="/lullaby"
+                      icon={<Music2 color={colors.dustyRose} size={23} />}
+                      subtitle="Sakinleştiren uyku sesleri"
+                      title="Ninniler"
+                      tint={colors.accentSoft}
+                    />
+                  </>
+                )}
+              </View>
+            </View>
+
+            <View style={styles.shortcutGroup}>
+              <Text style={styles.shortcutGroupTitle}>Aile alanları</Text>
+              <View style={styles.shortcutPanel}>
+                <ShortcutCard
+                  href="/document-insight"
+                  icon={<FileSearch color={colors.honeyGold} size={23} />}
+                  subtitle="Sağlık belgelerini sadeleştir"
+                  title="Belgeyi Anla"
+                  tint={colors.highlightSoft}
+                />
+                <ShortcutCard
+                  href="/gallery"
+                  icon={<Images color={appTheme.accent} size={23} />}
+                  premium
+                  subtitle="Özel anılarını güvenle sakla"
+                  title="Anı galerisi"
+                  tint={appTheme.accentSoft}
+                />
+                {!membershipQuery.data ? (
+                  <ShortcutCard
+                    href="/forum"
+                    icon={<HeartPulse color={appTheme.primary} size={23} />}
+                    premium
+                    subtitle="Deneyimlerini toplulukla paylaş"
+                    title="Anne forumu"
+                    tint={appTheme.primarySoft}
+                  />
+                ) : null}
+              </View>
+            </View>
           </View>
         </Reveal>
 
         {firstBaby && careHandoverQuery.isLoading ? (
-          <QueryState compact loading description="Canlı aile bakımı yükleniyor…" />
+          <QueryState compact loading description="Bakım özeti hazırlanıyor…" shape="home" />
         ) : firstBaby && careHandoverQuery.isError ? (
           <QueryState
-            description="Canlı bakım özeti alınamadı."
+            description="Canlı bakım özeti alınamadı. Bağlantını kontrol et ve yeniden dene."
             onRetry={() => void careHandoverQuery.refetch()}
             retrying={careHandoverQuery.isFetching}
           />
@@ -436,7 +535,7 @@ export default function HomeScreen() {
                 <View style={{ flex: 1, gap: spacing.xs }}>
                   <Text style={typography.eyebrow}>Canlı aile vardiyası</Text>
                   <Text style={typography.heading2}>{firstBaby.name} için bakımı devral</Text>
-                  <Text numberOfLines={2} style={typography.body}>
+                  <Text style={typography.body}>
                     {careHandoverQuery.data?.handover
                       ? `${careHandoverQuery.data.handover.caregiver_name} ${careHomeRelativeTimeValue(careHandoverQuery.data.handover.started_at)} bakımı devraldı.`
                       : "Şu anda atanmış bir bakıcı yok."}
@@ -453,7 +552,7 @@ export default function HomeScreen() {
               {careHandoverQuery.data?.handover?.caregiver_id === currentUserQuery.data ? (
                 <Button testID="open-care-summary" label="Bakım sende · özeti aç" onPress={() => router.push("/care-journal")} />
               ) : (
-                <Button disabled={handoverMutation.isPending} label={handoverMutation.isPending ? "Devralınıyor..." : "Bakımı devraldım"} onPress={() => handoverMutation.mutate()} />
+                <Button disabled={handoverMutation.isPending} label={handoverMutation.isPending ? "Devralınıyor…" : "Bakımı devraldım"} onPress={() => handoverMutation.mutate()} />
               )}
             </View>
           </Card>
@@ -465,7 +564,7 @@ export default function HomeScreen() {
               <View style={styles.cardHeader}>
                 <View style={{ gap: spacing.xs, flex: 1 }}>
                   <Text style={typography.heading2}>Deneyimini kişiselleştir</Text>
-                  <Text numberOfLines={2} style={typography.body}>
+                  <Text style={typography.body}>
                     Gebelik veya bebek bilgisi eklediğinde ana ekran sana özel
                     hatırlatmalar ve gelişim özeti gösterir.
                   </Text>
@@ -509,7 +608,7 @@ export default function HomeScreen() {
                     {formatDate(nextVaccination.scheduled_date)}
                   </Text>
                 ) : (
-                  <Text numberOfLines={2} style={typography.body}>
+                  <Text style={typography.body}>
                     Şu an yaklaşan aşı yok. Yeni kayıt ekledikçe burada görünür.
                   </Text>
                 )}
@@ -538,13 +637,20 @@ export default function HomeScreen() {
         </View>
 
         {featuredArticlesQuery.isLoading ? (
-          <QueryState compact loading description="Makaleler yükleniyor…" />
+          <QueryState compact loading description="Haftana uygun rehberler hazırlanıyor…" shape="home" />
         ) : featuredArticlesQuery.isError ? (
           <QueryState
             compact
-            description="Makaleler şu anda alınamadı."
+            description="Makaleler alınamadı. Bağlantını kontrol et ve yeniden dene."
             onRetry={() => void featuredArticlesQuery.refetch()}
             retrying={featuredArticlesQuery.isFetching}
+          />
+        ) : featuredArticles.length === 0 ? (
+          <EmptyState
+            actionLabel="Tüm rehberleri gör"
+            description="Gebelik haftanı veya bebeğinin yaşını eklediğinde en uygun rehberler burada sıralanır."
+            onActionPress={() => router.push("/articles")}
+            title="İlk rehberini keşfet"
           />
         ) : <ScrollView
           horizontal
@@ -648,6 +754,7 @@ function ShortcutCard({
   href,
   icon,
   premium = false,
+  subtitle,
   title,
   tint
 }: {
@@ -655,6 +762,7 @@ function ShortcutCard({
   href: "/baby" | "/birth-preparation" | "/care-journal" | "/document-insight" | "/forum" | "/gallery" | "/lullaby" | "/pregnancy-exercise" | "/pregnancy-nutrition" | "/pregnancy-tools";
   icon: ReactNode;
   premium?: boolean;
+  subtitle: string;
   title: string;
   tint: string;
 }) {
@@ -662,37 +770,35 @@ function ShortcutCard({
     <Link href={href} asChild>
       <Pressable
         accessibilityLabel={`${title}${premium ? ", Premium" : ""}`}
+        accessibilityHint={subtitle}
         accessibilityRole="button"
         style={({ pressed }) => [
           styles.shortcutPressable,
-          featured && styles.shortcutFeaturedPressable,
           pressed && styles.shortcutPressed
         ]}
       >
         <View style={[styles.shortcutCard, featured && styles.shortcutFeaturedCard]}>
-          <View
-            style={[
-              styles.shortcutVisual,
-              featured && styles.shortcutFeaturedVisual,
-              { backgroundColor: tint }
-            ]}
-          >
-            <View style={styles.shortcutOrb}>{icon}</View>
-            {premium ? (
-              <View style={styles.premiumBadge}>
-                <Sparkles color={colors.honeyGold} size={12} />
-                <Text style={styles.premiumBadgeText}>Premium</Text>
-              </View>
-            ) : null}
+          <View style={[styles.shortcutIcon, { backgroundColor: tint }]}>
+            {icon}
           </View>
-          <View style={[styles.shortcutCopy, featured && styles.shortcutFeaturedCopy]}>
-            <Text
-              numberOfLines={2}
-              style={[styles.shortcutTitle, featured && styles.shortcutFeaturedTitle]}
-            >
-              {title}
+          <View style={styles.shortcutCopy}>
+            <View style={styles.shortcutTitleRow}>
+              <Text style={styles.shortcutTitle}>
+                {title}
+              </Text>
+              {premium ? (
+                <View style={styles.premiumBadge}>
+                  <Sparkles color={colors.honeyGold} size={11} strokeWidth={2.4} />
+                  <Text style={styles.premiumBadgeText}>Premium</Text>
+                </View>
+              ) : null}
+            </View>
+            <Text style={styles.shortcutSubtitle}>
+              {subtitle}
             </Text>
-            <ChevronRight color={colors.textMuted} size={18} />
+          </View>
+          <View style={styles.shortcutChevron}>
+            <ChevronRight color={colors.textMuted} size={20} strokeWidth={2.2} />
           </View>
         </View>
       </Pressable>
@@ -869,20 +975,48 @@ const styles = StyleSheet.create({
     ...typography.label,
     color: colors.text
   },
-  pregnancyStatusBox: {
+  livingThreadStage: {
     ...radii.card,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 56,
+    gap: spacing.sm,
     overflow: "hidden",
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md
   },
-  pregnancyStatusText: {
-    ...typography.heading2,
+  livingThreadHeading: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between"
+  },
+  livingThreadCopy: {
+    flex: 1,
+    gap: 2
+  },
+  livingThreadEyebrow: {
+    ...typography.label,
+    fontSize: 13,
+    lineHeight: 18
+  },
+  livingThreadTitle: {
+    ...typography.heading3,
     color: colors.text,
-    position: "absolute",
-    textAlign: "center"
+    fontSize: 18,
+    lineHeight: 24
+  },
+  livingThreadValue: {
+    ...typography.dataStrong,
+    fontSize: 18,
+    lineHeight: 24
+  },
+  livingThreadFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between"
+  },
+  livingThreadMeta: {
+    ...typography.label,
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18
   },
   weekCard: {
     borderWidth: 1
@@ -1006,8 +1140,29 @@ const styles = StyleSheet.create({
   },
   developmentBox: {
     ...radii.card,
-    gap: spacing.sm,
-    padding: spacing.md
+    gap: spacing.md,
+    padding: spacing.lg
+  },
+  developmentHeading: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: spacing.md
+  },
+  developmentHeadingCopy: {
+    flex: 1,
+    gap: 2
+  },
+  developmentIcon: {
+    alignItems: "center",
+    borderRadius: radii.md,
+    height: 40,
+    justifyContent: "center",
+    width: 40
+  },
+  developmentEyebrow: {
+    ...typography.label,
+    fontSize: 13,
+    lineHeight: 18
   },
   developmentTitle: {
     ...typography.heading3,
@@ -1157,7 +1312,7 @@ const styles = StyleSheet.create({
     gap: 2
   },
   shortcutsSection: {
-    gap: spacing.md
+    gap: spacing.lg
   },
   shortcutSpark: {
     alignItems: "center",
@@ -1166,97 +1321,96 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 44
   },
-  shortcutGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.md
+  shortcutGroups: {
+    gap: spacing.xl
+  },
+  shortcutGroup: {
+    gap: spacing.sm
+  },
+  shortcutGroupTitle: {
+    ...typography.heading3,
+    color: colors.text,
+    fontSize: 17,
+    lineHeight: 23,
+    paddingHorizontal: spacing.xs
+  },
+  shortcutPanel: {
+    gap: spacing.sm
   },
   shortcutPressable: {
-    flexBasis: "47%",
-    flexGrow: 0,
-    minWidth: 128
-  },
-  shortcutFeaturedPressable: {
-    flexBasis: "100%",
     width: "100%"
   },
   shortcutPressed: {
-    opacity: 0.74
+    opacity: 0.7,
+    transform: [{ scale: 0.988 }]
   },
   shortcutCard: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    minHeight: 168,
-    overflow: "hidden"
-  },
-  shortcutFeaturedCard: {
-    flexDirection: "row",
-    minHeight: 132
-  },
-  shortcutVisual: {
-    flex: 1,
-    justifyContent: "center",
-    minHeight: 108,
-    overflow: "hidden",
-    padding: spacing.md
-  },
-  shortcutFeaturedVisual: {
-    minHeight: 132,
-    width: 132
-  },
-  shortcutOrb: {
     alignItems: "center",
     backgroundColor: colors.surface,
-    borderRadius: radii.pill,
-    height: 54,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    gap: spacing.md,
+    minHeight: 82,
+    padding: spacing.md,
+    shadowColor: colors.text,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.035,
+    shadowRadius: 18
+  },
+  shortcutFeaturedCard: {
+    borderColor: colors.primary,
+    borderWidth: 1
+  },
+  shortcutIcon: {
+    alignItems: "center",
+    borderRadius: radii.md,
+    height: 52,
     justifyContent: "center",
-    width: 54
+    width: 52
   },
   premiumBadge: {
     alignItems: "center",
-    backgroundColor: colors.surfaceStrong,
-    borderColor: colors.highlight,
+    backgroundColor: colors.highlightSoft,
     borderRadius: radii.pill,
-    borderWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
     gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 5,
-    position: "absolute",
-    right: spacing.sm,
-    top: spacing.sm
+    paddingHorizontal: 7,
+    paddingVertical: 4
   },
   premiumBadgeText: {
     ...typography.label,
     color: colors.highlight,
-    fontSize: 12,
-    lineHeight: 16
+    fontSize: 11,
+    lineHeight: 14
   },
   shortcutCopy: {
+    flex: 1,
+    gap: 3
+  },
+  shortcutTitleRow: {
     alignItems: "center",
     flexDirection: "row",
-    gap: spacing.xs,
-    justifyContent: "space-between",
-    minHeight: 60,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm
-  },
-  shortcutFeaturedCopy: {
-    flex: 1,
-    minHeight: 132,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg
+    flexWrap: "wrap",
+    gap: spacing.sm
   },
   shortcutTitle: {
     ...typography.label,
     color: colors.text,
-    flex: 1
+    flexShrink: 1
   },
-  shortcutFeaturedTitle: {
-    ...typography.heading3,
-    color: colors.text
+  shortcutSubtitle: {
+    ...typography.body,
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 19
+  },
+  shortcutChevron: {
+    alignItems: "center",
+    height: 44,
+    justifyContent: "center",
+    width: 28
   },
   sectionHint: {
     ...typography.body,

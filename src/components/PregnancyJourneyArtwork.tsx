@@ -1,16 +1,13 @@
 import { Image } from "expo-image";
-import { Leaf } from "lucide-react-native";
+import { Heart } from "lucide-react-native";
 import type { StyleProp, ViewStyle } from "react-native";
 import { StyleSheet, Text, View } from "react-native";
 import { useReducedMotion } from "react-native-reanimated";
 
+import { useAppTheme } from "@/providers/AppThemeProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
-const journeyArtwork = {
-  early: require("../../assets/illustrations/pregnancy-journey-early.jpg"),
-  middle: require("../../assets/illustrations/pregnancy-journey-middle.jpg"),
-  late: require("../../assets/illustrations/pregnancy-journey-late.jpg")
-} as const;
+const expectingParentsArtwork = require("../../assets/illustrations/expecting-parents-connection-v2.jpg");
 
 type PregnancyJourneyArtworkProps = {
   height?: number;
@@ -23,23 +20,37 @@ export function PregnancyJourneyArtwork({
   style,
   week
 }: PregnancyJourneyArtworkProps) {
-  const stage = week <= 13 ? "early" : week <= 27 ? "middle" : "late";
+  const appTheme = useAppTheme();
   const reducedMotion = useReducedMotion();
 
   return (
     <View style={[styles.frame, { height }, style]}>
       <Image
-        accessibilityLabel={`${week}. hafta için simgesel gelişim illüstrasyonu. Tıbbi görsel değildir.`}
+        accessibilityLabel={`${week}. haftada bebeğini birlikte bekleyen anne ve baba illüstrasyonu.`}
         accessibilityRole="image"
         accessible
         contentFit="cover"
-        source={journeyArtwork[stage]}
+        contentPosition="center"
+        source={expectingParentsArtwork}
         style={StyleSheet.absoluteFill}
-        transition={reducedMotion ? 0 : 180}
+        transition={reducedMotion ? 0 : 220}
+      />
+      <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        pointerEvents="none"
+        style={[
+          StyleSheet.absoluteFill,
+          {
+            backgroundColor: appTheme.isDark
+              ? "rgba(23, 20, 25, 0.24)"
+              : "rgba(55, 47, 61, 0.04)"
+          }
+        ]}
       />
       <View style={styles.caption}>
-        <Leaf color={colors.primary} size={16} strokeWidth={2.2} />
-        <Text style={styles.captionText}>Yolculuğun bu haftası</Text>
+        <Heart color={colors.dustyRose} size={16} strokeWidth={2.2} />
+        <Text style={styles.captionText}>Birlikte bekliyoruz</Text>
       </View>
     </View>
   );

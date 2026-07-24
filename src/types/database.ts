@@ -904,6 +904,10 @@ export type Database = {
           target_id: string;
           reason: string;
           status: "pending" | "reviewed" | "dismissed";
+          reported_author_id: string | null;
+          review_due_at: string;
+          reviewed_at: string | null;
+          moderation_action: string | null;
           created_at: string;
         };
         Insert: {
@@ -913,11 +917,19 @@ export type Database = {
           target_id: string;
           reason: string;
           status?: "pending" | "reviewed" | "dismissed";
+          reported_author_id?: string | null;
+          review_due_at?: string;
+          reviewed_at?: string | null;
+          moderation_action?: string | null;
           created_at?: string;
         };
         Update: {
           reason?: string;
           status?: "pending" | "reviewed" | "dismissed";
+          reported_author_id?: string | null;
+          review_due_at?: string;
+          reviewed_at?: string | null;
+          moderation_action?: string | null;
         };
         Relationships: [];
       };
@@ -1167,6 +1179,40 @@ export type Database = {
       };
     };
     Functions: {
+      has_legal_acceptance: {
+        Args: {
+          p_version: string;
+        };
+        Returns: boolean;
+      };
+      record_legal_acceptance: {
+        Args: {
+          p_source: "auth" | "forum";
+          p_version: string;
+        };
+        Returns: string;
+      };
+      block_forum_author: {
+        Args: {
+          p_target_id: string;
+          p_target_type: "post" | "comment";
+        };
+        Returns: string;
+      };
+      unblock_forum_author: {
+        Args: {
+          p_blocked_user_id: string;
+        };
+        Returns: boolean;
+      };
+      list_forum_blocks: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          blocked_user_id: string;
+          forum_nickname: string;
+          blocked_at: string;
+        }[];
+      };
       get_active_vaccine_reminders: {
         Args: {
           p_today?: string;

@@ -15,6 +15,7 @@ import {
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useReducedMotion } from "react-native-reanimated";
 
 import { createBaby, listBabies, updateBaby } from "@/api/babies";
 import {
@@ -25,6 +26,7 @@ import {
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { DatePickerField } from "@/components/DatePickerField";
+import { OnboardingThreadMoment } from "@/components/OnboardingThreadMoment";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
 import { Thread } from "@/components/Thread";
@@ -67,6 +69,9 @@ export default function OnboardingScreen() {
   const queryClient = useQueryClient();
   const appTheme = useAppTheme();
   const { showError, showInfo } = useFeedback();
+  const reducedMotion = useReducedMotion();
+  const completionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [completionVisible, setCompletionVisible] = useState(false);
   const hasHydrated = useRef(false);
   const [step, setStep] = useState<OnboardingStep>("family");
   const [status, setStatus] = useState<ParentStatus>();
@@ -166,6 +171,15 @@ export default function OnboardingScreen() {
 
     return () => clearTimeout(handle);
   }, [nickname, step]);
+
+  useEffect(
+    () => () => {
+      if (completionTimerRef.current) {
+        clearTimeout(completionTimerRef.current);
+      }
+    },
+    []
+  );
 
   const activeIndex = steps.findIndex((item) => item.id === step);
   const progressValue = useMemo(
@@ -361,7 +375,11 @@ export default function OnboardingScreen() {
         onboarding_completed: true,
         onboarding_step: "completed"
       });
-      router.replace("/home");
+      setCompletionVisible(true);
+      completionTimerRef.current = setTimeout(
+        () => router.replace("/home"),
+        reducedMotion ? 720 : 1_850
+      );
     } catch (error) {
       showError(error, "Kurulum tamamlanamadı");
     }
@@ -413,6 +431,31 @@ export default function OnboardingScreen() {
     if (previousStep) setStep(previousStep.id);
   }
 
+  if (completionVisible) {
+    const markerPosition =
+      status === "pregnant" ? 0.56 : status === "baby" ? 0.68 : 0.32;
+    const title =
+      status === "pregnant"
+        ? "Gebelik ipliğin başladı"
+        : status === "baby"
+          ? `${babyName.trim() || "Bebeğinin"} ipliği başladı`
+          : "Anne+ ipliğin hazır";
+    const detail =
+      status === "pregnant"
+        ? "Haftaların, hazırlıkların ve doğum düğümün bu çizgide birikecek."
+        : status === "baby"
+          ? "Doğum düğümünden büyüme, aşı ve bakım kayıtlarına aynı çizgide devam edeceksin."
+          : "İlk bilgini eklediğinde yaşam çizgin bu noktadan büyümeye başlayacak.";
+
+    return (
+      <OnboardingThreadMoment
+        detail={detail}
+        markerPosition={markerPosition}
+        title={title}
+      />
+    );
+  }
+
   return (
     <Screen>
       <View style={styles.container}>
@@ -440,13 +483,15 @@ export default function OnboardingScreen() {
         <View style={styles.progressWrap}>
           <View style={styles.threadProgress}>
             <Thread
+              accessibilityLabel={`Kurulum ilerlemesi: ${steps.length} adımın ${activeIndex + 1}. adımı`}
               color={appTheme.primary}
               height={42}
               mutedColor={colors.border}
               progress={progressValue}
+              semantic="progress"
               variant="progress"
             />
-            <View style={styles.stepDots}>
+            <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.stepDots}>
               {steps.map((item, index) => (
                 <View
                   key={item.id}
@@ -496,10 +541,9 @@ export default function OnboardingScreen() {
               </View>
 
               <Button
-                breathing
                 label={
                   updateStepMutation.isPending
-                    ? "Kaydediliyor..."
+                    ? "Kaydediliyor…"
                     : "Aile bilgilerini kaydet"
                 }
                 disabled={updateStepMutation.isPending}
@@ -518,7 +562,7 @@ export default function OnboardingScreen() {
                 body="Bu bilgiler gizli kalır. Ana sayfa, hatırlatmalar ve forum rozetin buna göre düzenlenir."
               />
 
-              <View style={{ gap: spacing.md }}>
+              <View accessibilityRole="radiogroup" style={{ gap: spacing.md }}>
                 <ChoiceCard
                   active={status === "pregnant"}
                   icon={<CalendarHeart color={colors.primary} size={24} />}
@@ -583,7 +627,7 @@ export default function OnboardingScreen() {
                   />
                   <View style={{ gap: spacing.sm }}>
                     <Text style={typography.label}>Cinsiyet</Text>
-                    <View style={styles.segmentRow}>
+                    <View accessibilityRole="radiogroup" style={styles.segmentRow}>
                       <SegmentButton
                         active={babyGender === "kiz"}
                         label="Kız"
@@ -605,8 +649,7 @@ export default function OnboardingScreen() {
               )}
 
               <Button
-                breathing
-                label={updateStepMutation.isPending ? "Kaydediliyor..." : "Devam et"}
+                label={updateStepMutation.isPending ? "Kaydediliyor…" : "Devam et"}
                 disabled={updateStepMutation.isPending}
                 onPress={saveDetails}
               />
@@ -622,13 +665,13 @@ export default function OnboardingScreen() {
                 title="Beslenme akışını sana göre sadeleştirelim"
                 body="Bu bir sağlık tercihi değildir; yalnızca bakım günlüğünde en sık kullandığın kayıtları öne çıkarır. Ayarlardan değiştirebilirsin."
               />
-              <View style={{ gap: spacing.md }}>
+              <View accessibilityRole="radiogroup" style={{ gap: spacing.md }}>
                 <ChoiceCard active={feedingMode === "breastfeeding"} icon={<Heart color={colors.primary} size={23} />} title="Emzirme" body="Emzirme tarafı ve süre takibini öne çıkarır." onPress={() => setFeedingMode("breastfeeding")} />
                 <ChoiceCard active={feedingMode === "pumping"} icon={<Milk color={colors.primary} size={23} />} title="Sağım" body="Çift taraflı zamanlayıcı ve süt stoğu ana akışta görünür." onPress={() => setFeedingMode("pumping")} />
                 <ChoiceCard active={feedingMode === "mixed"} icon={<Sparkles color={colors.primary} size={23} />} title="Karma beslenme" body="Emzirme, sağım ve biberon kısayollarını birlikte gösterir." onPress={() => setFeedingMode("mixed")} />
                 <ChoiceCard active={feedingMode === "formula"} icon={<Baby color={colors.primary} size={23} />} title="Mama" body="Biberon miktarı ve mama hatırlatmalarını öne çıkarır." onPress={() => setFeedingMode("formula")} />
               </View>
-              <Button breathing label={updateStepMutation.isPending ? "Kaydediliyor..." : "Akışımı kişiselleştir"} disabled={updateStepMutation.isPending} onPress={saveFeedingMode} />
+              <Button label={updateStepMutation.isPending ? "Kaydediliyor…" : "Akışımı kişiselleştir"} disabled={updateStepMutation.isPending} onPress={saveFeedingMode} />
             </View>
           </Card>
         ) : null}
@@ -646,7 +689,7 @@ export default function OnboardingScreen() {
                 }
               />
 
-              <View style={styles.themeGrid}>
+              <View accessibilityRole="radiogroup" style={styles.themeGrid}>
                 {themeOptions.map((item) => (
                   <ThemeChoice
                     key={item.id}
@@ -660,8 +703,7 @@ export default function OnboardingScreen() {
               </View>
 
               <Button
-                breathing
-                label={updateStepMutation.isPending ? "Kaydediliyor..." : "Temamı kaydet"}
+                label={updateStepMutation.isPending ? "Kaydediliyor…" : "Temamı kaydet"}
                 disabled={updateStepMutation.isPending}
                 onPress={saveTheme}
               />
@@ -698,7 +740,6 @@ export default function OnboardingScreen() {
                 </Text>
               </View>
               <Button
-                breathing
                 label="Takma adımı kaydet"
                 disabled={updateStepMutation.isPending}
                 onPress={saveNickname}
@@ -721,7 +762,6 @@ export default function OnboardingScreen() {
                 <FeatureRow label="Forum yorum ve beğeni bildirimleri" />
               </View>
               <Button
-                breathing
                 label="Bildirimleri aç ve başla"
                 onPress={() => completeOnboarding(true)}
               />
@@ -777,7 +817,9 @@ function ChoiceCard({
 
   return (
     <Pressable
-      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: active }}
       onPress={onPress}
       style={[
         styles.choiceCard,
@@ -815,7 +857,9 @@ function ThemeChoice({
 
   return (
     <Pressable
-      accessibilityRole="button"
+      accessibilityLabel={`${label}${isSuggested ? ", önerilen" : ""}`}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: active }}
       onPress={onPress}
       style={[
         styles.themeChoice,
@@ -847,7 +891,9 @@ function SegmentButton({
 
   return (
     <Pressable
-      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: active }}
       onPress={onPress}
       style={[styles.segmentButton, active && styles.segmentButtonActive]}
     >
@@ -1008,6 +1054,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     gap: spacing.sm,
     minHeight: 126,
+    minWidth: 144,
     padding: spacing.md
   },
   themeChoiceActive: {
@@ -1044,6 +1091,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: radii.pill,
     flex: 1,
+    minHeight: 48,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm
   },
