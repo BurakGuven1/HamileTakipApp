@@ -5,6 +5,11 @@ import type { Tables, TablesInsert, Views } from "@/types/database";
 export type ForumCategory = Tables<"forum_categories">;
 export type PublicForumPost = Views<"forum_posts_public">;
 export type PublicForumComment = Views<"forum_comments_public">;
+export type BlockedForumUser = {
+  blocked_at: string;
+  blocked_user_id: string;
+  forum_nickname: string;
+};
 
 export async function listForumCategories() {
   const { data, error } = await supabase
@@ -194,12 +199,64 @@ export async function reportForumContent(report: TablesInsert<"forum_reports">) 
     .single();
 
   if (error) {
+    if (error.code === "23505") {
+      throw new Error(
+        "Bu içeriği daha önce raporladın. İlk raporun 24 saat içinde incelenecek."
+      );
+    }
     throw error;
   }
 
   await trackEvent("forum_post_reported", {
     target_type: report.target_type,
     target_id: report.target_id
+  });
+
+  return data;
+}
+
+export async function listBlockedForumUsers() {
+  const { data, error } = await supabase.rpc("list_forum_blocks");
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as BlockedForumUser[];
+}
+
+export async function blockForumAuthor(
+  targetType: "post" | "comment",
+  targetId: string
+) {
+  const { data, error } = await supabase.rpc("block_forum_author", {
+    p_target_id: targetId,
+    p_target_type: targetType
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  await trackEvent("forum_user_blocked", {
+    target_type: targetType,
+    target_id: targetId
+  });
+
+  return data;
+}
+
+export async function unblockForumAuthor(blockedUserId: string) {
+  const { data, error } = await supabase.rpc("unblock_forum_author", {
+    p_blocked_user_id: blockedUserId
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  await trackEvent("forum_user_unblocked", {
+    blocked_user_id: blockedUserId
   });
 
   return data;

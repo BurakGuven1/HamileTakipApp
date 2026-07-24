@@ -1,10 +1,9 @@
 // ============================================================
 // Edge Function: moderate-forum-content
 // ============================================================
-// AMAÇ: Yeni bir forum_posts veya forum_comments satırı eklendiğinde
-// basit bir anahtar kelime filtresiyle içeriği tarar. Ağır ihlallerde
-// içeriği otomatik gizler (is_hidden = true), hafif şüpheli durumlarda
-// sadece işaretler (is_flagged = true) ki moderatör incelesin.
+// AMAÇ: Veritabanı ön-filtresine ek bir savunma katmanı olarak yeni forum
+// içeriğini tarar. Ağır ihlallerde içeriği gizler, bağlama bağlı olabilecek
+// ifadeleri moderatör kuyruğu için işaretler.
 //
 // TETİKLEME: Supabase "Database Webhooks" özelliği ile.
 //   Dashboard > Database > Webhooks > Create a new webhook
@@ -12,16 +11,12 @@
 //     - Events: Insert
 //     - Type: HTTP Request
 //     - URL: https://<PROJECT_REF>.supabase.co/functions/v1/moderate-forum-content
-//     - HTTP Headers: Authorization: Bearer <SERVICE_ROLE_KEY veya ayrı bir secret>
+//     - HTTP Headers:
+//         Authorization: Bearer <SERVICE_ROLE_KEY>
+//         x-moderation-secret: <MODERATION_WEBHOOK_SECRET>
 //
-// NOT: Bu, gerçek bir toksisite/ML modeli değildir — başlangıç seviyesi bir
-// anahtar kelime filtresidir. Prod'a çıkmadan önce:
-//   1) BANNED_WORDS_SEVERE / BANNED_WORDS_MILD listelerini genişletin
-//      (Türkçe küfür/hakaret sözlüğü kütüphaneleri araştırılabilir)
-//   2) İsterseniz OpenAI/Anthropic moderation API'si gibi bir servisle
-//      bu fonksiyonu güçlendirebilirsiniz (ek maliyet + gecikme getirir)
-//   3) forum_reports tablosundaki kullanıcı raporlarını düzenli inceleyen
-//      bir moderatör süreci MUTLAKA olmalı — otomatik filtre tek başına yeterli değildir
+// Kullanıcı raporları ayrı 24 saatlik moderasyon kuyruğunda insan tarafından
+// değerlendirilir; otomatik filtre tek başına nihai hesap yaptırımı uygulamaz.
 // ============================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -29,18 +24,34 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-moderation-secret",
   "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
 };
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const WEBHOOK_SECRET = Deno.env.get("MODERATION_WEBHOOK_SECRET") ?? "";
 
-// Örnek/başlangıç listesi — gerçek kullanım öncesi mutlaka genişletilmeli.
-// Küçük harfe çevrilip kelime bazlı kontrol edilir.
-const BANNED_WORDS_SEVERE = ["küfür_ornek1", "hakaret_ornek1"]; // ağır ihlal -> otomatik gizle
-const BANNED_WORDS_MILD = ["aptal", "salak", "gerizekalı"]; // hafif -> flagle, moderatör baksın
+const SEVERE_TERMS = new Set([
+  "amk",
+  "escort",
+  "gerizekalı",
+  "onlyfans",
+  "orospu",
+  "pezevenk",
+  "pornografi",
+  "porno",
+  "sikik",
+  "siktir",
+  "şerefsiz",
+]);
+
+const REVIEW_TERMS = new Set([
+  "aptal",
+  "salak",
+  "beceriksiz",
+  "iğrenç",
+]);
 
 interface DatabaseWebhookPayload {
   type: "INSERT" | "UPDATE" | "DELETE";
@@ -54,9 +65,24 @@ interface DatabaseWebhookPayload {
 }
 
 function scanText(text: string): "severe" | "mild" | "clean" {
-  const lower = text.toLowerCase();
-  if (BANNED_WORDS_SEVERE.some((w) => lower.includes(w))) return "severe";
-  if (BANNED_WORDS_MILD.some((w) => lower.includes(w))) return "mild";
+  const normalized = text.normalize("NFKC").toLocaleLowerCase("tr-TR");
+  const tokens = normalized
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+  const compact = normalized.replace(/[^\p{L}\p{N}]+/gu, "");
+
+  if (
+    tokens.some((token) => SEVERE_TERMS.has(token)) ||
+    /(seni|sizi).{0,18}(öldür|gebert|döver|tecavüz)/u.test(normalized) ||
+    /(seniöldür|siziöldür|senigebert|sizigebert|çıplakfotoğrafgönder|nudegönder)/u.test(
+      compact,
+    )
+  ) {
+    return "severe";
+  }
+
+  if (tokens.some((token) => REVIEW_TERMS.has(token))) return "mild";
   return "clean";
 }
 
@@ -65,22 +91,37 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  // Webhook secret kontrolü (Database Webhook header'ında gönderilmeli)
-  if (WEBHOOK_SECRET) {
-    const authHeader = req.headers.get("authorization") ?? "";
-    if (authHeader !== `Bearer ${WEBHOOK_SECRET}`) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !WEBHOOK_SECRET) {
+    return new Response(JSON.stringify({ error: "moderasyon yapılandırması eksik" }), {
+      status: 503,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const requestSecret = req.headers.get("x-moderation-secret") ?? "";
+  const bearerSecret = (req.headers.get("authorization") ?? "").replace(
+    /^Bearer\s+/i,
+    "",
+  );
+  if (
+    requestSecret !== WEBHOOK_SECRET &&
+    bearerSecret !== WEBHOOK_SECRET
+  ) {
+    return new Response(JSON.stringify({ error: "unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
     const payload: DatabaseWebhookPayload = await req.json();
     const { table, record } = payload;
 
-    if (!record?.id || !record?.content) {
+    if (
+      !["forum_posts", "forum_comments"].includes(table) ||
+      !record?.id ||
+      !record?.content
+    ) {
       return new Response(JSON.stringify({ error: "geçersiz payload" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

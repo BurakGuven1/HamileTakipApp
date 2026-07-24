@@ -1,6 +1,5 @@
 import type { PropsWithChildren } from "react";
-import type { StyleProp, ViewStyle } from "react-native";
-import Animated, { Easing, FadeInDown, useReducedMotion } from "react-native-reanimated";
+import { View, type StyleProp, type ViewStyle } from "react-native";
 
 type RevealProps = PropsWithChildren<{
   delay?: number;
@@ -8,20 +7,9 @@ type RevealProps = PropsWithChildren<{
 }>;
 
 export function Reveal({ children, delay = 0, style }: RevealProps) {
-  const reducedMotion = useReducedMotion();
+  void delay;
 
   return (
-    <Animated.View
-      entering={
-        reducedMotion
-          ? undefined
-          : FadeInDown.delay(delay)
-              .duration(380)
-              .easing(Easing.out(Easing.exp))
-      }
-      style={style}
-    >
-      {children}
-    </Animated.View>
+    <View style={style}>{children}</View>
   );
 }

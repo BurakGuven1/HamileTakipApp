@@ -23,7 +23,7 @@ import {
   Syringe,
   Wrench
 } from "lucide-react-native";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import {
   Pressable,
   ScrollView,
@@ -31,7 +31,7 @@ import {
   Text,
   View
 } from "react-native";
-import Animated, { Easing, FadeIn, FadeOut, useReducedMotion } from "react-native-reanimated";
+import { useReducedMotion } from "react-native-reanimated";
 
 import { listBabies } from "@/api/babies";
 import { getCareHandoverSnapshot, getCurrentCareUserId, listCareJournalEntries, subscribeToCareCoordination, takeOverBabyCare, type CareJournalEntry } from "@/api/careJournal";
@@ -44,6 +44,7 @@ import {
 } from "@/api/vaccinations";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import { EmptyState } from "@/components/EmptyState";
 import { MetricCard } from "@/components/MetricCard";
 import { PregnancyJourneyArtwork } from "@/components/PregnancyJourneyArtwork";
 import { QueryState } from "@/components/QueryState";
@@ -69,7 +70,6 @@ const motherBabyIllustration = require("../../../assets/illustrations/mother-bab
 export default function HomeScreen() {
   const queryClient = useQueryClient();
   const { showError, showInfo } = useFeedback();
-  const [showDaysUntilDue, setShowDaysUntilDue] = useState(false);
   const reducedMotion = useReducedMotion();
   const profileQuery = useQuery({
     queryKey: ["current-profile"],
@@ -208,23 +208,10 @@ export default function HomeScreen() {
     return () => clearTimeout(timer);
   }, [firstBaby, profile, showInfo, weekInfo]);
 
-  useEffect(() => {
-    if (!profile?.is_pregnant || !pregnancyProgress || reducedMotion) {
-      setShowDaysUntilDue(false);
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setShowDaysUntilDue((current) => !current);
-    }, 4_000);
-
-    return () => clearInterval(interval);
-  }, [pregnancyProgress, profile?.is_pregnant, reducedMotion]);
-
   if (profileQuery.isLoading || babiesQuery.isLoading || membershipQuery.isLoading) {
     return (
       <Screen scroll={false}>
-        <QueryState loading description="Ana sayfan hazırlanıyor…" />
+        <QueryState loading description="Aile ipliğin hazırlanıyor…" shape="home" />
       </Screen>
     );
   }
@@ -233,7 +220,7 @@ export default function HomeScreen() {
     return (
       <Screen scroll={false}>
         <QueryState
-          description="Profil ve bebek bilgileri alınamadı. Bağlantını kontrol edip yeniden deneyebilirsin."
+          description="Profil ve bebek bilgileri alınamadı. Bağlantını kontrol et ve yeniden dene."
           onRetry={() => void Promise.all([profileQuery.refetch(), babiesQuery.refetch(), membershipQuery.refetch()])}
           retrying={profileQuery.isFetching || babiesQuery.isFetching || membershipQuery.isFetching}
           title="Ana sayfa yüklenemedi"
@@ -268,7 +255,16 @@ export default function HomeScreen() {
                 ) : (
                   <>
                     <View style={styles.visualThread}>
-                      <Thread height={126} mutedColor={appTheme.accent} progress={0.84} variant="decorative" />
+                      <Thread
+                        accessibilityLabel="İlk aile düğümünü eklemek için açık ilmek"
+                        color={appTheme.primary}
+                        height={126}
+                        markers={[{ kind: "loop", position: 0.18 }]}
+                        mutedColor={appTheme.accentSoft}
+                        progress={0.19}
+                        semantic="timeline"
+                        variant="progress"
+                      />
                     </View>
                     <View style={styles.sizeVisual}>
                       <View
@@ -289,7 +285,7 @@ export default function HomeScreen() {
                 <View style={styles.visualFooter}>
                   <View style={styles.heroFooterCopy}>
                     <Text style={styles.heroTitle}>{heroTitle}</Text>
-                    <Text numberOfLines={2} style={styles.heroText}>{heroBody}</Text>
+                    <Text style={styles.heroText}>{heroBody}</Text>
                   </View>
                   <Link href="/articles" asChild>
                     <Pressable accessibilityRole="button" style={styles.openArticlesButton}>
@@ -323,18 +319,41 @@ export default function HomeScreen() {
                 {pregnancyProgress ? (
                   <View
                     accessibilityLiveRegion="polite"
-                    style={[styles.pregnancyStatusBox, { backgroundColor: appTheme.primarySoft }]}
+                    style={[styles.livingThreadStage, { backgroundColor: appTheme.primarySoft }]}
                   >
-                    <Animated.Text
-                      key={showDaysUntilDue ? "days-until-due" : "pregnancy-day"}
-                      entering={reducedMotion ? undefined : FadeIn.duration(260).easing(Easing.out(Easing.cubic))}
-                      exiting={reducedMotion ? undefined : FadeOut.duration(180).easing(Easing.inOut(Easing.quad))}
-                      style={styles.pregnancyStatusText}
-                    >
-                      {showDaysUntilDue
-                        ? `${pregnancyProgress.daysUntilDue} gün kaldı`
-                        : `${pregnancyProgress.day}. günlük hamile`}
-                    </Animated.Text>
+                    <View style={styles.livingThreadHeading}>
+                      <View style={styles.livingThreadCopy}>
+                        <Text style={[styles.livingThreadEyebrow, { color: appTheme.primary }]}>
+                          Yaşayan İplik
+                        </Text>
+                        <Text style={styles.livingThreadTitle}>
+                          {week}. hafta düğümü
+                        </Text>
+                      </View>
+                      <Text style={[styles.livingThreadValue, { color: appTheme.primary }]}>
+                        %{Math.round((week / 40) * 100)}
+                      </Text>
+                    </View>
+                    <Thread
+                      accessibilityLabel={`Gebelik ipliği, 40 haftanın ${week} haftası tamamlandı`}
+                      color={appTheme.primary}
+                      height={72}
+                      markers={[
+                        { kind: "knot", position: week / 40 },
+                        { kind: "loop", position: Math.min(0.98, (week + 4) / 40) }
+                      ]}
+                      mutedColor={colors.border}
+                      progress={week / 40}
+                      variant="progress"
+                    />
+                    <View style={styles.livingThreadFooter}>
+                      <Text style={styles.livingThreadMeta}>
+                        {pregnancyProgress.day}. gün
+                      </Text>
+                      <Text style={styles.livingThreadMeta}>
+                        Doğuma {pregnancyProgress.daysUntilDue} gün
+                      </Text>
+                    </View>
                   </View>
                 ) : null}
 
@@ -502,10 +521,10 @@ export default function HomeScreen() {
         </Reveal>
 
         {firstBaby && careHandoverQuery.isLoading ? (
-          <QueryState compact loading description="Canlı aile bakımı yükleniyor…" />
+          <QueryState compact loading description="Bakım özeti hazırlanıyor…" shape="home" />
         ) : firstBaby && careHandoverQuery.isError ? (
           <QueryState
-            description="Canlı bakım özeti alınamadı."
+            description="Canlı bakım özeti alınamadı. Bağlantını kontrol et ve yeniden dene."
             onRetry={() => void careHandoverQuery.refetch()}
             retrying={careHandoverQuery.isFetching}
           />
@@ -516,7 +535,7 @@ export default function HomeScreen() {
                 <View style={{ flex: 1, gap: spacing.xs }}>
                   <Text style={typography.eyebrow}>Canlı aile vardiyası</Text>
                   <Text style={typography.heading2}>{firstBaby.name} için bakımı devral</Text>
-                  <Text numberOfLines={2} style={typography.body}>
+                  <Text style={typography.body}>
                     {careHandoverQuery.data?.handover
                       ? `${careHandoverQuery.data.handover.caregiver_name} ${careHomeRelativeTimeValue(careHandoverQuery.data.handover.started_at)} bakımı devraldı.`
                       : "Şu anda atanmış bir bakıcı yok."}
@@ -533,7 +552,7 @@ export default function HomeScreen() {
               {careHandoverQuery.data?.handover?.caregiver_id === currentUserQuery.data ? (
                 <Button testID="open-care-summary" label="Bakım sende · özeti aç" onPress={() => router.push("/care-journal")} />
               ) : (
-                <Button disabled={handoverMutation.isPending} label={handoverMutation.isPending ? "Devralınıyor..." : "Bakımı devraldım"} onPress={() => handoverMutation.mutate()} />
+                <Button disabled={handoverMutation.isPending} label={handoverMutation.isPending ? "Devralınıyor…" : "Bakımı devraldım"} onPress={() => handoverMutation.mutate()} />
               )}
             </View>
           </Card>
@@ -545,7 +564,7 @@ export default function HomeScreen() {
               <View style={styles.cardHeader}>
                 <View style={{ gap: spacing.xs, flex: 1 }}>
                   <Text style={typography.heading2}>Deneyimini kişiselleştir</Text>
-                  <Text numberOfLines={2} style={typography.body}>
+                  <Text style={typography.body}>
                     Gebelik veya bebek bilgisi eklediğinde ana ekran sana özel
                     hatırlatmalar ve gelişim özeti gösterir.
                   </Text>
@@ -589,7 +608,7 @@ export default function HomeScreen() {
                     {formatDate(nextVaccination.scheduled_date)}
                   </Text>
                 ) : (
-                  <Text numberOfLines={2} style={typography.body}>
+                  <Text style={typography.body}>
                     Şu an yaklaşan aşı yok. Yeni kayıt ekledikçe burada görünür.
                   </Text>
                 )}
@@ -618,13 +637,20 @@ export default function HomeScreen() {
         </View>
 
         {featuredArticlesQuery.isLoading ? (
-          <QueryState compact loading description="Makaleler yükleniyor…" />
+          <QueryState compact loading description="Haftana uygun rehberler hazırlanıyor…" shape="home" />
         ) : featuredArticlesQuery.isError ? (
           <QueryState
             compact
-            description="Makaleler şu anda alınamadı."
+            description="Makaleler alınamadı. Bağlantını kontrol et ve yeniden dene."
             onRetry={() => void featuredArticlesQuery.refetch()}
             retrying={featuredArticlesQuery.isFetching}
+          />
+        ) : featuredArticles.length === 0 ? (
+          <EmptyState
+            actionLabel="Tüm rehberleri gör"
+            description="Gebelik haftanı veya bebeğinin yaşını eklediğinde en uygun rehberler burada sıralanır."
+            onActionPress={() => router.push("/articles")}
+            title="İlk rehberini keşfet"
           />
         ) : <ScrollView
           horizontal
@@ -949,20 +975,48 @@ const styles = StyleSheet.create({
     ...typography.label,
     color: colors.text
   },
-  pregnancyStatusBox: {
+  livingThreadStage: {
     ...radii.card,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 56,
+    gap: spacing.sm,
     overflow: "hidden",
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md
   },
-  pregnancyStatusText: {
-    ...typography.heading2,
+  livingThreadHeading: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: spacing.md,
+    justifyContent: "space-between"
+  },
+  livingThreadCopy: {
+    flex: 1,
+    gap: 2
+  },
+  livingThreadEyebrow: {
+    ...typography.label,
+    fontSize: 13,
+    lineHeight: 18
+  },
+  livingThreadTitle: {
+    ...typography.heading3,
     color: colors.text,
-    position: "absolute",
-    textAlign: "center"
+    fontSize: 18,
+    lineHeight: 24
+  },
+  livingThreadValue: {
+    ...typography.dataStrong,
+    fontSize: 18,
+    lineHeight: 24
+  },
+  livingThreadFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between"
+  },
+  livingThreadMeta: {
+    ...typography.label,
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18
   },
   weekCard: {
     borderWidth: 1

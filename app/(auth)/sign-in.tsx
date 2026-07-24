@@ -1,15 +1,20 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
-import { Thread } from "@/components/Thread";
 import { signInFatherWithFamilyCode } from "@/api/familyAccess";
 import { getEffectivePremiumAccess } from "@/api/subscriptions";
 import { openLegalPage, type LegalPage } from "@/config/legal";
+import {
+  APP_EULA_VERSION,
+  hasAcceptedAppAgreementLocally,
+  recordLegalAcceptance,
+  setAppAgreementAccepted
+} from "@/lib/legalAcceptance";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { colors, radii, spacing, typography } from "@/theme";
@@ -31,9 +36,31 @@ export default function SignInScreen() {
   const isFather = audience === "father";
   const isSignUp = !isFather && mode === "sign-up";
 
+  useEffect(() => {
+    let active = true;
+
+    hasAcceptedAppAgreementLocally()
+      .then((accepted) => {
+        if (active) setAcceptedLegal(accepted);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   async function submit() {
     setSubmitAttempted(true);
     const cleanFamilyCode = familyCode.replace(/\D/g, "");
+
+    if (!acceptedLegal) {
+      showInfo(
+        "Devam etmek için EULA’yı, Kullanım Şartları’nı ve topluluğun sıfır tolerans kurallarını kabul et.",
+        "Ortak kuralları kabul et"
+      );
+      return;
+    }
 
     if (isFather) {
       if (cleanFamilyCode.length !== 7) {
@@ -44,6 +71,9 @@ export default function SignInScreen() {
       setLoading(true);
       try {
         await signInFatherWithFamilyCode(cleanFamilyCode);
+        await recordLegalAcceptance(APP_EULA_VERSION, "auth").catch(
+          () => undefined
+        );
         const premiumAccess = await getEffectivePremiumAccess().catch(() => null);
         const successMessage =
           premiumAccess?.accessSource === "family_trial" &&
@@ -68,14 +98,6 @@ export default function SignInScreen() {
       showInfo(
         "Geçerli bir e-posta ve en az 8 karakterli şifre gerekli.",
         "Bilgileri kontrol et"
-      );
-      return;
-    }
-
-    if (isSignUp && !acceptedLegal) {
-      showInfo(
-        "Hesap oluşturmadan önce gizlilik politikasını ve kullanım şartlarını onaylamalısın.",
-        "Onay gerekli"
       );
       return;
     }
@@ -107,6 +129,9 @@ export default function SignInScreen() {
         if (error) throw error;
       }
 
+      await recordLegalAcceptance(APP_EULA_VERSION, "auth").catch(
+        () => undefined
+      );
       router.replace("/");
     } catch (error) {
       showError(error, isSignUp ? "Kayıt tamamlanamadı" : "Giriş yapılamadı");
@@ -138,6 +163,11 @@ export default function SignInScreen() {
   }
 
   async function openLegalDocument(page: LegalPage) {
+    if (page === "terms") {
+      router.push("/legal/community-terms");
+      return;
+    }
+
     try {
       await openLegalPage(page);
     } catch (error) {
@@ -145,13 +175,22 @@ export default function SignInScreen() {
     }
   }
 
+  async function toggleLegalAcceptance() {
+    const nextValue = !acceptedLegal;
+    setAcceptedLegal(nextValue);
+
+    try {
+      await setAppAgreementAccepted(nextValue);
+    } catch (error) {
+      setAcceptedLegal(!nextValue);
+      showError(error, "Onay bu cihazda kaydedilemedi");
+    }
+  }
+
   return (
     <Screen>
       <View style={styles.container}>
         <View style={styles.hero}>
-          <View style={styles.heroThread}>
-            <Thread height={108} progress={0.72} variant="decorative" />
-          </View>
           <Text style={typography.eyebrow}>Anne+ Takip</Text>
           <Text style={typography.heading1}>
             {isFather
@@ -224,53 +263,6 @@ export default function SignInScreen() {
                   value={password}
                   onChangeText={setPassword}
                 />
-                {isSignUp ? (
-                  <View style={styles.legalConsent}>
-                    <Pressable
-                      accessibilityLabel="Gizlilik politikası ve kullanım şartlarını kabul et"
-                      accessibilityRole="checkbox"
-                      accessibilityState={{ checked: acceptedLegal }}
-                      hitSlop={10}
-                      onPress={() => setAcceptedLegal((value) => !value)}
-                      style={styles.legalCheckbox}
-                    >
-                      <Text style={styles.legalCheckboxText}>
-                        {acceptedLegal ? "✓" : ""}
-                      </Text>
-                    </Pressable>
-                    <Text style={styles.legalConsentText}>
-                      Gizlilik Politikası ve Kullanım Şartları’nı okudum, kişisel
-                      verilerimin bu metinlerde açıklandığı şekilde işlenmesini kabul
-                      ediyorum.
-                    </Text>
-                    <View style={styles.legalLinks}>
-                      <Pressable
-                        accessibilityRole="link"
-                        onPress={() => openLegalDocument("privacy")}
-                      >
-                        <Text style={styles.linkText}>Gizlilik Politikası</Text>
-                      </Pressable>
-                      <Pressable
-                        accessibilityRole="link"
-                        onPress={() => openLegalDocument("terms")}
-                      >
-                        <Text style={styles.linkText}>Kullanım Şartları</Text>
-                      </Pressable>
-                      <Pressable
-                        accessibilityRole="link"
-                        onPress={() => openLegalDocument("kvkkDisclosure")}
-                      >
-                        <Text style={styles.linkText}>KVKK Aydınlatma</Text>
-                      </Pressable>
-                      <Pressable
-                        accessibilityRole="link"
-                        onPress={() => openLegalDocument("explicitConsent")}
-                      >
-                        <Text style={styles.linkText}>Açık Rıza Metni</Text>
-                      </Pressable>
-                    </View>
-                  </View>
-                ) : null}
               </>
             ) : null}
 
@@ -290,11 +282,83 @@ export default function SignInScreen() {
               </View>
             ) : null}
 
+            <View style={styles.legalConsent}>
+              <Pressable
+                accessibilityLabel="EULA, kullanım şartları ve topluluk kurallarını kabul et"
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: acceptedLegal }}
+                hitSlop={10}
+                onPress={() => void toggleLegalAcceptance()}
+                style={[
+                  styles.legalCheckbox,
+                  acceptedLegal && styles.legalCheckboxAccepted
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.legalCheckboxText,
+                    acceptedLegal && styles.legalCheckboxTextAccepted
+                  ]}
+                >
+                  {acceptedLegal ? "✓" : ""}
+                </Text>
+              </Pressable>
+              <Text style={styles.legalConsentText}>
+                Apple Standard EULA’yı, Kullanım Şartları ve Topluluk
+                Kuralları’nı okudum. Hakaret, taciz ve uygunsuz içeriğe sıfır
+                tolerans politikasını kabul ediyorum.
+                {isSignUp
+                  ? " Kişisel verilerimin Gizlilik Politikası ve KVKK metinlerinde açıklandığı şekilde işlenmesini kabul ediyorum."
+                  : ""}
+              </Text>
+              <View style={styles.legalLinks}>
+                <Pressable
+                  accessibilityRole="link"
+                  onPress={() => openLegalDocument("appleEula")}
+                >
+                  <Text style={styles.linkText}>Apple Standard EULA</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="link"
+                  onPress={() => openLegalDocument("terms")}
+                >
+                  <Text style={styles.linkText}>Kullanım Şartları</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="link"
+                  onPress={() => openLegalDocument("privacy")}
+                >
+                  <Text style={styles.linkText}>Gizlilik Politikası</Text>
+                </Pressable>
+                {isSignUp ? (
+                  <>
+                    <Pressable
+                      accessibilityRole="link"
+                      onPress={() => openLegalDocument("kvkkDisclosure")}
+                    >
+                      <Text style={styles.linkText}>KVKK Aydınlatma</Text>
+                    </Pressable>
+                    <Pressable
+                      accessibilityRole="link"
+                      onPress={() => openLegalDocument("explicitConsent")}
+                    >
+                      <Text style={styles.linkText}>Açık Rıza Metni</Text>
+                    </Pressable>
+                  </>
+                ) : null}
+              </View>
+              {submitAttempted && !acceptedLegal ? (
+                <Text accessibilityRole="alert" style={styles.legalError}>
+                  Devam etmek için kutuyu işaretle.
+                </Text>
+              ) : null}
+            </View>
+
             <Button
               disabled={loading || !isSupabaseConfigured}
               label={
                 loading
-                  ? "Bekle..."
+                  ? "Bekle…"
                   : isFather
                     ? "Baba olarak bağlan"
                     : isSignUp
@@ -360,13 +424,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     padding: spacing.lg
   },
-  heroThread: {
-    bottom: -28,
-    left: spacing.lg,
-    opacity: 0.3,
-    position: "absolute",
-    right: -spacing.lg
-  },
   heroText: {
     ...typography.body,
     color: colors.text
@@ -421,10 +478,20 @@ const styles = StyleSheet.create({
     ...typography.label,
     color: colors.primary
   },
+  legalCheckboxAccepted: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary
+  },
+  legalCheckboxTextAccepted: {
+    color: colors.onPrimary
+  },
   legalConsent: {
+    backgroundColor: colors.surfaceMuted,
+    ...radii.card,
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing.sm
+    gap: spacing.sm,
+    padding: spacing.md
   },
   legalConsentText: {
     ...typography.body,
@@ -438,8 +505,14 @@ const styles = StyleSheet.create({
     flexBasis: "100%",
     flexDirection: "row",
     flexWrap: "wrap",
-    paddingLeft: 32,
+    paddingLeft: 36,
     rowGap: spacing.sm
+  },
+  legalError: {
+    ...typography.label,
+    color: colors.danger,
+    flexBasis: "100%",
+    paddingLeft: 36
   },
   warning: {
     ...typography.body,

@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
+import { router } from "expo-router";
 import {
   ArrowLeft,
   Baby,
   CalendarHeart,
+  Flag,
   Heart,
   HeartPulse,
   MessageCircle,
@@ -12,7 +14,8 @@ import {
   Plus,
   ShieldCheck,
   Sparkles,
-  UserRound
+  UserRound,
+  UserX
 } from "lucide-react-native";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -25,14 +28,18 @@ import {
 } from "react-native";
 
 import {
+  blockForumAuthor,
   createForumComment,
   createForumPost,
+  listBlockedForumUsers,
   listForumCategories,
   listPublicForumComments,
   listPublicForumPosts,
   reportForumContent,
   toggleForumCommentLike,
   toggleForumPostLike,
+  unblockForumAuthor,
+  type BlockedForumUser,
   type PublicForumComment,
   type PublicForumPost
 } from "@/api/forum";
@@ -41,17 +48,19 @@ import { getCurrentProfile } from "@/api/profiles";
 import { Badge } from "@/components/Badge";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import { CommunityAgreementGate } from "@/components/CommunityAgreementGate";
 import { EmptyState } from "@/components/EmptyState";
 import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
+import { openLegalPage } from "@/config/legal";
 import { PremiumFeatureBoundary } from "@/features/subscription/PremiumFeatureBoundary";
 import {
-  blockForumNickname,
-  getBlockedForumNicknames,
-  unblockForumNickname
-} from "@/lib/forumBlocks";
+  acceptForumAgreement,
+  hasAcceptedForumAgreement
+} from "@/lib/legalAcceptance";
 import { trackEvent } from "@/lib/analytics";
+import { supabase } from "@/lib/supabase";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { colors, radii, spacing, typography } from "@/theme";
@@ -66,7 +75,7 @@ export default function ForumScreen() {
   if (fatherRoleQuery.isPending) {
     return (
       <Screen scroll={false}>
-        <QueryState loading description="Forum erişimi doğrulanıyor…" />
+        <QueryState loading description="Topluluk ipliği hazırlanıyor…" shape="forum" />
       </Screen>
     );
   }
@@ -76,7 +85,7 @@ export default function ForumScreen() {
       <Screen scroll={false}>
         <QueryState
           title="Erişim doğrulanamadı"
-          description="Anne forumuna erişim bilgisi şu anda doğrulanamıyor. Bağlantını kontrol edip tekrar dene."
+          description="Anne forumuna erişim bilgisi doğrulanamadı. Bağlantını kontrol et ve yeniden dene."
           onRetry={() => void fatherRoleQuery.refetch()}
           retrying={fatherRoleQuery.isFetching}
         />
@@ -96,14 +105,108 @@ export default function ForumScreen() {
   }
 
   return (
-    <PremiumFeatureBoundary
-      description="Anonim anne topluluğunda soru sormak, yorum yapmak ve güvenli forum akışına katılmak Premium ile açılır."
-      featureKey="mother_forum"
-      title="Anne forumu"
-    >
-      <ForumContent />
-    </PremiumFeatureBoundary>
+    <ForumAgreementBoundary>
+      <PremiumFeatureBoundary
+        description="Anonim anne topluluğunda soru sormak, yorum yapmak ve güvenli forum akışına katılmak Premium ile açılır."
+        featureKey="mother_forum"
+        title="Anne forumu"
+      >
+        <ForumContent />
+      </PremiumFeatureBoundary>
+    </ForumAgreementBoundary>
   );
+}
+
+function ForumAgreementBoundary({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
+  const { showError, showSuccess } = useFeedback();
+  const agreementQuery = useQuery({
+    queryKey: ["forum-community-agreement"],
+    queryFn: async () => {
+      const {
+        data: { user },
+        error
+      } = await supabase.auth.getUser();
+
+      if (error) throw error;
+      if (!user) throw new Error("Topluluğa girmek için oturum açmalısın.");
+
+      return {
+        accepted: await hasAcceptedForumAgreement(user.id),
+        userId: user.id
+      };
+    }
+  });
+
+  const acceptMutation = useMutation({
+    mutationFn: async () => {
+      if (!agreementQuery.data?.userId) {
+        throw new Error("Topluluk onayı için oturum bilgisi bulunamadı.");
+      }
+
+      await acceptForumAgreement(agreementQuery.data.userId);
+    },
+    onSuccess: () => {
+      queryClient.setQueryData(["forum-community-agreement"], {
+        accepted: true,
+        userId: agreementQuery.data?.userId
+      });
+      showSuccess(
+        "Topluluk kuralları bu hesap için kaydedildi.",
+        "Foruma hoş geldin"
+      );
+    },
+    onError: (error) => showError(error, "Topluluk onayı kaydedilemedi")
+  });
+
+  if (agreementQuery.isPending) {
+    return (
+      <Screen scroll={false}>
+        <QueryState
+          loading
+          description="Topluluk kuralları hazırlanıyor…"
+          shape="forum"
+        />
+      </Screen>
+    );
+  }
+
+  if (agreementQuery.isError) {
+    return (
+      <Screen scroll={false}>
+        <QueryState
+          description="Topluluk onayı doğrulanamadı. Bağlantını kontrol et ve yeniden dene."
+          onRetry={() => void agreementQuery.refetch()}
+          retrying={agreementQuery.isFetching}
+          title="Topluluk açılamadı"
+        />
+      </Screen>
+    );
+  }
+
+  if (!agreementQuery.data.accepted) {
+    return (
+      <>
+        <Screen scroll={false}>
+          <View style={styles.agreementPreview}>
+            <ShieldCheck color={colors.primary} size={32} />
+            <Text style={typography.heading1}>Güvenli bir topluluk</Text>
+            <Text style={styles.agreementPreviewText}>
+              Üç kısa ortak kuralı kabul ettiğinde forum açılacak.
+            </Text>
+          </View>
+        </Screen>
+        <CommunityAgreementGate
+          busy={acceptMutation.isPending}
+          onAccept={() => acceptMutation.mutate()}
+          onDecline={() => router.replace("/home")}
+          visible
+        />
+      </>
+    );
+  }
+
+  return children;
 }
 
 function ForumContent() {
@@ -115,7 +218,7 @@ function ForumContent() {
   const [feedMode, setFeedMode] = useState<"feed" | "mine">("feed");
   const [composerOpen, setComposerOpen] = useState(false);
   const [commentComposerOpen, setCommentComposerOpen] = useState(false);
-  const [blockedNicknames, setBlockedNicknames] = useState<string[]>([]);
+  const [blockedUsers, setBlockedUsers] = useState<BlockedForumUser[]>([]);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [commentText, setCommentText] = useState("");
@@ -154,7 +257,7 @@ function ForumContent() {
   }, [selectedCategoryId]);
 
   useEffect(() => {
-    getBlockedForumNicknames().then(setBlockedNicknames).catch(() => undefined);
+    listBlockedForumUsers().then(setBlockedUsers).catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -209,6 +312,7 @@ function ForumContent() {
         () => undefined
       );
       await queryClient.invalidateQueries({ queryKey: ["forum-posts"] });
+      showSuccess("Paylaşımın topluluk ipliğine eklendi.", "Paylaşıldı");
     },
     onError: (error) => showError(error, "Gönderi oluşturulamadı")
   });
@@ -241,6 +345,7 @@ function ForumContent() {
         queryClient.invalidateQueries({ queryKey: ["forum-comments", activePostId] }),
         queryClient.invalidateQueries({ queryKey: ["forum-posts"] })
       ]);
+      showSuccess("Yorumun konuşmaya eklendi.", "Paylaşıldı");
     },
     onError: (error) => showError(error, "Yorum eklenemedi")
   });
@@ -283,30 +388,63 @@ function ForumContent() {
         reason
       });
     },
-    onSuccess: () => showSuccess("Raporun moderasyon kuyruğuna iletildi."),
+    onSuccess: async (_report, variables) => {
+      if (variables.targetType === "post") {
+        setActivePostId(undefined);
+      }
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["forum-posts"] }),
+        queryClient.invalidateQueries({ queryKey: ["forum-comments"] })
+      ]);
+      showSuccess(
+        "İçerik inceleme süresince akıştan kaldırıldı. Rapor en geç 24 saat içinde incelenecek.",
+        "Raporlandı"
+      );
+    },
     onError: (error) => showError(error, "Rapor gönderilemedi")
   });
 
-  async function blockNickname(nickname: string) {
+  async function blockAuthor(
+    nickname: string,
+    targetType: "post" | "comment",
+    targetId: string
+  ) {
     try {
-      const next = await blockForumNickname(nickname);
-      setBlockedNicknames(next);
-      showSuccess(`${nickname} artık forum akışında gizlenecek.`);
+      await blockForumAuthor(targetType, targetId);
+      setActivePostId(undefined);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["forum-posts"] }),
+        queryClient.invalidateQueries({ queryKey: ["forum-comments"] })
+      ]);
+      const next = await listBlockedForumUsers().catch(() => blockedUsers);
+      setBlockedUsers(next);
+      showSuccess(
+        `${nickname} ve paylaşımları artık forum akışında görünmeyecek.`,
+        "Kullanıcı engellendi"
+      );
     } catch (error) {
       showError(error, "Kullanıcı engellenemedi");
     }
   }
 
-  async function unblockNickname(nickname: string) {
+  async function unblockUser(blockedUser: BlockedForumUser) {
     try {
-      const next = await unblockForumNickname(nickname);
-      setBlockedNicknames(next);
-      showSuccess(`${nickname} engeli kaldırıldı.`);
+      await unblockForumAuthor(blockedUser.blocked_user_id);
+      setBlockedUsers((current) =>
+        current.filter(
+          (item) => item.blocked_user_id !== blockedUser.blocked_user_id
+        )
+      );
+      await queryClient.invalidateQueries({ queryKey: ["forum-posts"] });
+      showSuccess(`${blockedUser.forum_nickname} için engel kaldırıldı.`);
     } catch (error) {
       showError(error, "Engel kaldırılamadı");
     }
   }
 
+  const blockedNicknames = blockedUsers.map(
+    (blockedUser) => blockedUser.forum_nickname
+  );
   const rawPosts = postsQuery.data ?? [];
   const hasMorePosts = rawPosts.length > postLimit;
   const posts = rawPosts.slice(0, postLimit).filter(
@@ -341,6 +479,25 @@ function ForumContent() {
             <Text style={styles.heroText}>
               Sor, paylaş, yalnız olmadığını hisset.
             </Text>
+            <Pressable
+              accessibilityLabel="Topluluk kurallarını aç"
+              accessibilityRole="link"
+              onPress={() => {
+                openLegalPage("terms").catch((error) =>
+                  showError(error, "Topluluk kuralları açılamadı")
+                );
+              }}
+              style={styles.communityRulesLink}
+            >
+              <Text
+                style={[
+                  styles.communityRulesLinkText,
+                  { color: appTheme.primary }
+                ]}
+              >
+                Topluluk kurallarını gör
+              </Text>
+            </Pressable>
           </View>
           <Pressable
             accessibilityRole="button"
@@ -427,7 +584,7 @@ function ForumContent() {
                 style={styles.multiline}
               />
               <Button
-                label={createPostMutation.isPending ? "Paylaşılıyor..." : "Paylaş"}
+                label={createPostMutation.isPending ? "Paylaşılıyor…" : "Paylaş"}
                 disabled={createPostMutation.isPending}
                 onPress={() => {
                   setPostSubmitAttempted(true);
@@ -439,10 +596,10 @@ function ForumContent() {
         ) : null}
 
         {postsQuery.isLoading || categoriesQuery.isLoading ? (
-          <QueryState compact loading description="Forum akışı yükleniyor…" />
+          <QueryState compact loading description="Topluluk ipliği hazırlanıyor…" shape="forum" />
         ) : postsQuery.isError || categoriesQuery.isError ? (
           <QueryState
-            description="Forum akışı alınamadı. Bağlantını kontrol edip yeniden deneyebilirsin."
+            description="Forum akışı alınamadı. Bağlantını kontrol et ve yeniden dene."
             onRetry={() => {
               void Promise.all([postsQuery.refetch(), categoriesQuery.refetch()]);
             }}
@@ -451,8 +608,10 @@ function ForumContent() {
           />
         ) : visiblePosts.length === 0 ? (
           <EmptyState
-            title={feedMode === "mine" ? "Henüz bir paylaşımın yok" : "Bu kategoride ilk sen yaz"}
-            description={feedMode === "mine" ? "İlk sorunu veya deneyimini toplulukla paylaşabilirsin." : "Sorular, küçük zaferler ve destek mesajları burada birikir."}
+            actionLabel="Paylaşım yaz"
+            title={feedMode === "mine" ? "İlk paylaşımını ipliğe ekle" : "Bu başlığı sen aç"}
+            description={feedMode === "mine" ? "Sorunu, deneyimini veya küçük bir zaferini toplulukla paylaş." : "İlk notun, bu kategoride başlayacak konuşmanın düğümü olsun."}
+            onActionPress={() => setComposerOpen(true)}
           />
         ) : (
           <View style={styles.layout}>
@@ -487,7 +646,7 @@ function ForumContent() {
                     <ActionButton
                       active={false}
                       disabled={reportMutation.isPending}
-                      icon={<ShieldCheck color={colors.textMuted} size={16} />}
+                      icon={<Flag color={colors.textMuted} size={16} />}
                       label="Raporla"
                       onPress={() =>
                         reportMutation.mutate({
@@ -500,9 +659,15 @@ function ForumContent() {
                     <ActionButton
                       active={false}
                       disabled={blockedNicknames.includes(activePost.forum_nickname)}
-                      icon={<ShieldCheck color={colors.textMuted} size={16} />}
+                      icon={<UserX color={colors.textMuted} size={16} />}
                       label="Engelle"
-                      onPress={() => blockNickname(activePost.forum_nickname)}
+                      onPress={() =>
+                        blockAuthor(
+                          activePost.forum_nickname,
+                          "post",
+                          activePost.id
+                        )
+                      }
                     />
                   </View>
 
@@ -528,7 +693,7 @@ function ForumContent() {
                         <Button
                           label={
                             createCommentMutation.isPending
-                              ? "Gönderiliyor..."
+                              ? "Gönderiliyor…"
                               : "Yorum gönder"
                           }
                           disabled={createCommentMutation.isPending}
@@ -543,16 +708,18 @@ function ForumContent() {
                   ) : null}
 
                   {commentsQuery.isLoading ? (
-                    <QueryState compact loading description="Yorumlar yükleniyor…" />
+                    <QueryState compact loading description="Konuşma ipliği hazırlanıyor…" shape="forum" />
                   ) : commentsQuery.isError ? (
                     <QueryState
                       compact
-                      description="Yorumlar alınamadı."
+                      description="Yorumlar alınamadı. Bağlantını kontrol et ve yeniden dene."
                       onRetry={() => void commentsQuery.refetch()}
                       retrying={commentsQuery.isFetching}
                     />
                   ) : comments.length === 0 ? (
-                    <Text style={styles.metaText}>İlk destek mesajını sen yazabilirsin.</Text>
+                    <Text style={styles.metaText}>
+                      İlk destek mesajını yaz; bu konuşmanın yeni düğümü olsun.
+                    </Text>
                   ) : (
                     <>
                       <View style={{ gap: spacing.sm }}>
@@ -569,7 +736,13 @@ function ForumContent() {
                               targetType: "comment"
                             })
                           }
-                          onBlock={() => blockNickname(comment.forum_nickname)}
+                          onBlock={() =>
+                            blockAuthor(
+                              comment.forum_nickname,
+                              "comment",
+                              comment.id
+                            )
+                          }
                           disabled={commentLikeMutation.isPending}
                         />
                         ))}
@@ -613,17 +786,19 @@ function ForumContent() {
             )}
           </View>
         )}
-        {blockedNicknames.length > 0 ? (
+        {blockedUsers.length > 0 ? (
           <Card>
             <View style={{ gap: spacing.sm }}>
-              <Text style={typography.heading2}>Gizlenen takma adlar</Text>
-              {blockedNicknames.map((nickname) => (
-                <View key={nickname} style={styles.blockedRow}>
-                  <Text style={typography.label}>{nickname}</Text>
+              <Text style={typography.heading2}>Engellediğin kullanıcılar</Text>
+              {blockedUsers.map((blockedUser) => (
+                <View key={blockedUser.blocked_user_id} style={styles.blockedRow}>
+                  <Text style={typography.label}>
+                    {blockedUser.forum_nickname}
+                  </Text>
                   <Button
                     label="Engeli kaldır"
                     variant="secondary"
-                    onPress={() => unblockNickname(nickname)}
+                    onPress={() => unblockUser(blockedUser)}
                   />
                 </View>
               ))}
@@ -697,35 +872,46 @@ function PostCard({
   onPress,
   post
 }: PostCardProps) {
+  const appTheme = useAppTheme();
+
   return (
-    <View style={styles.postCard}>
-      <View style={{ gap: spacing.md }}>
-        <Pressable
-          accessibilityLabel={`${post.forum_nickname} tarafından paylaşılan ${post.title}`}
-          accessibilityRole="button"
-          onPress={onPress}
-          style={({ pressed }) => [styles.postMain, pressed && styles.pressed]}
-        >
-          <AuthorLine nickname={post.forum_nickname} badge={post.author_badge} createdAt={post.created_at} />
-          <View style={styles.postCopy}>
-            <Text style={styles.postTitle}>{post.title}</Text>
-            <Text numberOfLines={4} style={styles.previewText}>{post.content}</Text>
+    <View style={styles.threadPostRow}>
+      <View style={styles.postThreadColumn} pointerEvents="none">
+        <View style={[styles.postThreadRail, { backgroundColor: appTheme.primary }]} />
+        <View style={[styles.postThreadBranch, { backgroundColor: appTheme.primary }]} />
+        <View style={[styles.postThreadKnot, { borderColor: appTheme.primary }]} />
+      </View>
+      <View style={styles.postCard}>
+        <View style={{ gap: spacing.md }}>
+          <Pressable
+            accessibilityHint="Paylaşımı ve yorumlarını açar"
+            accessibilityLabel={`${post.forum_nickname} tarafından paylaşılan ${post.title}`}
+            accessibilityRole="button"
+            onPress={onPress}
+            style={({ pressed }) => [styles.postMain, pressed && styles.pressed]}
+          >
+            <AuthorLine nickname={post.forum_nickname} badge={post.author_badge} createdAt={post.created_at} />
+            <View style={styles.postCopy}>
+              <Text style={styles.postTitle}>{post.title}</Text>
+              <Text numberOfLines={4} style={styles.previewText}>{post.content}</Text>
+            </View>
+          </Pressable>
+          <View style={styles.feedActionRow}>
+            <LikeButton
+              active={post.liked_by_current_user}
+              count={post.like_count}
+              disabled={disabled}
+              onPress={onLike}
+            />
+            <ActionButton
+              accessibilityLabel={`${post.title} paylaşımında ${post.comment_count} yorum`}
+              active={false}
+              disabled={disabled}
+              icon={<MessageCircle color={colors.textMuted} size={17} />}
+              label={`${post.comment_count} yorum`}
+              onPress={onComment}
+            />
           </View>
-        </Pressable>
-        <View style={styles.feedActionRow}>
-          <LikeButton
-            active={post.liked_by_current_user}
-            count={post.like_count}
-            disabled={disabled}
-            onPress={onLike}
-          />
-          <ActionButton
-            active={false}
-            disabled={disabled}
-            icon={<MessageCircle color={colors.textMuted} size={17} />}
-            label={`${post.comment_count} yorum`}
-            onPress={onComment}
-          />
         </View>
       </View>
     </View>
@@ -747,9 +933,14 @@ function CommentRow({
   onLike,
   onReport
 }: CommentRowProps) {
+  const appTheme = useAppTheme();
+
   return (
     <View style={styles.commentRow}>
-      <View style={styles.commentRail} />
+      <View style={styles.commentThread} pointerEvents="none">
+        <View style={[styles.commentRail, { backgroundColor: appTheme.primary }]} />
+        <View style={[styles.commentKnot, { borderColor: appTheme.primary }]} />
+      </View>
       <View style={styles.commentContent}>
         <AuthorLine nickname={comment.forum_nickname} badge={comment.author_badge} createdAt={comment.created_at} />
         <Text style={styles.commentText}>{comment.content}</Text>
@@ -763,14 +954,14 @@ function CommentRow({
           <ActionButton
             active={false}
             disabled={disabled}
-            icon={<ShieldCheck color={colors.textMuted} size={16} />}
+            icon={<Flag color={colors.textMuted} size={16} />}
             label="Raporla"
             onPress={onReport}
           />
           <ActionButton
             active={false}
             disabled={disabled}
-            icon={<ShieldCheck color={colors.textMuted} size={16} />}
+            icon={<UserX color={colors.textMuted} size={16} />}
             label="Engelle"
             onPress={onBlock}
           />
@@ -841,6 +1032,7 @@ function LikeButton({
 
   return (
     <ActionButton
+      accessibilityLabel={`${active ? "Beğeniyi kaldır" : "Beğen"}, ${count} beğeni`}
       active={active}
       disabled={disabled}
       icon={
@@ -857,12 +1049,14 @@ function LikeButton({
 }
 
 function ActionButton({
+  accessibilityLabel,
   active,
   icon,
   label,
   onPress,
   disabled
 }: {
+  accessibilityLabel?: string;
   active: boolean;
   icon: ReactNode;
   label: string;
@@ -873,6 +1067,7 @@ function ActionButton({
 
   return (
     <Pressable
+      accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
       accessibilityState={{ disabled, selected: active }}
       disabled={disabled}
@@ -898,6 +1093,21 @@ function ActionButton({
 }
 
 const styles = StyleSheet.create({
+  agreementPreview: {
+    alignItems: "center",
+    backgroundColor: colors.primarySoft,
+    ...radii.cardLarge,
+    gap: spacing.md,
+    justifyContent: "center",
+    minHeight: 280,
+    padding: spacing.xl
+  },
+  agreementPreviewText: {
+    ...typography.body,
+    color: colors.textMuted,
+    maxWidth: 320,
+    textAlign: "center"
+  },
   roleGateLoading: {
     alignItems: "center",
     flex: 1,
@@ -928,6 +1138,17 @@ const styles = StyleSheet.create({
   heroText: {
     ...typography.body,
     color: colors.text
+  },
+  communityRulesLink: {
+    alignSelf: "flex-start",
+    justifyContent: "center",
+    minHeight: 44,
+    paddingRight: spacing.md
+  },
+  communityRulesLinkText: {
+    ...typography.label,
+    fontSize: 13,
+    textDecorationLine: "underline"
   },
   privatePill: {
     alignItems: "center",
@@ -1041,7 +1262,41 @@ const styles = StyleSheet.create({
     gap: spacing.lg
   },
   postList: {
-    gap: spacing.md
+    gap: 0
+  },
+  threadPostRow: {
+    alignItems: "stretch",
+    flexDirection: "row"
+  },
+  postThreadColumn: {
+    position: "relative",
+    width: 38
+  },
+  postThreadRail: {
+    bottom: 0,
+    left: 17,
+    opacity: 0.34,
+    position: "absolute",
+    top: 0,
+    width: 2
+  },
+  postThreadBranch: {
+    height: 2,
+    left: 17,
+    opacity: 0.5,
+    position: "absolute",
+    top: 34,
+    width: 21
+  },
+  postThreadKnot: {
+    backgroundColor: colors.surfaceStrong,
+    borderRadius: radii.pill,
+    borderWidth: 2,
+    height: 16,
+    left: 10,
+    position: "absolute",
+    top: 26,
+    width: 16
   },
   feedHeading: {
     alignItems: "center",
@@ -1058,7 +1313,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderColor: colors.border,
     ...radii.card,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
+    flex: 1,
+    marginBottom: spacing.md,
     padding: spacing.lg
   },
   postMain: {
@@ -1200,10 +1457,28 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.md
   },
+  commentThread: {
+    position: "relative",
+    width: 18
+  },
   commentRail: {
-    backgroundColor: colors.border,
+    bottom: -spacing.sm,
     borderRadius: radii.pill,
-    width: 3
+    left: 8,
+    opacity: 0.34,
+    position: "absolute",
+    top: -spacing.sm,
+    width: 2
+  },
+  commentKnot: {
+    backgroundColor: colors.surfaceStrong,
+    borderRadius: radii.pill,
+    borderWidth: 2,
+    height: 12,
+    left: 3,
+    position: "absolute",
+    top: spacing.md,
+    width: 12
   },
   commentContent: {
     backgroundColor: colors.surfaceMuted,

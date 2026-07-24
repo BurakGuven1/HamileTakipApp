@@ -16,7 +16,6 @@ import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
-import { Thread } from "@/components/Thread";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { useLullabyPlayer } from "@/providers/LullabyPlayerProvider";
@@ -95,15 +94,6 @@ export default function LullabyScreen() {
     <Screen>
       <View style={{ gap: spacing.lg }}>
         <View style={[styles.hero, { backgroundColor: accentColor.tint }]}>
-          <View style={styles.thread}>
-            <Thread
-              color={accentColor.primary}
-              height={96}
-              mutedColor={accentColor.accentSoft}
-              progress={0.7}
-              variant="decorative"
-            />
-          </View>
           <View style={styles.iconBubble}>
             <Music2 color={accentColor.primary} size={28} />
           </View>
@@ -286,13 +276,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     overflow: "hidden",
     padding: spacing.lg
-  },
-  thread: {
-    bottom: -18,
-    left: spacing.lg,
-    opacity: 0.3,
-    position: "absolute",
-    right: -spacing.lg
   },
   iconBubble: {
     alignItems: "center",
