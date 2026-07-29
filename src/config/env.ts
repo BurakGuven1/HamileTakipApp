@@ -12,9 +12,11 @@ export const env = {
 } as const;
 
 export function getRevenueCatApiKey() {
-  return Platform.select({
+  const apiKey = Platform.select({
     ios: env.revenueCatIosApiKey,
     android: env.revenueCatAndroidApiKey,
     default: undefined
   });
+
+  return apiKey?.trim();
 }
