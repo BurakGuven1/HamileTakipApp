@@ -81,7 +81,8 @@ export default function SettingsScreen() {
   const [feedingMode, setFeedingMode] = useState<"breastfeeding" | "pumping" | "mixed" | "formula">("mixed");
   const [ownUserId, setOwnUserId] = useState<string>();
   const [restoringPurchases, setRestoringPurchases] = useState(false);
-  const [sendingTestNotification, setSendingTestNotification] = useState(false);
+  const [showMoreNotificationPreferences, setShowMoreNotificationPreferences] =
+    useState(false);
   const [waterRemindersEnabled, setWaterRemindersEnabledState] = useState(false);
   const [updatingWaterReminders, setUpdatingWaterReminders] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
@@ -289,33 +290,6 @@ export default function SettingsScreen() {
       showError(error, "Su hatırlatmaları güncellenemedi");
     } finally {
       setUpdatingWaterReminders(false);
-    }
-  }
-
-  async function sendTestNotification() {
-    setSendingTestNotification(true);
-    try {
-      const token = await registerAndSavePushToken();
-      if (!token) {
-        showInfo(
-          "Önce telefon ayarlarından Anne+ bildirimlerine izin verin.",
-          "Bildirim izni gerekli"
-        );
-        return;
-      }
-
-      const { data, error } = await supabase.functions.invoke(
-        "send-test-notification",
-        { body: {} }
-      );
-      if (error) throw error;
-      if (!data?.success) throw new Error("Test bildirimi gönderilemedi.");
-
-      showSuccess("Test push bildirimi gönderildi. Birkaç saniye içinde görünmeli.");
-    } catch (error) {
-      showError(error, "Test bildirimi gönderilemedi");
-    } finally {
-      setSendingTestNotification(false);
     }
   }
 
@@ -642,67 +616,83 @@ export default function SettingsScreen() {
                 updatePreferenceMutation.mutate({ notify_vaccine_reminders: value })
               }
             />
-            <PreferenceRow
-              label="Haftalık gebelik güncellemesi"
-              description="Gebelik haftana göre özet bildirimler al."
-              value={Boolean(profile?.notify_weekly_pregnancy_updates)}
-              disabled={!profile || updatePreferenceMutation.isPending}
-              onValueChange={(value) =>
-                updatePreferenceMutation.mutate({
-                  notify_weekly_pregnancy_updates: value
-                })
+            {showMoreNotificationPreferences ? (
+              <>
+                <PreferenceRow
+                  label="Haftalık gebelik güncellemesi"
+                  description="Gebelik haftana göre özet bildirimler al."
+                  value={Boolean(profile?.notify_weekly_pregnancy_updates)}
+                  disabled={!profile || updatePreferenceMutation.isPending}
+                  onValueChange={(value) =>
+                    updatePreferenceMutation.mutate({
+                      notify_weekly_pregnancy_updates: value
+                    })
+                  }
+                />
+                <PreferenceRow
+                  label="Günlük kişisel destek"
+                  description="Gebelik haftana veya doğum sonrası dönemine uygun makale, küçük öneri ve destek mesajı al."
+                  value={Boolean(profile?.notify_daily_support)}
+                  disabled={!profile || updatePreferenceMutation.isPending}
+                  onValueChange={(value) =>
+                    updatePreferenceMutation.mutate({ notify_daily_support: value })
+                  }
+                />
+                <PreferenceRow
+                  label="Günlük su hatırlatmaları · Ücretsiz"
+                  description={`${WATER_REMINDER_TIME_LABEL} saatlerinde cihazında nazik su molaları planla. İstediğin an kapatabilirsin.`}
+                  value={waterRemindersEnabled}
+                  disabled={updatingWaterReminders}
+                  onValueChange={(value) => void updateWaterReminders(value)}
+                />
+                <PreferenceRow
+                  label="Akıllı uyku tahminleri"
+                  description="Yeterli kayıt oluştuğunda yaklaşan uyku penceresinden haber ver."
+                  value={Boolean(profile?.notify_sleep_predictions)}
+                  disabled={!profile || updatePreferenceMutation.isPending}
+                  onValueChange={(value) =>
+                    updatePreferenceMutation.mutate({ notify_sleep_predictions: value })
+                  }
+                />
+                <PreferenceRow
+                  label="İlaç ve vitamin güvenlik uyarıları"
+                  description="Başka bir bakıcı doz kaydettiğinde çift doz riskine karşı haber ver."
+                  value={Boolean(profile?.notify_medicine_safety)}
+                  disabled={!profile || updatePreferenceMutation.isPending}
+                  onValueChange={(value) =>
+                    updatePreferenceMutation.mutate({ notify_medicine_safety: value })
+                  }
+                />
+                <PreferenceRow
+                  label="Gelişim dönemi notları"
+                  description="Bebeğin yaşına göre empatik ve güvenli gelişim notları al."
+                  value={Boolean(profile?.notify_development_periods)}
+                  disabled={!profile || updatePreferenceMutation.isPending}
+                  onValueChange={(value) =>
+                    updatePreferenceMutation.mutate({ notify_development_periods: value })
+                  }
+                />
+                <PreferenceRow
+                  label="Anne sütü stok uyarıları"
+                  description="Poşet veya kabın son kullanım süresi yaklaşınca haber ver."
+                  value={Boolean(profile?.notify_milk_inventory)}
+                  disabled={!profile || updatePreferenceMutation.isPending}
+                  onValueChange={(value) =>
+                    updatePreferenceMutation.mutate({ notify_milk_inventory: value })
+                  }
+                />
+              </>
+            ) : null}
+
+            <Button
+              label={
+                showMoreNotificationPreferences
+                  ? "Daha az bildirim tercihi göster"
+                  : "Diğer bildirim tercihlerini göster"
               }
-            />
-            <PreferenceRow
-              label="Günlük kişisel destek"
-              description="Gebelik haftana veya doğum sonrası dönemine uygun makale, küçük öneri ve destek mesajı al."
-              value={Boolean(profile?.notify_daily_support)}
-              disabled={!profile || updatePreferenceMutation.isPending}
-              onValueChange={(value) =>
-                updatePreferenceMutation.mutate({ notify_daily_support: value })
-              }
-            />
-            <PreferenceRow
-              label="Günlük su hatırlatmaları · Ücretsiz"
-              description={`${WATER_REMINDER_TIME_LABEL} saatlerinde cihazında nazik su molaları planla. İstediğin an kapatabilirsin.`}
-              value={waterRemindersEnabled}
-              disabled={updatingWaterReminders}
-              onValueChange={(value) => void updateWaterReminders(value)}
-            />
-            <PreferenceRow
-              label="Akıllı uyku tahminleri"
-              description="Yeterli kayıt oluştuğunda yaklaşan uyku penceresinden haber ver."
-              value={Boolean(profile?.notify_sleep_predictions)}
-              disabled={!profile || updatePreferenceMutation.isPending}
-              onValueChange={(value) =>
-                updatePreferenceMutation.mutate({ notify_sleep_predictions: value })
-              }
-            />
-            <PreferenceRow
-              label="İlaç ve vitamin güvenlik uyarıları"
-              description="Başka bir bakıcı doz kaydettiğinde çift doz riskine karşı haber ver."
-              value={Boolean(profile?.notify_medicine_safety)}
-              disabled={!profile || updatePreferenceMutation.isPending}
-              onValueChange={(value) =>
-                updatePreferenceMutation.mutate({ notify_medicine_safety: value })
-              }
-            />
-            <PreferenceRow
-              label="Gelişim dönemi notları"
-              description="Bebeğin yaşına göre empatik ve güvenli gelişim notları al."
-              value={Boolean(profile?.notify_development_periods)}
-              disabled={!profile || updatePreferenceMutation.isPending}
-              onValueChange={(value) =>
-                updatePreferenceMutation.mutate({ notify_development_periods: value })
-              }
-            />
-            <PreferenceRow
-              label="Anne sütü stok uyarıları"
-              description="Poşet veya kabın son kullanım süresi yaklaşınca haber ver."
-              value={Boolean(profile?.notify_milk_inventory)}
-              disabled={!profile || updatePreferenceMutation.isPending}
-              onValueChange={(value) =>
-                updatePreferenceMutation.mutate({ notify_milk_inventory: value })
+              variant="ghost"
+              onPress={() =>
+                setShowMoreNotificationPreferences((current) => !current)
               }
             />
 
@@ -710,16 +700,6 @@ export default function SettingsScreen() {
               label="Bildirim iznini yenile"
               variant="secondary"
               onPress={refreshNotificationPermission}
-            />
-            <Button
-              disabled={sendingTestNotification}
-              label={
-                sendingTestNotification
-                  ? "Test bildirimi gönderiliyor..."
-                  : "Test push bildirimi gönder"
-              }
-              variant="secondary"
-              onPress={sendTestNotification}
             />
           </View>
         </Card>
@@ -798,6 +778,28 @@ export default function SettingsScreen() {
               label="Sorumluluk reddini aç"
               variant="ghost"
               onPress={() => openLegalDocument("disclaimer")}
+            />
+          </View>
+        </Card>
+
+        <Card>
+          <View style={{ gap: spacing.md }}>
+            <Text style={typography.heading2}>Destek ve güvenlik</Text>
+            <Text style={typography.body}>
+              Uygulama, üyelik veya topluluk güvenliğiyle ilgili bir sorunu doğrudan
+              destek ekibine iletebilirsin.
+            </Text>
+            <Button
+              label="Destek ekibine e-posta gönder"
+              variant="secondary"
+              onPress={() => {
+                const url =
+                  "mailto:anneplusapp@gmail.com?subject=" +
+                  encodeURIComponent("Anne+ destek talebi");
+                Linking.openURL(url).catch((error) =>
+                  showError(error, "E-posta uygulaması açılamadı")
+                );
+              }}
             />
           </View>
         </Card>

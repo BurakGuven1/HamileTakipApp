@@ -1,7 +1,8 @@
 import { Platform } from "react-native";
 import Purchases, {
   LOG_LEVEL,
-  type CustomerInfo
+  type CustomerInfo,
+  type PurchasesOffering
 } from "react-native-purchases";
 
 import { env, getRevenueCatApiKey } from "@/config/env";
@@ -32,11 +33,15 @@ export function configureRevenueCat() {
   }
 
   if (__DEV__) {
-    Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+    Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
   }
 
   Purchases.configure({
-    apiKey
+    apiKey,
+    // RevenueCat Dashboard'daki diagnostics ekranı, mağazadan ürün alma
+    // hatalarını (ör. Error 23) uygulama sürümü ve platformuyla birlikte
+    // görmemizi sağlar. Kişisel bilgi göndermez.
+    diagnosticsEnabled: true
   });
   configured = true;
 }
@@ -85,6 +90,23 @@ export async function getCustomerInfo(): Promise<CustomerInfo | null> {
   }
 
   return Purchases.getCustomerInfo();
+}
+
+/**
+ * Dashboard'un hedefleme/deney kurallarından sonra bu kullanıcıya sunulan
+ * offering. Ürün veya fiyat burada tanımlanmaz; tamamı RevenueCat'ten gelir.
+ */
+export async function getCurrentOffering(): Promise<PurchasesOffering | null> {
+  if (!configured) {
+    configureRevenueCat();
+  }
+
+  if (!configured) {
+    return null;
+  }
+
+  const offerings = await Purchases.getOfferings();
+  return offerings.current;
 }
 
 export function hasPremiumEntitlement(customerInfo: CustomerInfo | null) {
