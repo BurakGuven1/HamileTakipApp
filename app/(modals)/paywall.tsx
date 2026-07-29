@@ -1,40 +1,80 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import type { CustomerInfo, PurchasesPackage } from "react-native-purchases";
+import type {
+  CustomerInfo,
+  PurchasesOffering,
+  PurchasesPackage
+} from "react-native-purchases";
 import RevenueCatUI from "react-native-purchases-ui";
 
 import { Button } from "@/components/Button";
-import { EmptyState } from "@/components/EmptyState";
+import { QueryState } from "@/components/QueryState";
 import { reconcileCustomerInfoWithSupabase } from "@/features/subscription/reconcileSubscription";
 import { trackEvent } from "@/lib/analytics";
 import { getErrorMessage } from "@/lib/errors";
 import {
-  configureRevenueCat,
+  getCurrentRevenueCatOffering,
   getSubscriptionStatusFromCustomerInfo,
-  isRevenueCatConfigured,
   SUBSCRIPTION_STATUS_QUERY_KEY,
   type PremiumSubscriptionStatus
 } from "@/lib/revenuecat";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { colors, spacing } from "@/theme";
 
-type PaywallErrorSource = "purchase" | "restore" | "sync";
+type PaywallErrorSource = "load" | "purchase" | "restore" | "sync";
 
 export default function PaywallScreen() {
   const queryClient = useQueryClient();
   const { showError, showSuccess } = useFeedback();
   const dismissedRef = useRef(false);
+  const loadGenerationRef = useRef(0);
   const purchasingPackageRef = useRef<PurchasesPackage | null>(null);
-
-  configureRevenueCat();
+  const [offering, setOffering] = useState<PurchasesOffering | null>(null);
+  const [loadError, setLoadError] = useState<unknown>(null);
+  const [loading, setLoading] = useState(true);
 
   function closePaywall() {
     if (dismissedRef.current) return;
     dismissedRef.current = true;
     router.back();
   }
+
+  const loadPaywall = useCallback(async () => {
+    const generation = ++loadGenerationRef.current;
+    setLoading(true);
+    setLoadError(null);
+
+    try {
+      const currentOffering = await getCurrentRevenueCatOffering();
+      if (generation !== loadGenerationRef.current) return;
+
+      setOffering(currentOffering);
+      void trackEvent("paywall_offering_loaded", {
+        offering_id: currentOffering.identifier,
+        package_count: currentOffering.availablePackages.length
+      });
+    } catch (error) {
+      if (generation !== loadGenerationRef.current) return;
+
+      setOffering(null);
+      setLoadError(error);
+      void logPaywallError("load", error);
+    } finally {
+      if (generation === loadGenerationRef.current) {
+        setLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadPaywall();
+
+    return () => {
+      loadGenerationRef.current += 1;
+    };
+  }, [loadPaywall]);
 
   async function syncPremiumState(customerInfo: CustomerInfo) {
     const status = getSubscriptionStatusFromCustomerInfo(customerInfo);
@@ -55,12 +95,30 @@ export default function PaywallScreen() {
     return status;
   }
 
-  if (!isRevenueCatConfigured()) {
+  if (loading) {
     return (
       <View style={styles.fallback}>
-        <EmptyState
-          title="Abonelikler yüklenemedi"
-          description="RevenueCat API anahtarı bulunamadı. Uygulamanın RevenueCat ortam değişkenlerini kontrol edin."
+        <QueryState
+          loading
+          description="App Store'daki abonelik seçenekleri hazırlanıyor…"
+          shape="paywall"
+        />
+        <Button label="Kapat" variant="ghost" onPress={closePaywall} />
+      </View>
+    );
+  }
+
+  if (loadError || !offering) {
+    return (
+      <View style={styles.fallback}>
+        <QueryState
+          description={getErrorMessage(
+            loadError,
+            "Abonelik seçenekleri şu anda alınamıyor."
+          )}
+          onRetry={() => void loadPaywall()}
+          shape="paywall"
+          title="Abonelikler şu anda kullanılamıyor"
         />
         <Button label="Kapat" variant="ghost" onPress={closePaywall} />
       </View>
@@ -70,7 +128,7 @@ export default function PaywallScreen() {
   return (
     <View style={styles.container}>
       <RevenueCatUI.Paywall
-        options={{ displayCloseButton: true }}
+        options={{ offering }}
         onDismiss={closePaywall}
         onPurchaseStarted={({ packageBeingPurchased }) => {
           purchasingPackageRef.current = packageBeingPurchased;
@@ -136,19 +194,52 @@ function getPaywallErrorDetails(error: unknown) {
     typeof error === "object" && error !== null
       ? (error as Record<string, unknown>)
       : {};
+  const userInfo =
+    typeof errorObject.userInfo === "object" && errorObject.userInfo !== null
+      ? (errorObject.userInfo as Record<string, unknown>)
+      : {};
 
   return {
     code: toNullableString(errorObject.code),
-    message: getErrorMessage(error),
-    readable_error_code: toNullableString(errorObject.readableErrorCode),
+    domain: toNullableString(errorObject.domain),
+    message: getRawErrorMessage(error),
+    readable_error_code:
+      toNullableString(errorObject.readableErrorCode) ??
+      toNullableString(userInfo.readableErrorCode) ??
+      toNullableString(userInfo.readable_error_code),
     underlying_error_message: toNullableString(
       errorObject.underlyingErrorMessage
-    )
+    ),
+    user_info: toNullableJson(userInfo)
   };
 }
 
 function toNullableString(value: unknown) {
+  if (typeof value === "number") return String(value);
   return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function getRawErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error
+  ) {
+    return String((error as { message?: unknown }).message ?? "");
+  }
+  return "Unknown RevenueCat error";
+}
+
+function toNullableJson(value: Record<string, unknown>) {
+  if (Object.keys(value).length === 0) return null;
+
+  try {
+    return JSON.stringify(value).slice(0, 1_000);
+  } catch {
+    return null;
+  }
 }
 
 const styles = StyleSheet.create({

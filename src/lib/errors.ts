@@ -12,6 +12,11 @@ const friendlyErrorMap: Array<[RegExp, string]> = [
 ];
 
 export function getErrorMessage(error: unknown, fallback = "Bir şey yolunda gitmedi.") {
+  const revenueCatMessage = getRevenueCatErrorMessage(error);
+  if (revenueCatMessage) {
+    return revenueCatMessage;
+  }
+
   const raw =
     error instanceof Error
       ? error.message
@@ -28,4 +33,65 @@ export function getErrorMessage(error: unknown, fallback = "Bir şey yolunda git
   }
 
   return raw || fallback;
+}
+
+function getRevenueCatErrorMessage(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return null;
+  }
+
+  const errorObject = error as Record<string, unknown>;
+  const userInfo =
+    typeof errorObject.userInfo === "object" && errorObject.userInfo !== null
+      ? (errorObject.userInfo as Record<string, unknown>)
+      : {};
+  const code = String(errorObject.code ?? "");
+  const readableCode = String(
+    errorObject.readableErrorCode ??
+      userInfo.readableErrorCode ??
+      userInfo.readable_error_code ??
+      ""
+  );
+  const name = String(errorObject.name ?? "");
+
+  if (
+    code === "23" ||
+    readableCode === "CONFIGURATION_ERROR" ||
+    name === "RevenueCatConfigurationError"
+  ) {
+    return "Abonelik seçenekleri App Store'dan alınamadı. Bağlantını kontrol edip biraz sonra yeniden dene.";
+  }
+
+  if (code === "2" || readableCode === "STORE_PROBLEM_ERROR") {
+    return "App Store'a şu anda ulaşılamıyor. Biraz sonra yeniden dene.";
+  }
+
+  if (code === "3" || readableCode === "PURCHASE_NOT_ALLOWED_ERROR") {
+    return "Bu cihazda uygulama içi satın almalara izin verilmiyor.";
+  }
+
+  if (
+    code === "5" ||
+    readableCode === "PRODUCT_NOT_AVAILABLE_FOR_PURCHASE_ERROR"
+  ) {
+    return "Seçtiğin abonelik App Store'da şu anda kullanılamıyor. Biraz sonra yeniden dene.";
+  }
+
+  if (
+    code === "10" ||
+    code === "35" ||
+    readableCode === "NETWORK_ERROR" ||
+    readableCode === "OFFLINE_CONNECTION_ERROR"
+  ) {
+    return "App Store'a bağlanılamadı. İnternetini kontrol edip tekrar dene.";
+  }
+
+  if (
+    code === "15" ||
+    readableCode === "OPERATION_ALREADY_IN_PROGRESS_ERROR"
+  ) {
+    return "Satın alma işlemi zaten devam ediyor. Lütfen Apple ekranını tamamla.";
+  }
+
+  return null;
 }

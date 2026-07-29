@@ -9,7 +9,9 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "doctor": "expo-doctor"
+    "doctor": "expo-doctor",
+    "verify:revenuecat": "node tools/verify-revenuecat-config.mjs",
+    "eas-build-post-install": "npm run verify:revenuecat"
   },
   "dependencies": {
     "@dariyd/react-native-text-recognition": "2.0.20",
@@ -51,8 +53,8 @@
     "react-native-android-widget": "^0.21.0",
     "react-native-gesture-handler": "~2.32.0",
     "react-native-gifted-charts": "^1.4.77",
-    "react-native-purchases": "^10.4.2",
-    "react-native-purchases-ui": "^10.4.2",
+    "react-native-purchases": "^10.4.4",
+    "react-native-purchases-ui": "^10.4.4",
     "react-native-reanimated": "4.5.0",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
