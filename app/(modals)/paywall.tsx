@@ -1,8 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { useRef } from "react";
-import { StyleSheet, View } from "react-native";
-import type { CustomerInfo, PurchasesPackage } from "react-native-purchases";
+import { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
+import type {
+  CustomerInfo,
+  PurchasesOffering,
+  PurchasesPackage
+} from "react-native-purchases";
 import RevenueCatUI from "react-native-purchases-ui";
 
 import { Button } from "@/components/Button";
@@ -12,6 +16,7 @@ import { trackEvent } from "@/lib/analytics";
 import { getErrorMessage } from "@/lib/errors";
 import {
   configureRevenueCat,
+  getCurrentOffering,
   getSubscriptionStatusFromCustomerInfo,
   isRevenueCatConfigured,
   SUBSCRIPTION_STATUS_QUERY_KEY,
@@ -20,15 +25,53 @@ import {
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { colors, spacing } from "@/theme";
 
-type PaywallErrorSource = "purchase" | "restore" | "sync";
+type PaywallErrorSource = "offering" | "purchase" | "restore" | "sync";
 
 export default function PaywallScreen() {
   const queryClient = useQueryClient();
   const { showError, showSuccess } = useFeedback();
   const dismissedRef = useRef(false);
   const purchasingPackageRef = useRef<PurchasesPackage | null>(null);
+  const [offering, setOffering] = useState<PurchasesOffering | null>(null);
+  const [isOfferingLoading, setIsOfferingLoading] = useState(true);
+  const [offeringLoadError, setOfferingLoadError] = useState<unknown>(null);
 
   configureRevenueCat();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    void (async () => {
+      try {
+        // `current` offering; Dashboard'daki Default Offering, targeting ve
+        // experiment kuralları burada çözülür. Uygulamada ürün ID'si yoktur.
+        const currentOffering = await getCurrentOffering();
+
+        if (!currentOffering || currentOffering.availablePackages.length === 0) {
+          throw new Error(
+            "RevenueCat current offering için satın alınabilir paket bulunamadı."
+          );
+        }
+
+        if (isMounted) {
+          setOffering(currentOffering);
+        }
+      } catch (error) {
+        await logPaywallError("offering", error);
+        if (isMounted) {
+          setOfferingLoadError(error);
+        }
+      } finally {
+        if (isMounted) {
+          setIsOfferingLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   function closePaywall() {
     if (dismissedRef.current) return;
@@ -67,10 +110,30 @@ export default function PaywallScreen() {
     );
   }
 
+  if (isOfferingLoading) {
+    return (
+      <View style={styles.fallback}>
+        <ActivityIndicator color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (offeringLoadError || !offering) {
+    return (
+      <View style={styles.fallback}>
+        <EmptyState
+          title="Abonelik paketleri kullanılamıyor"
+          description="RevenueCat, bu paywall'daki ürünleri mağazadan alamadı. RevenueCat'teki varsayılan offering'e bağlı ürün kimliklerini ve App Store Connect/Google Play ürün durumlarını kontrol edin."
+        />
+        <Button label="Kapat" variant="ghost" onPress={closePaywall} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <RevenueCatUI.Paywall
-        options={{ displayCloseButton: true }}
+        options={{ displayCloseButton: true, offering }}
         onDismiss={closePaywall}
         onPurchaseStarted={({ packageBeingPurchased }) => {
           purchasingPackageRef.current = packageBeingPurchased;

@@ -116,7 +116,7 @@ export default function CommunityTermsScreen() {
             </Text>
           </Pressable>
           <Text style={styles.contact}>
-            Moderasyon ve destek: burakguven351999@gmail.com
+            Moderasyon ve destek: anneplusapp@gmail.com
           </Text>
         </View>
       </View>

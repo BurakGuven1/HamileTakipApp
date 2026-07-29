@@ -219,6 +219,10 @@ function ForumContent() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [commentComposerOpen, setCommentComposerOpen] = useState(false);
   const [blockedUsers, setBlockedUsers] = useState<BlockedForumUser[]>([]);
+  const [optimisticallyBlockedNicknames, setOptimisticallyBlockedNicknames] =
+    useState<string[]>([]);
+  const [hiddenPostIds, setHiddenPostIds] = useState<string[]>([]);
+  const [hiddenCommentIds, setHiddenCommentIds] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [commentText, setCommentText] = useState("");
@@ -388,10 +392,23 @@ function ForumContent() {
         reason
       });
     },
-    onSuccess: async (_report, variables) => {
+    onMutate: (variables) => {
       if (variables.targetType === "post") {
         setActivePostId(undefined);
+        setHiddenPostIds((current) =>
+          current.includes(variables.targetId)
+            ? current
+            : [...current, variables.targetId]
+        );
+      } else {
+        setHiddenCommentIds((current) =>
+          current.includes(variables.targetId)
+            ? current
+            : [...current, variables.targetId]
+        );
       }
+    },
+    onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["forum-posts"] }),
         queryClient.invalidateQueries({ queryKey: ["forum-comments"] })
@@ -401,7 +418,18 @@ function ForumContent() {
         "Raporlandı"
       );
     },
-    onError: (error) => showError(error, "Rapor gönderilemedi")
+    onError: (error, variables) => {
+      if (variables.targetType === "post") {
+        setHiddenPostIds((current) =>
+          current.filter((id) => id !== variables.targetId)
+        );
+      } else {
+        setHiddenCommentIds((current) =>
+          current.filter((id) => id !== variables.targetId)
+        );
+      }
+      showError(error, "Rapor gönderilemedi");
+    }
   });
 
   async function blockAuthor(
@@ -409,9 +437,13 @@ function ForumContent() {
     targetType: "post" | "comment",
     targetId: string
   ) {
+    setOptimisticallyBlockedNicknames((current) =>
+      current.includes(nickname) ? current : [...current, nickname]
+    );
+    setActivePostId(undefined);
+
     try {
       await blockForumAuthor(targetType, targetId);
-      setActivePostId(undefined);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["forum-posts"] }),
         queryClient.invalidateQueries({ queryKey: ["forum-comments"] })
@@ -423,6 +455,9 @@ function ForumContent() {
         "Kullanıcı engellendi"
       );
     } catch (error) {
+      setOptimisticallyBlockedNicknames((current) =>
+        current.filter((value) => value !== nickname)
+      );
       showError(error, "Kullanıcı engellenemedi");
     }
   }
@@ -442,13 +477,18 @@ function ForumContent() {
     }
   }
 
-  const blockedNicknames = blockedUsers.map(
-    (blockedUser) => blockedUser.forum_nickname
+  const blockedNicknames = Array.from(
+    new Set([
+      ...blockedUsers.map((blockedUser) => blockedUser.forum_nickname),
+      ...optimisticallyBlockedNicknames
+    ])
   );
   const rawPosts = postsQuery.data ?? [];
   const hasMorePosts = rawPosts.length > postLimit;
   const posts = rawPosts.slice(0, postLimit).filter(
-    (post) => !blockedNicknames.includes(post.forum_nickname)
+    (post) =>
+      !blockedNicknames.includes(post.forum_nickname) &&
+      !hiddenPostIds.includes(post.id)
   );
   const visiblePosts = feedMode === "mine"
     ? posts.filter((post) => post.forum_nickname === profileQuery.data?.forum_nickname)
@@ -457,7 +497,9 @@ function ForumContent() {
   const rawComments = commentsQuery.data ?? [];
   const hasMoreComments = rawComments.length > commentLimit;
   const comments = rawComments.slice(0, commentLimit).filter(
-    (comment) => !blockedNicknames.includes(comment.forum_nickname)
+    (comment) =>
+      !blockedNicknames.includes(comment.forum_nickname) &&
+      !hiddenCommentIds.includes(comment.id)
   );
 
   return (
@@ -775,6 +817,17 @@ function ForumContent() {
                       onPress={() => setActivePostId(post.id)}
                       onComment={() => setActivePostId(post.id)}
                       onLike={() => postLikeMutation.mutate(post)}
+                      onReport={() =>
+                        reportMutation.mutate({
+                          reason:
+                            "Kullanıcı tarafından uygunsuz gönderi olarak raporlandı.",
+                          targetId: post.id,
+                          targetType: "post"
+                        })
+                      }
+                      onBlock={() =>
+                        blockAuthor(post.forum_nickname, "post", post.id)
+                      }
                       disabled={postLikeMutation.isPending}
                     />
                   ))}
@@ -861,15 +914,19 @@ type PostCardProps = {
   post: PublicForumPost;
   onPress: () => void;
   onComment: () => void;
+  onBlock: () => void;
   onLike: () => void;
   disabled: boolean;
+  onReport: () => void;
 };
 
 function PostCard({
   disabled,
+  onBlock,
   onComment,
   onLike,
   onPress,
+  onReport,
   post
 }: PostCardProps) {
   const appTheme = useAppTheme();
@@ -910,6 +967,20 @@ function PostCard({
               icon={<MessageCircle color={colors.textMuted} size={17} />}
               label={`${post.comment_count} yorum`}
               onPress={onComment}
+            />
+            <ActionButton
+              active={false}
+              disabled={disabled}
+              icon={<Flag color={colors.textMuted} size={16} />}
+              label="Raporla"
+              onPress={onReport}
+            />
+            <ActionButton
+              active={false}
+              disabled={disabled}
+              icon={<UserX color={colors.textMuted} size={16} />}
+              label="Engelle"
+              onPress={onBlock}
             />
           </View>
         </View>
