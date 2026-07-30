@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import { DatePickerField } from "@/components/DatePickerField";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
 import { signInFatherWithFamilyCode } from "@/api/familyAccess";
@@ -15,6 +16,14 @@ import {
   recordLegalAcceptance,
   setAppAgreementAccepted
 } from "@/lib/legalAcceptance";
+import {
+  AGE_ASSURANCE_VERSION,
+  getAdultBirthDateCutoff,
+  isAdultBirthDate,
+  recordAgeAssurance,
+  type AgeAssuranceContext
+} from "@/lib/ageAssurance";
+import { parseDateOnly } from "@/lib/dates";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { colors, radii, spacing, typography } from "@/theme";
@@ -29,12 +38,23 @@ export default function SignInScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [familyCode, setFamilyCode] = useState("");
+  const [birthDate, setBirthDate] = useState("");
   const [loading, setLoading] = useState(false);
+  const [confirmedAdult, setConfirmedAdult] = useState(false);
   const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
 
   const isFather = audience === "father";
   const isSignUp = !isFather && mode === "sign-up";
+  const adultBirthDateCutoff = getAdultBirthDateCutoff();
+  const birthDateError =
+    submitAttempted && isSignUp
+      ? !birthDate
+        ? "Doğum tarihini seç."
+        : !isAdultBirthDate(birthDate)
+          ? "Anne+ yalnızca 18 yaş ve üzerindeki kullanıcılar içindir."
+          : undefined
+      : undefined;
 
   useEffect(() => {
     let active = true;
@@ -54,6 +74,24 @@ export default function SignInScreen() {
     setSubmitAttempted(true);
     const cleanFamilyCode = familyCode.replace(/\D/g, "");
 
+    if (isSignUp && !isAdultBirthDate(birthDate)) {
+      showInfo(
+        birthDate
+          ? "Anne+ yalnızca 18 yaş ve üzerindeki kullanıcılar içindir."
+          : "Hesap oluşturmak için doğum tarihini seç.",
+        birthDate ? "Yaş sınırı karşılanmıyor" : "Doğum tarihi gerekli"
+      );
+      return;
+    }
+
+    if (!confirmedAdult) {
+      showInfo(
+        "Devam etmek için 18 yaşından büyük olduğunu onayla.",
+        "18+ onayı gerekli"
+      );
+      return;
+    }
+
     if (!acceptedLegal) {
       showInfo(
         "Devam etmek için EULA’yı, Kullanım Şartları’nı ve topluluğun sıfır tolerans kurallarını kabul et.",
@@ -71,6 +109,7 @@ export default function SignInScreen() {
       setLoading(true);
       try {
         await signInFatherWithFamilyCode(cleanFamilyCode);
+        await recordRequiredAgeAssurance("family_code");
         await recordLegalAcceptance(APP_EULA_VERSION, "auth").catch(
           () => undefined
         );
@@ -107,7 +146,15 @@ export default function SignInScreen() {
       if (isSignUp) {
         const { data, error } = await supabase.auth.signUp({
           email: cleanEmail,
-          password
+          password,
+          options: {
+            data: {
+              age_assurance_version: AGE_ASSURANCE_VERSION,
+              age_over_18_confirmed: true,
+              age_assured_at: new Date().toISOString(),
+              birth_date: birthDate
+            }
+          }
         });
 
         if (error) throw error;
@@ -118,8 +165,12 @@ export default function SignInScreen() {
             "E-postanı kontrol et"
           );
           setMode("sign-in");
+          setConfirmedAdult(false);
+          setSubmitAttempted(false);
           return;
         }
+
+        await recordRequiredAgeAssurance("sign_up", birthDate);
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: cleanEmail,
@@ -127,6 +178,7 @@ export default function SignInScreen() {
         });
 
         if (error) throw error;
+        await recordRequiredAgeAssurance("sign_in");
       }
 
       await recordLegalAcceptance(APP_EULA_VERSION, "auth").catch(
@@ -187,6 +239,37 @@ export default function SignInScreen() {
     }
   }
 
+  async function recordRequiredAgeAssurance(
+    context: AgeAssuranceContext,
+    assuredBirthDate?: string
+  ) {
+    try {
+      await recordAgeAssurance({
+        birthDate: assuredBirthDate,
+        context
+      });
+    } catch (error) {
+      await supabase.auth.signOut().catch(() => undefined);
+      throw new Error(
+        "18+ onayı güvenli biçimde kaydedilemedi. İnternet bağlantını kontrol edip yeniden dene.",
+        { cause: error }
+      );
+    }
+  }
+
+  function selectAudience(nextAudience: AuthAudience) {
+    setAudience(nextAudience);
+    setMode("sign-in");
+    setConfirmedAdult(false);
+    setSubmitAttempted(false);
+  }
+
+  function selectMode(nextMode: AuthMode) {
+    setMode(nextMode);
+    setConfirmedAdult(false);
+    setSubmitAttempted(false);
+  }
+
   return (
     <Screen>
       <View style={styles.container}>
@@ -212,15 +295,12 @@ export default function SignInScreen() {
               <ModeButton
                 active={!isFather}
                 label="Anne"
-                onPress={() => setAudience("mother")}
+                onPress={() => selectAudience("mother")}
               />
               <ModeButton
                 active={isFather}
                 label="Baba"
-                onPress={() => {
-                  setAudience("father");
-                  setMode("sign-in");
-                }}
+                onPress={() => selectAudience("father")}
               />
             </View>
 
@@ -230,12 +310,12 @@ export default function SignInScreen() {
                   <ModeButton
                     active={!isSignUp}
                     label="Giriş"
-                    onPress={() => setMode("sign-in")}
+                    onPress={() => selectMode("sign-in")}
                   />
                   <ModeButton
                     active={isSignUp}
                     label="Kayıt"
-                    onPress={() => setMode("sign-up")}
+                    onPress={() => selectMode("sign-up")}
                   />
                 </View>
 
@@ -263,6 +343,18 @@ export default function SignInScreen() {
                   value={password}
                   onChangeText={setPassword}
                 />
+                {isSignUp ? (
+                  <DatePickerField
+                    error={birthDateError}
+                    label="Doğum tarihi"
+                    maximumDate={
+                      parseDateOnly(adultBirthDateCutoff) ?? undefined
+                    }
+                    onChange={setBirthDate}
+                    placeholder="Doğum tarihini seç"
+                    value={birthDate}
+                  />
+                ) : null}
               </>
             ) : null}
 
@@ -281,6 +373,50 @@ export default function SignInScreen() {
                 </Text>
               </View>
             ) : null}
+
+            <View>
+              <Pressable
+                accessibilityLabel="18 yaşından büyük olduğumu onaylıyorum"
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: confirmedAdult }}
+                onPress={() => setConfirmedAdult((current) => !current)}
+                style={[
+                  styles.ageConsent,
+                  submitAttempted &&
+                    !confirmedAdult &&
+                    styles.ageConsentError
+                ]}
+              >
+                <View
+                  style={[
+                    styles.legalCheckbox,
+                    confirmedAdult && styles.legalCheckboxAccepted
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.legalCheckboxText,
+                      confirmedAdult && styles.legalCheckboxTextAccepted
+                    ]}
+                  >
+                    {confirmedAdult ? "✓" : ""}
+                  </Text>
+                </View>
+                <View style={styles.ageConsentCopy}>
+                  <Text style={styles.ageConsentTitle}>
+                    18 yaşından büyük olduğumu onaylıyorum
+                  </Text>
+                  <Text style={styles.ageConsentText}>
+                    Anne+ yalnızca 18 yaş ve üzerindeki kullanıcılar içindir.
+                  </Text>
+                </View>
+              </Pressable>
+              {submitAttempted && !confirmedAdult ? (
+                <Text accessibilityRole="alert" style={styles.ageError}>
+                  Devam etmek için 18+ onay kutusunu işaretle.
+                </Text>
+              ) : null}
+            </View>
 
             <View style={styles.legalConsent}>
               <Pressable
@@ -462,6 +598,41 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 15,
     lineHeight: 21
+  },
+  ageConsent: {
+    alignItems: "flex-start",
+    backgroundColor: colors.primarySoft,
+    ...radii.card,
+    flexDirection: "row",
+    gap: spacing.sm,
+    minHeight: 56,
+    padding: spacing.md
+  },
+  ageConsentError: {
+    borderColor: colors.danger,
+    borderWidth: 1
+  },
+  ageConsentCopy: {
+    flex: 1,
+    gap: 2
+  },
+  ageConsentTitle: {
+    ...typography.label,
+    color: colors.text
+  },
+  ageConsentText: {
+    ...typography.body,
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 19
+  },
+  ageError: {
+    ...typography.body,
+    color: colors.danger,
+    fontSize: 14,
+    lineHeight: 20,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xs
   },
   legalCheckbox: {
     alignItems: "center",

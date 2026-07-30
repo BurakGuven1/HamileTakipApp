@@ -88,6 +88,37 @@ export type Database = {
         };
         Relationships: [];
       };
+      user_age_assurance: {
+        Row: {
+          user_id: string;
+          birth_date: string | null;
+          is_over_18_confirmed: boolean;
+          assurance_version: string;
+          last_context: "sign_up" | "sign_in" | "family_code";
+          first_assured_at: string;
+          last_assured_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          birth_date?: string | null;
+          is_over_18_confirmed?: boolean;
+          assurance_version: string;
+          last_context: "sign_up" | "sign_in" | "family_code";
+          first_assured_at?: string;
+          last_assured_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          birth_date?: string | null;
+          is_over_18_confirmed?: boolean;
+          assurance_version?: string;
+          last_context?: "sign_up" | "sign_in" | "family_code";
+          last_assured_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       family_members: {
         Row: {
           id: string;
@@ -1179,6 +1210,15 @@ export type Database = {
       };
     };
     Functions: {
+      record_age_assurance: {
+        Args: {
+          p_birth_date?: string;
+          p_context: "sign_up" | "sign_in" | "family_code";
+          p_is_over_18: boolean;
+          p_version: string;
+        };
+        Returns: Database["public"]["Tables"]["user_age_assurance"]["Row"];
+      };
       has_legal_acceptance: {
         Args: {
           p_version: string;
