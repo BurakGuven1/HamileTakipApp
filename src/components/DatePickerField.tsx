@@ -10,21 +10,27 @@ import { useAppTheme } from "@/providers/AppThemeProvider";
 import { colors, spacing, typography } from "@/theme";
 
 type DatePickerFieldProps = {
+  error?: string;
   label: string;
-  value?: string | null;
-  placeholder?: string;
+  maximumDate?: Date;
+  minimumDate?: Date;
   onChange: (value: string) => void;
+  placeholder?: string;
+  value?: string | null;
 };
 
 export function DatePickerField({
+  error,
   label,
+  maximumDate,
+  minimumDate,
   value,
   placeholder = "Tarih seç",
   onChange
 }: DatePickerFieldProps) {
   const appTheme = useAppTheme();
   const [open, setOpen] = useState(false);
-  const selectedDate = parseDateOnly(value) ?? new Date();
+  const selectedDate = parseDateOnly(value) ?? maximumDate ?? new Date();
 
   function handleChange(event: DateTimePickerEvent, date?: Date) {
     if (Platform.OS === "android") {
@@ -42,9 +48,11 @@ export function DatePickerField({
     <View style={styles.wrapper}>
       <Text style={typography.label}>{label}</Text>
       <Pressable
+        accessibilityHint="Tarih seçiciyi açar"
+        accessibilityLabel={`${label}: ${value ? formatDate(value) : placeholder}`}
         accessibilityRole="button"
         onPress={() => setOpen((current) => !current)}
-        style={styles.trigger}
+        style={[styles.trigger, error && styles.triggerError]}
       >
         <View style={styles.triggerTextWrap}>
           <Text style={[styles.valueText, !value && styles.placeholderText]}>
@@ -58,11 +66,18 @@ export function DatePickerField({
       {open && (
         <DateTimePicker
           display={Platform.OS === "ios" ? "compact" : "default"}
+          maximumDate={maximumDate}
+          minimumDate={minimumDate}
           mode="date"
           value={selectedDate}
           onChange={handleChange}
         />
       )}
+      {error ? (
+        <Text accessibilityRole="alert" style={styles.errorText}>
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -83,6 +98,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm
   },
+  triggerError: {
+    borderBottomColor: colors.danger
+  },
   triggerTextWrap: {
     flex: 1,
     gap: 2
@@ -99,5 +117,11 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 14,
     lineHeight: 19
+  },
+  errorText: {
+    ...typography.body,
+    color: colors.danger,
+    fontSize: 14,
+    lineHeight: 20
   }
 });
