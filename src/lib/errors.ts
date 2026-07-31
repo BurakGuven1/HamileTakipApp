@@ -1,7 +1,36 @@
 const friendlyErrorMap: Array<[RegExp, string]> = [
-  [/invalid login credentials/i, "E-posta veya şifre hatalı."],
-  [/password/i, "Şifre en az 8 karakter olmalı."],
-  [/email/i, "Geçerli bir e-posta adresi gir."],
+  [
+    /invalid login credentials|invalid_credentials/i,
+    "E-posta veya şifre hatalı."
+  ],
+  [
+    /email not confirmed|email_not_confirmed/i,
+    "Giriş yapmadan önce e-postandaki onay bağlantısına dokun."
+  ],
+  [
+    /email address not authorized|email_address_not_authorized|error sending confirmation email/i,
+    "Onay e-postası şu anda gönderilemiyor. Biraz sonra tekrar dene."
+  ],
+  [
+    /over_email_send_rate_limit|email rate limit|rate limit.*email/i,
+    "Çok fazla e-posta isteği gönderildi. Birkaç dakika sonra tekrar dene."
+  ],
+  [
+    /invalid email|email address.*invalid|email_address_invalid|unable to validate email/i,
+    "Geçerli bir e-posta adresi gir."
+  ],
+  [
+    /weak_password|password should be at least|password.*(?:characters|length)/i,
+    "Şifre en az 8 karakter olmalı."
+  ],
+  [
+    /user already registered|user_already_exists/i,
+    "Bu e-posta ile zaten bir hesap var."
+  ],
+  [
+    /database error saving new user|unexpected_failure/i,
+    "Hesap şu anda oluşturulamadı. Biraz sonra tekrar dene."
+  ],
   [/auth session is required|oturum/i, "Bu işlem için tekrar giriş yapmalısın."],
   [/network|fetch|failed to fetch/i, "Bağlantı kurulamadı. İnternetini kontrol edip tekrar dene."],
   [/permission|izin/i, "Bu işlem için gerekli izin verilmemiş."],
@@ -26,13 +55,24 @@ export function getErrorMessage(error: unknown, fallback = "Bir şey yolunda git
           ? String((error as { message?: unknown }).message)
           : fallback;
 
+  const code = getErrorCode(error);
+  const searchableError = `${code} ${raw}`.trim();
+
   for (const [pattern, message] of friendlyErrorMap) {
-    if (pattern.test(raw)) {
+    if (pattern.test(searchableError)) {
       return message;
     }
   }
 
   return raw || fallback;
+}
+
+function getErrorCode(error: unknown) {
+  if (!error || typeof error !== "object" || !("code" in error)) {
+    return "";
+  }
+
+  return String((error as { code?: unknown }).code ?? "");
 }
 
 function getRevenueCatErrorMessage(error: unknown) {
