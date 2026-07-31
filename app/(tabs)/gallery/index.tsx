@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
+import { router } from "expo-router";
 import { Camera, Images } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
@@ -248,8 +249,13 @@ function GalleryContent() {
 
         {!selectedBaby ? (
           <EmptyState
+            actionHint="Bebek profili oluşturma ekranını açar"
+            actionLabel="Bebek profili ekle"
             title="Galeri için bebek profili gerekli"
-            description="Önce Bebek sekmesinden bebek profilini oluştur."
+            description="Galeri mevcut bebek profillerine bağlıdır. Hamilelik veya annelik akışındayken bir bebek profili ekleyebilirsin."
+            onActionPress={() =>
+              router.push({ pathname: "/baby", params: { section: "profile" } })
+            }
           />
         ) : (
           <View style={styles.galleryContent}>

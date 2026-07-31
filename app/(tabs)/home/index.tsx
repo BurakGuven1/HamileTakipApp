@@ -39,6 +39,7 @@ import { getCurrentFamilyMembership } from "@/api/familyAccess";
 import { getFeaturedArticles } from "@/api/articles";
 import { getCurrentProfile } from "@/api/profiles";
 import {
+  getNextUpcomingVaccination,
   listVaccinationsForBaby,
   type BabyVaccinationWithSchedule
 } from "@/api/vaccinations";
@@ -85,25 +86,25 @@ export default function HomeScreen() {
 
   const babies = babiesQuery.data ?? [];
   const firstBaby = babies[0];
+  const profile = profileQuery.data;
+  const isMotherhoodMode = Boolean(profile && !profile.is_pregnant);
   const careHandoverQuery = useQuery({
     queryKey: ["care-handover", firstBaby?.id],
     queryFn: () => getCareHandoverSnapshot(firstBaby?.id as string),
-    enabled: Boolean(firstBaby?.id),
+    enabled: Boolean(firstBaby?.id && isMotherhoodMode),
     refetchInterval: 30_000
   });
   const careJournalWidgetQuery = useQuery({
     queryKey: ["care-journal-home", firstBaby?.id],
     queryFn: () => listCareJournalEntries(firstBaby?.id as string, 300),
-    enabled: Boolean(firstBaby?.id)
+    enabled: Boolean(firstBaby?.id && isMotherhoodMode)
   });
 
   const vaccinationsQuery = useQuery({
     queryKey: ["baby-vaccinations", firstBaby?.id],
     queryFn: () => listVaccinationsForBaby(firstBaby?.id as string),
-    enabled: Boolean(firstBaby?.id)
+    enabled: Boolean(firstBaby?.id && isMotherhoodMode)
   });
-
-  const profile = profileQuery.data;
   const accentColor = useAppTheme();
   const appTheme = accentColor.theme;
   const pregnancyProgress = getPregnancyProgress(profile?.due_date);
@@ -115,9 +116,18 @@ export default function HomeScreen() {
     queryKey: ["articles", "featured"],
     queryFn: () => getFeaturedArticles(4)
   });
+  const nextVaccinationQuery = useQuery({
+    queryKey: [
+      "next-upcoming-vaccination",
+      profile?.id,
+      firstBaby?.id,
+      profile?.is_pregnant
+    ],
+    queryFn: () => getNextUpcomingVaccination(firstBaby?.id ?? null, firstBaby?.name),
+    enabled: Boolean(profile)
+  });
   const featuredArticles = featuredArticlesQuery.data ?? [];
   const vaccinations: BabyVaccinationWithSchedule[] = vaccinationsQuery.data ?? [];
-  const nextVaccination = vaccinations.find((item) => !item.completed);
   const completedVaccines = vaccinations.filter((item) => item.completed).length;
   const babyAge = firstBaby ? getBabyAgeLabel(firstBaby.birth_date) : null;
   const displayName =
@@ -141,15 +151,25 @@ export default function HomeScreen() {
     onError: (error) => showError(error, "Bakım devralınamadı")
   });
   useEffect(() => {
-    if (!firstBaby?.id) return;
+    if (!firstBaby?.id || !isMotherhoodMode) return;
     return subscribeToCareCoordination(firstBaby.id, () => {
       Promise.all([
         queryClient.invalidateQueries({ queryKey: ["care-handover", firstBaby.id] }),
         queryClient.invalidateQueries({ queryKey: ["care-journal-home", firstBaby.id] })
       ]).catch(() => undefined);
     });
-  }, [firstBaby?.id, queryClient]);
+  }, [firstBaby?.id, isMotherhoodMode, queryClient]);
   useEffect(() => {
+    if (profile?.is_pregnant) {
+      syncCareQuickWidget(
+        firstBaby?.id ?? null,
+        firstBaby?.name ?? displayName ?? "Anne",
+        []
+      ).catch(
+        () => undefined
+      );
+      return;
+    }
     if (firstBaby && careJournalWidgetQuery.isSuccess) {
       syncCareQuickWidget(
         firstBaby.id,
@@ -158,10 +178,8 @@ export default function HomeScreen() {
       ).catch(() => undefined);
       return;
     }
-    if (!firstBaby && profile?.is_pregnant) {
-      syncCareQuickWidget(null, displayName || "Anne", []).catch(
-        () => undefined
-      );
+    if (profile && !firstBaby) {
+      syncCareQuickWidget(null, displayName || "Anne", []).catch(() => undefined);
     }
   }, [
     careJournalWidgetQuery.data,
@@ -520,15 +538,15 @@ export default function HomeScreen() {
           </View>
         </Reveal>
 
-        {firstBaby && careHandoverQuery.isLoading ? (
+        {isMotherhoodMode && firstBaby && careHandoverQuery.isLoading ? (
           <QueryState compact loading description="Bakım özeti hazırlanıyor…" shape="home" />
-        ) : firstBaby && careHandoverQuery.isError ? (
+        ) : isMotherhoodMode && firstBaby && careHandoverQuery.isError ? (
           <QueryState
             description="Canlı bakım özeti alınamadı. Bağlantını kontrol et ve yeniden dene."
             onRetry={() => void careHandoverQuery.refetch()}
             retrying={careHandoverQuery.isFetching}
           />
-        ) : firstBaby ? (
+        ) : isMotherhoodMode && firstBaby ? (
           <Card style={[styles.toolsCard, { backgroundColor: appTheme.primarySoft }]}>
             <View style={{ gap: spacing.md }}>
               <View style={styles.cardHeader}>
@@ -578,34 +596,36 @@ export default function HomeScreen() {
           </Card>
         ) : null}
 
-        <View style={styles.metricRow}>
-          <MetricCard label="Bebek profili" value={`${babies.length}`} />
-          <MetricCard
-            label="Aşı tamamlama"
-            value={
-              vaccinationsQuery.isError
-                ? "—"
-                : vaccinations.length > 0
-                ? `${completedVaccines}/${vaccinations.length}`
-                : "0"
-            }
-          />
-        </View>
+        {isMotherhoodMode ? (
+          <View style={styles.metricRow}>
+            <MetricCard label="Bebek profili" value={`${babies.length}`} />
+            <MetricCard
+              label="Bebek aşıları"
+              value={
+                vaccinationsQuery.isError
+                  ? "—"
+                  : vaccinations.length > 0
+                  ? `${completedVaccines}/${vaccinations.length}`
+                  : "0"
+              }
+            />
+          </View>
+        ) : null}
 
         <Card>
           <View style={{ gap: spacing.md }}>
             <View style={styles.cardHeader}>
               <View style={{ gap: spacing.xs, flex: 1 }}>
-                <Text style={typography.heading2}>Sıradaki hatırlatıcı</Text>
-                {vaccinationsQuery.isLoading ? (
+                <Text style={typography.heading2}>Sıradaki aşı</Text>
+                {nextVaccinationQuery.isLoading ? (
                   <Text style={typography.body}>Aşı bilgileri yükleniyor…</Text>
-                ) : vaccinationsQuery.isError ? (
+                ) : nextVaccinationQuery.isError ? (
                   <Text style={typography.body}>Aşı bilgileri şu anda alınamadı.</Text>
-                ) : nextVaccination ? (
+                ) : nextVaccinationQuery.data ? (
                   <Text style={typography.body}>
-                    {nextVaccination.vaccine_schedule?.vaccine_name ?? "Aşı"} /{" "}
-                    {getRelativeDayLabel(nextVaccination.scheduled_date)} /{" "}
-                    {formatDate(nextVaccination.scheduled_date)}
+                    {nextVaccinationQuery.data.subjectName} · {nextVaccinationQuery.data.vaccineName} ·{" "}
+                    {getRelativeDayLabel(nextVaccinationQuery.data.scheduledDate)} ·{" "}
+                    {formatDate(nextVaccinationQuery.data.scheduledDate)}
                   </Text>
                 ) : (
                   <Text style={typography.body}>
@@ -615,8 +635,8 @@ export default function HomeScreen() {
               </View>
               <Syringe color={appTheme.primary} size={28} />
             </View>
-            <Link href="/baby" asChild>
-              <Button label="Aşı takvimini aç" variant="secondary" />
+            <Link href="/vaccines" asChild>
+              <Button label="Aşı merkezini aç" variant="secondary" />
             </Link>
           </View>
         </Card>
@@ -624,7 +644,7 @@ export default function HomeScreen() {
         <View style={styles.sectionHeader}>
           <View>
             <Text style={typography.heading2}>Makaleler</Text>
-            <Text style={styles.sectionHint}>Hafta ve ay rehberleri</Text>
+            <Text style={styles.sectionHint}>Gebelikten bebekliğe tüm rehberler</Text>
           </View>
           <Link href="/articles" asChild>
             <Pressable accessibilityRole="button" style={styles.sectionLink}>
@@ -637,7 +657,7 @@ export default function HomeScreen() {
         </View>
 
         {featuredArticlesQuery.isLoading ? (
-          <QueryState compact loading description="Haftana uygun rehberler hazırlanıyor…" shape="home" />
+          <QueryState compact loading description="Rehberler hazırlanıyor…" shape="home" />
         ) : featuredArticlesQuery.isError ? (
           <QueryState
             compact
@@ -648,7 +668,7 @@ export default function HomeScreen() {
         ) : featuredArticles.length === 0 ? (
           <EmptyState
             actionLabel="Tüm rehberleri gör"
-            description="Gebelik haftanı veya bebeğinin yaşını eklediğinde en uygun rehberler burada sıralanır."
+            description="Gebelik, bakım ve gelişim rehberleri yayınlandığında burada birlikte sıralanır."
             onActionPress={() => router.push("/articles")}
             title="İlk rehberini keşfet"
           />

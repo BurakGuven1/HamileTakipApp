@@ -93,9 +93,7 @@ export async function syncCareQuickWidget(
                     ? `${vaccination.vaccineName} yarın`
                     : `${vaccination.vaccineName} aşısına ${days} gün kaldı`,
               detail: `${vaccination.subjectName} · ${formatDate(vaccination.scheduledDate)}`,
-              destination: babyId
-                ? "hamiletakip://baby?section=vaccines"
-                : "hamiletakip://home"
+              destination: "hamiletakip://vaccines"
             });
           }
         }

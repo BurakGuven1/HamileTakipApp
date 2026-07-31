@@ -34,6 +34,7 @@ type FamilyPremiumTrialRow = { expires_at: string; owner_id: string };
 type PushTokenRow = { id: string; expo_push_token: string; user_id: string };
 type NotificationPreferenceRow = {
   id: string;
+  is_pregnant: boolean;
   notify_development_periods: boolean;
   notify_medicine_safety: boolean;
   notify_sleep_predictions: boolean;
@@ -108,7 +109,7 @@ Deno.serve(async (req) => {
     const { data: preferenceData, error: preferenceError } = await supabase
       .from("profiles")
       .select(
-        "id,notify_sleep_predictions,notify_medicine_safety,notify_development_periods,notify_milk_inventory",
+        "id,is_pregnant,notify_sleep_predictions,notify_medicine_safety,notify_development_periods,notify_milk_inventory",
       )
       .in("id", ownerIds);
     if (preferenceError) return json({ error: preferenceError.message }, 500);
@@ -209,6 +210,7 @@ Deno.serve(async (req) => {
     const messages: PushCandidate[] = [];
     for (const reminder of reminders) {
       const ownerId = ownerByBaby.get(reminder.baby_id);
+      if (ownerId && preferencesByOwner.get(ownerId)?.is_pregnant) continue;
       const eligibleRecipients = ownerId
         ? reminder.alarm_kind === "standard"
           ? premiumRecipientsByOwner.get(ownerId)
@@ -266,6 +268,7 @@ Deno.serve(async (req) => {
       const ownerId = ownerByBaby.get(notification.baby_id);
       if (!ownerId) continue;
       const preference = preferencesByOwner.get(ownerId);
+      if (preference?.is_pregnant) continue;
       if (
         (notification.kind === "sleep_prediction" &&
           preference?.notify_sleep_predictions === false) ||

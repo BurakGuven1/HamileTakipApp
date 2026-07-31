@@ -35,7 +35,7 @@ export function useNotificationNavigation() {
       } else if (data?.screen === "article" && typeof data.slug === "string") {
         router.push({ pathname: "/articles/[slug]", params: { slug: data.slug } });
       } else if (data?.screen === "baby-vaccines") {
-        router.push({ pathname: "/baby", params: { section: "vaccines" } });
+        router.push("/vaccines");
       } else if (data?.screen === "home") {
         router.push("/home");
       } else if (data?.screen === "forum") {

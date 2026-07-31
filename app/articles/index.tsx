@@ -25,11 +25,10 @@ export default function ArticlesScreen() {
           <View style={styles.heroIcon}>
             <BookOpen color={colors.primary} size={28} />
           </View>
-          <Text style={typography.eyebrow}>Makaleler</Text>
-          <Text style={typography.heading1}>Hafta hafta okunacak rehberler</Text>
+          <Text style={typography.eyebrow}>Anne+ rehberleri</Text>
+          <Text style={typography.heading1}>Gebelikten bebekliğe güvenilir rehberler</Text>
           <Text style={styles.heroText}>
-            Gebelik haftaları, ay rehberleri ve günlük ipuçları düzenli bir akışta.
-            Sonradan ekleyeceğin görseller bu kapaklarda gösterilir.
+            Gebelik haftaları, bakım, gelişim ve günlük yaşam içerikleri tek bir arşivde.
           </Text>
         </View>
 
@@ -50,8 +49,8 @@ export default function ArticlesScreen() {
             />
           ) : sortedArticles.length === 0 ? (
             <EmptyState
-              title="Henüz yayınlanmış makale yok"
-              description="Supabase articles tablosunda is_published alanı açık olan yazılar burada görünür."
+              title="Yeni rehberler hazırlanıyor"
+              description="Gebelikten bebek bakımına uzanan yeni yayınlar eklendiğinde burada görünecek."
             />
           ) : (
             sortedArticles.map((article) => (
