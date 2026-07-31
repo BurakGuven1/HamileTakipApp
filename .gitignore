@@ -19,10 +19,9 @@ credentials.json
 google-services.json
 GoogleService-Info.plist
 
-# env files
+# env files (local configuration and templates)
 .env
 .env.*
-!.env.example
 
 # logs
 npm-debug.log*

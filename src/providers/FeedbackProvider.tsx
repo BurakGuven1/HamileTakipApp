@@ -17,7 +17,6 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { getErrorMessage } from "@/lib/errors";
-import { useAppTheme } from "@/providers/AppThemeProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
 type FeedbackKind = "error" | "success" | "info";
@@ -38,7 +37,6 @@ type FeedbackContextValue = {
 const FeedbackContext = createContext<FeedbackContextValue | null>(null);
 
 export function FeedbackProvider({ children }: PropsWithChildren) {
-  const appTheme = useAppTheme();
   const insets = useSafeAreaInsets();
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -97,8 +95,7 @@ export function FeedbackProvider({ children }: PropsWithChildren) {
           <View
             style={[
               styles.toast,
-              styles[feedback.kind],
-              feedback.kind === "info" && { backgroundColor: appTheme.tint }
+              styles[feedback.kind]
             ]}
           >
             <View style={styles.copy}>
@@ -111,7 +108,7 @@ export function FeedbackProvider({ children }: PropsWithChildren) {
               onPress={hide}
               style={styles.close}
             >
-              <X color={colors.text} size={18} />
+              <X color={colors.feedbackForeground} size={18} />
             </Pressable>
           </View>
         </Animated.View>
@@ -151,13 +148,13 @@ const styles = StyleSheet.create({
     shadowRadius: 24
   },
   error: {
-    backgroundColor: colors.accentSoft
+    backgroundColor: colors.feedbackErrorBackground
   },
   success: {
-    backgroundColor: colors.highlightSoft
+    backgroundColor: colors.feedbackSuccessBackground
   },
   info: {
-    backgroundColor: colors.primarySoft
+    backgroundColor: colors.feedbackInfoBackground
   },
   copy: {
     flex: 1,
@@ -165,17 +162,17 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.label,
-    color: colors.text
+    color: colors.feedbackForeground
   },
   message: {
     ...typography.body,
-    color: colors.text,
+    color: colors.feedbackForeground,
     fontSize: 14,
     lineHeight: 20
   },
   close: {
     alignItems: "center",
-    backgroundColor: colors.surface,
+    backgroundColor: colors.feedbackActionBackground,
     borderRadius: radii.pill,
     height: 44,
     justifyContent: "center",
