@@ -23,9 +23,9 @@ import {
 } from "@/api/profiles";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
-import { DatePickerField } from "@/components/DatePickerField";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
+import { LifeStageSwitcher } from "@/features/life-stage/LifeStageSwitcher";
 import {
   getWaterRemindersEnabled,
   setWaterRemindersEnabled,
@@ -75,8 +75,6 @@ export default function SettingsScreen() {
   const [motherName, setMotherName] = useState("");
   const [fatherName, setFatherName] = useState("");
   const [forumNickname, setForumNickname] = useState("");
-  const [isPregnant, setIsPregnant] = useState(false);
-  const [dueDate, setDueDate] = useState("");
   const [themePreference, setThemePreference] = useState<ThemePreference>("auto");
   const [feedingMode, setFeedingMode] = useState<"breastfeeding" | "pumping" | "mixed" | "formula">("mixed");
   const [ownUserId, setOwnUserId] = useState<string>();
@@ -117,8 +115,6 @@ export default function SettingsScreen() {
     setForumNickname(profile.forum_nickname ?? "");
     setMotherName(profile.mother_name ?? "");
     setFatherName(profile.father_name ?? "");
-    setIsPregnant(profile.is_pregnant);
-    setDueDate(profile.due_date ?? "");
     setThemePreference(profile.theme_preference);
     setFeedingMode(profile.feeding_mode ?? "mixed");
   }, [profile, profileEditOpen]);
@@ -168,16 +164,10 @@ export default function SettingsScreen() {
         }
       }
 
-      if (isPregnant && !dueDate) {
-        throw new Error("Tahmini doğum tarihini seçmelisin.");
-      }
-
       return updateCurrentProfile({
-        due_date: isPregnant ? dueDate : null,
         display_name: cleanMotherName,
         father_name: cleanFatherName,
         forum_nickname: cleanNickname,
-        is_pregnant: isPregnant,
         mother_name: cleanMotherName,
         feeding_mode: feedingMode,
         theme_preference: themePreference
@@ -336,8 +326,6 @@ export default function SettingsScreen() {
     setForumNickname(profile?.forum_nickname ?? "");
     setMotherName(profile?.mother_name ?? profile?.display_name ?? "");
     setFatherName(profile?.father_name ?? "");
-    setIsPregnant(Boolean(profile?.is_pregnant));
-    setDueDate(profile?.due_date ?? "");
     setThemePreference(profile?.theme_preference ?? "auto");
     setProfileEditOpen(true);
     requestAnimationFrame(() => scrollToProfileEditor());
@@ -413,7 +401,7 @@ export default function SettingsScreen() {
               />
               <StatusPill
                 label="Durum"
-                value={profile?.is_pregnant ? "Hamilelik" : "Genel takip"}
+                value={profile?.is_pregnant ? "Hamilelik" : "Annelik"}
               />
               <StatusPill label="Tema" value={appTheme.label} />
             </View>
@@ -438,6 +426,12 @@ export default function SettingsScreen() {
             />
           </View>
         </Card>
+
+        {profile && profile.id === ownUserId ? (
+          <Card>
+            <LifeStageSwitcher profile={profile} />
+          </Card>
+        ) : null}
 
         {profile?.family_referral_code && profile.id === ownUserId ? (
           <Pressable
@@ -475,7 +469,7 @@ export default function SettingsScreen() {
               <View style={{ gap: spacing.xs }}>
                 <Text style={typography.heading2}>Profil bilgileri</Text>
               <Text style={typography.body}>
-                  Anne-baba adını, forum takma adını ve gebelik durumunu buradan güncelle.
+                  Anne-baba adını, forum takma adını ve görünüm tercihini buradan güncelle.
                 </Text>
               </View>
 
@@ -500,41 +494,18 @@ export default function SettingsScreen() {
                 onChangeText={setForumNickname}
               />
 
-              <View style={{ gap: spacing.sm }}>
-                <Text style={typography.label}>Takip durumu</Text>
-                <View style={styles.segmentRow}>
-                  <SegmentButton
-                    active={isPregnant}
-                    label="Hamileyim"
-                    onPress={() => setIsPregnant(true)}
-                  />
-                  <SegmentButton
-                    active={!isPregnant}
-                    label="Hamile değilim"
-                    onPress={() => setIsPregnant(false)}
-                  />
+              {!profile?.is_pregnant ? (
+                <View style={{ gap: spacing.sm }}>
+                  <Text style={typography.label}>Beslenme akışı</Text>
+                  <Text style={typography.body}>Bakım günlüğünde en sık kullandığın kayıtları öne çıkarır; sağlık önerisi değildir.</Text>
+                  <View style={styles.segmentRow}>
+                    <SegmentButton active={feedingMode === "breastfeeding"} label="Emzirme" onPress={() => setFeedingMode("breastfeeding")} />
+                    <SegmentButton active={feedingMode === "pumping"} label="Sağım" onPress={() => setFeedingMode("pumping")} />
+                    <SegmentButton active={feedingMode === "mixed"} label="Karma" onPress={() => setFeedingMode("mixed")} />
+                    <SegmentButton active={feedingMode === "formula"} label="Mama" onPress={() => setFeedingMode("formula")} />
+                  </View>
                 </View>
-              </View>
-
-              {isPregnant ? (
-                <DatePickerField
-                  label="Tahmini doğum tarihi"
-                  placeholder="Doğum tarihini seç"
-                  value={dueDate}
-                  onChange={setDueDate}
-                />
               ) : null}
-
-              <View style={{ gap: spacing.sm }}>
-                <Text style={typography.label}>Beslenme akışı</Text>
-                <Text style={typography.body}>Bakım günlüğünde en sık kullandığın kayıtları öne çıkarır; sağlık önerisi değildir.</Text>
-                <View style={styles.segmentRow}>
-                  <SegmentButton active={feedingMode === "breastfeeding"} label="Emzirme" onPress={() => setFeedingMode("breastfeeding")} />
-                  <SegmentButton active={feedingMode === "pumping"} label="Sağım" onPress={() => setFeedingMode("pumping")} />
-                  <SegmentButton active={feedingMode === "mixed"} label="Karma" onPress={() => setFeedingMode("mixed")} />
-                  <SegmentButton active={feedingMode === "formula"} label="Mama" onPress={() => setFeedingMode("formula")} />
-                </View>
-              </View>
 
               <View style={{ gap: spacing.sm }}>
                 <Text style={typography.label}>Görünüm ve tema</Text>
@@ -618,17 +589,19 @@ export default function SettingsScreen() {
             />
             {showMoreNotificationPreferences ? (
               <>
-                <PreferenceRow
-                  label="Haftalık gebelik güncellemesi"
-                  description="Gebelik haftana göre özet bildirimler al."
-                  value={Boolean(profile?.notify_weekly_pregnancy_updates)}
-                  disabled={!profile || updatePreferenceMutation.isPending}
-                  onValueChange={(value) =>
-                    updatePreferenceMutation.mutate({
-                      notify_weekly_pregnancy_updates: value
-                    })
-                  }
-                />
+                {profile?.is_pregnant ? (
+                  <PreferenceRow
+                    label="Haftalık gebelik güncellemesi"
+                    description="Gebelik haftana göre özet bildirimler al."
+                    value={Boolean(profile?.notify_weekly_pregnancy_updates)}
+                    disabled={!profile || updatePreferenceMutation.isPending}
+                    onValueChange={(value) =>
+                      updatePreferenceMutation.mutate({
+                        notify_weekly_pregnancy_updates: value
+                      })
+                    }
+                  />
+                ) : null}
                 <PreferenceRow
                   label="Günlük kişisel destek"
                   description="Gebelik haftana veya doğum sonrası dönemine uygun makale, küçük öneri ve destek mesajı al."
@@ -638,49 +611,54 @@ export default function SettingsScreen() {
                     updatePreferenceMutation.mutate({ notify_daily_support: value })
                   }
                 />
-                <PreferenceRow
-                  label="Günlük su hatırlatmaları · Ücretsiz"
-                  description={`${WATER_REMINDER_TIME_LABEL} saatlerinde cihazında nazik su molaları planla. İstediğin an kapatabilirsin.`}
-                  value={waterRemindersEnabled}
-                  disabled={updatingWaterReminders}
-                  onValueChange={(value) => void updateWaterReminders(value)}
-                />
-                <PreferenceRow
-                  label="Akıllı uyku tahminleri"
-                  description="Yeterli kayıt oluştuğunda yaklaşan uyku penceresinden haber ver."
-                  value={Boolean(profile?.notify_sleep_predictions)}
-                  disabled={!profile || updatePreferenceMutation.isPending}
-                  onValueChange={(value) =>
-                    updatePreferenceMutation.mutate({ notify_sleep_predictions: value })
-                  }
-                />
-                <PreferenceRow
-                  label="İlaç ve vitamin güvenlik uyarıları"
-                  description="Başka bir bakıcı doz kaydettiğinde çift doz riskine karşı haber ver."
-                  value={Boolean(profile?.notify_medicine_safety)}
-                  disabled={!profile || updatePreferenceMutation.isPending}
-                  onValueChange={(value) =>
-                    updatePreferenceMutation.mutate({ notify_medicine_safety: value })
-                  }
-                />
-                <PreferenceRow
-                  label="Gelişim dönemi notları"
-                  description="Bebeğin yaşına göre empatik ve güvenli gelişim notları al."
-                  value={Boolean(profile?.notify_development_periods)}
-                  disabled={!profile || updatePreferenceMutation.isPending}
-                  onValueChange={(value) =>
-                    updatePreferenceMutation.mutate({ notify_development_periods: value })
-                  }
-                />
-                <PreferenceRow
-                  label="Anne sütü stok uyarıları"
-                  description="Poşet veya kabın son kullanım süresi yaklaşınca haber ver."
-                  value={Boolean(profile?.notify_milk_inventory)}
-                  disabled={!profile || updatePreferenceMutation.isPending}
-                  onValueChange={(value) =>
-                    updatePreferenceMutation.mutate({ notify_milk_inventory: value })
-                  }
-                />
+                {profile?.is_pregnant ? (
+                  <PreferenceRow
+                    label="Günlük su hatırlatmaları · Ücretsiz"
+                    description={`${WATER_REMINDER_TIME_LABEL} saatlerinde cihazında nazik su molaları planla. İstediğin an kapatabilirsin.`}
+                    value={waterRemindersEnabled}
+                    disabled={updatingWaterReminders}
+                    onValueChange={(value) => void updateWaterReminders(value)}
+                  />
+                ) : (
+                  <>
+                    <PreferenceRow
+                      label="Akıllı uyku tahminleri"
+                      description="Yeterli kayıt oluştuğunda yaklaşan uyku penceresinden haber ver."
+                      value={Boolean(profile?.notify_sleep_predictions)}
+                      disabled={!profile || updatePreferenceMutation.isPending}
+                      onValueChange={(value) =>
+                        updatePreferenceMutation.mutate({ notify_sleep_predictions: value })
+                      }
+                    />
+                    <PreferenceRow
+                      label="İlaç ve vitamin güvenlik uyarıları"
+                      description="Başka bir bakıcı doz kaydettiğinde çift doz riskine karşı haber ver."
+                      value={Boolean(profile?.notify_medicine_safety)}
+                      disabled={!profile || updatePreferenceMutation.isPending}
+                      onValueChange={(value) =>
+                        updatePreferenceMutation.mutate({ notify_medicine_safety: value })
+                      }
+                    />
+                    <PreferenceRow
+                      label="Gelişim dönemi notları"
+                      description="Bebeğin yaşına göre empatik ve güvenli gelişim notları al."
+                      value={Boolean(profile?.notify_development_periods)}
+                      disabled={!profile || updatePreferenceMutation.isPending}
+                      onValueChange={(value) =>
+                        updatePreferenceMutation.mutate({ notify_development_periods: value })
+                      }
+                    />
+                    <PreferenceRow
+                      label="Anne sütü stok uyarıları"
+                      description="Poşet veya kabın son kullanım süresi yaklaşınca haber ver."
+                      value={Boolean(profile?.notify_milk_inventory)}
+                      disabled={!profile || updatePreferenceMutation.isPending}
+                      onValueChange={(value) =>
+                        updatePreferenceMutation.mutate({ notify_milk_inventory: value })
+                      }
+                    />
+                  </>
+                )}
               </>
             ) : null}
 

@@ -204,9 +204,13 @@ export default function BabyScreen() {
       return markVaccinationDone(vaccination.id);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["baby-vaccinations", selectedBaby?.id]
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["baby-vaccinations", selectedBaby?.id]
+        }),
+        queryClient.invalidateQueries({ queryKey: ["active-vaccine-reminders"] }),
+        queryClient.invalidateQueries({ queryKey: ["next-upcoming-vaccination"] })
+      ]);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
         () => undefined
       );

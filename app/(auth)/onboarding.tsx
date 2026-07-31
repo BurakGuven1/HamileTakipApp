@@ -31,6 +31,10 @@ import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
 import { Thread } from "@/components/Thread";
 import { registerAndSavePushToken } from "@/lib/notifications";
+import {
+  getPregnancyDueDateBounds,
+  getPregnancyDueDateError
+} from "@/lib/dates";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import {
@@ -269,8 +273,9 @@ export default function OnboardingScreen() {
       }
 
       if (status === "pregnant") {
-        if (!dueDate) {
-          showInfo("Tahmini doğum tarihini seçmelisin.", "Tarih seç");
+        const dueDateError = getPregnancyDueDateError(dueDate);
+        if (dueDateError) {
+          showInfo(dueDateError, "Tarihi kontrol et");
           return;
         }
 
@@ -607,6 +612,8 @@ export default function OnboardingScreen() {
               {status === "pregnant" ? (
                 <DatePickerField
                   label="Tahmini doğum tarihi"
+                  maximumDate={getPregnancyDueDateBounds().maximumDate}
+                  minimumDate={getPregnancyDueDateBounds().minimumDate}
                   placeholder="Doğum tarihini seç"
                   value={dueDate}
                   onChange={setDueDate}

@@ -73,7 +73,6 @@ export function VaccineReminderGate() {
   const hasTodayReminder = reminders.some(
     (reminder) => reminder.scheduled_date === toDateOnly(new Date())
   );
-  const hasBabyReminder = reminders.some((item) => item.source === "baby");
 
   const dismissMutation = useMutation({
     mutationFn: () => dismissVaccineReminders(reminders),
@@ -87,11 +86,7 @@ export function VaccineReminderGate() {
 
   function openSchedule() {
     setHiddenForEntry(true);
-    if (hasBabyReminder) {
-      router.push({ pathname: "/baby", params: { section: "vaccines" } });
-    } else {
-      router.push("/home");
-    }
+    router.push("/vaccines");
   }
 
   return (
@@ -169,7 +164,7 @@ export function VaccineReminderGate() {
           </Text>
 
           <View style={styles.actions}>
-            <Button label="Aşı takvimini aç" onPress={openSchedule} />
+            <Button label="Aşı merkezini aç" onPress={openSchedule} />
             <Button
               disabled={dismissMutation.isPending}
               label={

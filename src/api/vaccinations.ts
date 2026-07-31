@@ -1,9 +1,12 @@
 import { supabase } from "@/lib/supabase";
 import { trackEvent } from "@/lib/analytics";
+import { getCurrentProfile } from "@/api/profiles";
 import type { Tables, TablesUpdate } from "@/types/database";
 import { toDateOnly } from "@/lib/dates";
 
 export type BabyVaccination = Tables<"baby_vaccinations">;
+export type PregnancyVaccination = Tables<"pregnancy_vaccinations">;
+export type VaccinationSource = "baby" | "pregnancy";
 export type VaccineScheduleItem = Tables<"vaccine_schedule">;
 export type BabyVaccinationWithSchedule = BabyVaccination & {
   vaccine_schedule: VaccineScheduleItem | null;
@@ -77,17 +80,26 @@ export async function listVaccinationsForBaby(
   return data as unknown as BabyVaccinationWithSchedule[];
 }
 
+export async function listPregnancyVaccinations(
+  profileId: string
+): Promise<PregnancyVaccination[]> {
+  const { data, error } = await supabase
+    .from("pregnancy_vaccinations")
+    .select("*")
+    .eq("profile_id", profileId)
+    .order("scheduled_date", { ascending: true });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function getNextUpcomingVaccination(
   babyId: string | null,
   babyName = "Bebeğin"
 ): Promise<UpcomingVaccinationContext | null> {
   const today = toDateOnly(new Date());
-  const {
-    data: { user },
-    error: userError
-  } = await supabase.auth.getUser();
-  if (userError) throw userError;
-  if (!user) return null;
+  const profile = await getCurrentProfile();
+  if (!profile) return null;
 
   const [babyResult, pregnancyResult] = await Promise.all([
     babyId
@@ -101,20 +113,18 @@ export async function getNextUpcomingVaccination(
           .limit(1)
           .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
-    supabase
-      .from("pregnancy_vaccinations")
-      .select("scheduled_date, completed, vaccine_name")
-      .eq("profile_id", user.id)
-      .eq("completed", false)
-      .gte("scheduled_date", today)
-      .order("scheduled_date", { ascending: true })
-      .limit(1)
-      .maybeSingle()
+    profile.is_pregnant
+      ? supabase
+          .from("pregnancy_vaccinations")
+          .select("scheduled_date, completed, vaccine_name")
+          .eq("profile_id", profile.id)
+          .eq("completed", false)
+          .gte("scheduled_date", today)
+          .order("scheduled_date", { ascending: true })
+          .limit(1)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null })
   ]);
-
-  if (babyResult.error && pregnancyResult.error) {
-    throw babyResult.error;
-  }
 
   const babyRow = babyResult.data as unknown as {
     completed: boolean;
@@ -141,6 +151,11 @@ export async function getNextUpcomingVaccination(
     });
   }
 
+  if (candidates.length === 0) {
+    if (babyResult.error) throw babyResult.error;
+    if (pregnancyResult.error) throw pregnancyResult.error;
+  }
+
   return candidates.sort((a, b) =>
     a.scheduledDate.localeCompare(b.scheduledDate)
   )[0] ?? null;
@@ -150,69 +165,98 @@ export async function markVaccinationDone(
   vaccinationId: string,
   completedAt = new Date().toISOString()
 ) {
-  const update: TablesUpdate<"baby_vaccinations"> = {
+  return setVaccinationCompleted({
     completed: true,
-    completed_date: completedAt.slice(0, 10),
-    updated_at: new Date().toISOString()
-  };
-
-  const { data, error } = await supabase
-    .from("baby_vaccinations")
-    .update(update)
-    .eq("id", vaccinationId)
-    .select()
-    .single();
-
-  if (error) {
-    throw error;
-  }
-
-  await trackEvent("vaccination_marked_done", {
-    vaccination_id: vaccinationId
+    completedAt,
+    source: "baby",
+    vaccinationId
   });
-
-  return data;
 }
 
 export async function markVaccinationPending(vaccinationId: string) {
-  const update: TablesUpdate<"baby_vaccinations"> = {
+  return setVaccinationCompleted({
     completed: false,
-    completed_date: null,
-    updated_at: new Date().toISOString()
-  };
-
-  const { data, error } = await supabase
-    .from("baby_vaccinations")
-    .update(update)
-    .eq("id", vaccinationId)
-    .select()
-    .single();
-
-  if (error) {
-    throw error;
-  }
-
-  await trackEvent("vaccination_marked_pending", {
-    vaccination_id: vaccinationId
+    source: "baby",
+    vaccinationId
   });
-
-  return data;
 }
 
 export async function updateVaccinationNotes(
   vaccinationId: string,
   notes: string | null
 ) {
-  const { data, error } = await supabase
-    .from("baby_vaccinations")
-    .update({ notes, updated_at: new Date().toISOString() })
-    .eq("id", vaccinationId)
-    .select()
-    .single();
+  return updateVaccinationNotesForSource({
+    notes,
+    source: "baby",
+    vaccinationId
+  });
+}
 
-  if (error) {
-    throw error;
-  }
+export async function setVaccinationCompleted({
+  completed,
+  completedAt = new Date().toISOString(),
+  source,
+  vaccinationId
+}: {
+  completed: boolean;
+  completedAt?: string;
+  source: VaccinationSource;
+  vaccinationId: string;
+}) {
+  const update = {
+    completed,
+    completed_date: completed ? completedAt.slice(0, 10) : null,
+    updated_at: new Date().toISOString()
+  };
+  const result = source === "pregnancy"
+    ? await supabase
+        .from("pregnancy_vaccinations")
+        .update(update satisfies TablesUpdate<"pregnancy_vaccinations">)
+        .eq("id", vaccinationId)
+        .select()
+        .single()
+    : await supabase
+        .from("baby_vaccinations")
+        .update(update satisfies TablesUpdate<"baby_vaccinations">)
+        .eq("id", vaccinationId)
+        .select()
+        .single();
 
-  return data;
+  if (result.error) throw result.error;
+
+  await trackEvent(
+    completed ? "vaccination_marked_done" : "vaccination_marked_pending",
+    { source, vaccination_id: vaccinationId }
+  );
+
+  return result.data;
+}
+
+export async function updateVaccinationNotesForSource({
+  notes,
+  source,
+  vaccinationId
+}: {
+  notes: string | null;
+  source: VaccinationSource;
+  vaccinationId: string;
+}) {
+  const update = { notes, updated_at: new Date().toISOString() };
+  const result = source === "pregnancy"
+    ? await supabase
+        .from("pregnancy_vaccinations")
+        .update(update satisfies TablesUpdate<"pregnancy_vaccinations">)
+        .eq("id", vaccinationId)
+        .select()
+        .single()
+    : await supabase
+        .from("baby_vaccinations")
+        .update(update satisfies TablesUpdate<"baby_vaccinations">)
+        .eq("id", vaccinationId)
+        .select()
+        .single();
+
+  if (result.error) throw result.error;
+
+  return result.data;
 }

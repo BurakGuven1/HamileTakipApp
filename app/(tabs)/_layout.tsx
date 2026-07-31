@@ -10,6 +10,7 @@ import {
 } from "lucide-react-native";
 import type { ColorValue } from "react-native";
 import { isCurrentUserFamilyFather } from "@/api/familyAccess";
+import { getCurrentProfile } from "@/api/profiles";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
@@ -25,6 +26,13 @@ export default function TabsLayout() {
     queryKey: ["current-user-is-family-father"],
     queryFn: isCurrentUserFamilyFather
   });
+  const profileQuery = useQuery({
+    queryKey: ["current-profile"],
+    queryFn: getCurrentProfile
+  });
+  const isPregnancyMode = profileQuery.data?.is_pregnant === true;
+  const lifeStageUnavailable =
+    profileQuery.isPending || profileQuery.isError || !profileQuery.data;
   const hideWomensForum =
     fatherRoleQuery.isPending || fatherRoleQuery.isError || fatherRoleQuery.data === true;
 
@@ -65,6 +73,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="baby"
         options={{
+          href: lifeStageUnavailable || isPregnancyMode ? null : undefined,
           title: "Bebek",
           tabBarIcon: (props) => <BabyIcon {...props} />
         }}
@@ -79,6 +88,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="lullaby"
         options={{
+          href: null,
           title: "Ninni",
           tabBarIcon: (props) => <LullabyIcon {...props} />
         }}
@@ -97,6 +107,10 @@ export default function TabsLayout() {
           title: "Profil",
           tabBarIcon: (props) => <ProfileIcon {...props} />
         }}
+      />
+      <Tabs.Screen
+        name="vaccines"
+        options={{ href: null, title: "Aşı merkezi" }}
       />
       <Tabs.Screen
         name="pregnancy-tools"

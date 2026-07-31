@@ -19,6 +19,32 @@ export function parseDateOnly(value?: string | null) {
 }
 
 const dayInMs = 1000 * 60 * 60 * 24;
+const pregnancyPastDueToleranceDays = 14;
+const pregnancyMaximumDaysUntilDue = 294;
+
+export function getPregnancyDueDateBounds(reference = new Date()) {
+  const minimumDate = new Date(reference);
+  const maximumDate = new Date(reference);
+  minimumDate.setHours(0, 0, 0, 0);
+  maximumDate.setHours(0, 0, 0, 0);
+  minimumDate.setDate(minimumDate.getDate() - pregnancyPastDueToleranceDays);
+  maximumDate.setDate(maximumDate.getDate() + pregnancyMaximumDaysUntilDue);
+  return { maximumDate, minimumDate };
+}
+
+export function getPregnancyDueDateError(value?: string | null) {
+  const dueDate = parseDateOnly(value);
+  if (!dueDate || toDateOnly(dueDate) !== value) {
+    return "Geçerli bir tahmini doğum tarihi seçmelisin.";
+  }
+
+  const { maximumDate, minimumDate } = getPregnancyDueDateBounds();
+  if (dueDate < minimumDate || dueDate > maximumDate) {
+    return "Tahmini doğum tarihi bugünden en fazla 14 gün önce veya 42 hafta sonra olabilir.";
+  }
+
+  return null;
+}
 
 function getDateOnlyDiffDays(target: Date, base = new Date()) {
   const targetDate = new Date(target);
