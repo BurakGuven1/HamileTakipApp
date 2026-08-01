@@ -3,8 +3,8 @@ import type { TextStyle } from "react-native";
 import { colors } from "@/theme/colors";
 
 export const fonts = {
-  displaySemiBold: "Fraunces_600SemiBold",
-  displayBold: "Fraunces_700Bold",
+  displaySemiBold: "Manrope_600SemiBold",
+  displayBold: "Manrope_700Bold",
   bodyRegular: "Manrope_400Regular",
   bodyMedium: "Manrope_500Medium",
   bodySemiBold: "Manrope_600SemiBold",
@@ -18,18 +18,21 @@ export const typography = {
     color: colors.text,
     fontFamily: fonts.displayBold,
     fontSize: 32,
+    letterSpacing: -0.6,
     lineHeight: 38
   },
   heading2: {
     color: colors.text,
     fontFamily: fonts.displaySemiBold,
     fontSize: 23,
+    letterSpacing: -0.3,
     lineHeight: 30
   },
   heading3: {
     color: colors.text,
     fontFamily: fonts.displaySemiBold,
     fontSize: 19,
+    letterSpacing: -0.15,
     lineHeight: 26
   },
   body: {

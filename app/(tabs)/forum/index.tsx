@@ -54,7 +54,6 @@ import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
 import { openLegalPage } from "@/config/legal";
-import { PremiumFeatureBoundary } from "@/features/subscription/PremiumFeatureBoundary";
 import {
   acceptForumAgreement,
   hasAcceptedForumAgreement
@@ -106,13 +105,7 @@ export default function ForumScreen() {
 
   return (
     <ForumAgreementBoundary>
-      <PremiumFeatureBoundary
-        description="Anonim anne topluluğunda soru sormak, yorum yapmak ve güvenli forum akışına katılmak Premium ile açılır."
-        featureKey="mother_forum"
-        title="Anne forumu"
-      >
-        <ForumContent />
-      </PremiumFeatureBoundary>
+      <ForumContent />
     </ForumAgreementBoundary>
   );
 }

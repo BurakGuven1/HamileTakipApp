@@ -15,7 +15,6 @@
   },
   "dependencies": {
     "@dariyd/react-native-text-recognition": "2.0.20",
-    "@expo-google-fonts/fraunces": "^0.4.1",
     "@expo-google-fonts/manrope": "^0.4.2",
     "@expo-google-fonts/space-mono": "^0.4.2",
     "@expo/ui": "~57.0.8",

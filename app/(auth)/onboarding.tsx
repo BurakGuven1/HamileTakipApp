@@ -15,7 +15,6 @@ import {
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { useReducedMotion } from "react-native-reanimated";
 
 import { createBaby, listBabies, updateBaby } from "@/api/babies";
 import {
@@ -26,7 +25,6 @@ import {
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { DatePickerField } from "@/components/DatePickerField";
-import { OnboardingThreadMoment } from "@/components/OnboardingThreadMoment";
 import { PregnancyAgeField } from "@/components/PregnancyAgeField";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
@@ -75,9 +73,6 @@ export default function OnboardingScreen() {
   const queryClient = useQueryClient();
   const appTheme = useAppTheme();
   const { showError, showInfo } = useFeedback();
-  const reducedMotion = useReducedMotion();
-  const completionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [completionVisible, setCompletionVisible] = useState(false);
   const hasHydrated = useRef(false);
   const [step, setStep] = useState<OnboardingStep>("family");
   const [status, setStatus] = useState<ParentStatus>();
@@ -186,15 +181,6 @@ export default function OnboardingScreen() {
 
     return () => clearTimeout(handle);
   }, [nickname, step]);
-
-  useEffect(
-    () => () => {
-      if (completionTimerRef.current) {
-        clearTimeout(completionTimerRef.current);
-      }
-    },
-    []
-  );
 
   const visibleSteps = useMemo(() => {
     if (status === "pregnant") {
@@ -406,7 +392,8 @@ export default function OnboardingScreen() {
     try {
       if (requestNotifications) {
         try {
-          await registerAndSavePushToken();
+          const token = await registerAndSavePushToken();
+          notificationSetupFailed = !token;
         } catch {
           notificationSetupFailed = true;
         }
@@ -416,17 +403,13 @@ export default function OnboardingScreen() {
         onboarding_completed: true,
         onboarding_step: "completed"
       });
-      setCompletionVisible(true);
-      completionTimerRef.current = setTimeout(
-        () => router.replace("/home"),
-        reducedMotion ? 720 : 1_850
-      );
       if (notificationSetupFailed) {
         showInfo(
           "Kurulum tamamlandı. Bildirim kaydı şu anda tamamlanamadı; Profil > Bildirim tercihleri bölümünden yeniden deneyebilirsin.",
           "Bildirimleri sonra açabilirsin"
         );
       }
+      router.replace("/home");
     } catch (error) {
       showError(error, "Kurulum tamamlanamadı");
     } finally {
@@ -487,31 +470,6 @@ export default function OnboardingScreen() {
 
     const previousStep = visibleSteps[activeIndex - 1];
     if (previousStep) setStep(previousStep.id);
-  }
-
-  if (completionVisible) {
-    const markerPosition =
-      status === "pregnant" ? 0.56 : status === "baby" ? 0.68 : 0.32;
-    const title =
-      status === "pregnant"
-        ? "Gebelik ipliğin başladı"
-        : status === "baby"
-          ? `${babyName.trim() || "Bebeğinin"} ipliği başladı`
-          : "Anne+ ipliğin hazır";
-    const detail =
-      status === "pregnant"
-        ? "Haftaların, hazırlıkların ve doğum düğümün bu çizgide birikecek."
-        : status === "baby"
-          ? "Doğum düğümünden büyüme, aşı ve bakım kayıtlarına aynı çizgide devam edeceksin."
-          : "İlk bilgini eklediğinde yaşam çizgin bu noktadan büyümeye başlayacak.";
-
-    return (
-      <OnboardingThreadMoment
-        detail={detail}
-        markerPosition={markerPosition}
-        title={title}
-      />
-    );
   }
 
   return (

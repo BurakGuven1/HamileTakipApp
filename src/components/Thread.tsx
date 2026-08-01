@@ -20,6 +20,13 @@ export type ThreadMarker = {
 };
 
 type ThreadVariant = "progress" | "chart";
+type Point = { x: number; y: number };
+type CubicSegment = {
+  control1: Point;
+  control2: Point;
+  end: Point;
+  start: Point;
+};
 
 type ThreadProps = {
   accessibilityLabel?: string;
@@ -39,22 +46,57 @@ const paths: Record<ThreadVariant, string> = {
   chart: "M4 60 C40 52 52 28 88 36 C122 44 134 18 170 24 C212 31 210 70 252 54 C288 40 300 24 340 32"
 };
 
+const pathSegments: Record<ThreadVariant, CubicSegment[]> = {
+  progress: [
+    {
+      start: { x: 8, y: 48 },
+      control1: { x: 84, y: 64 },
+      control2: { x: 142, y: 18 },
+      end: { x: 216, y: 30 }
+    },
+    {
+      start: { x: 216, y: 30 },
+      control1: { x: 272, y: 39 },
+      control2: { x: 305, y: 30 },
+      end: { x: 336, y: 18 }
+    }
+  ],
+  chart: [
+    {
+      start: { x: 4, y: 60 },
+      control1: { x: 40, y: 52 },
+      control2: { x: 52, y: 28 },
+      end: { x: 88, y: 36 }
+    },
+    {
+      start: { x: 88, y: 36 },
+      control1: { x: 122, y: 44 },
+      control2: { x: 134, y: 18 },
+      end: { x: 170, y: 24 }
+    },
+    {
+      start: { x: 170, y: 24 },
+      control1: { x: 212, y: 31 },
+      control2: { x: 210, y: 70 },
+      end: { x: 252, y: 54 }
+    },
+    {
+      start: { x: 252, y: 54 },
+      control1: { x: 288, y: 40 },
+      control2: { x: 300, y: 24 },
+      end: { x: 340, y: 32 }
+    }
+  ]
+};
+
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-const chartAnchors = [
-  { position: 0, y: 60 },
-  { position: 0.25, y: 36 },
-  { position: 0.5, y: 24 },
-  { position: 0.75, y: 54 },
-  { position: 1, y: 32 }
-];
-
 function cubicPoint(
-  start: { x: number; y: number },
-  control1: { x: number; y: number },
-  control2: { x: number; y: number },
-  end: { x: number; y: number },
+  start: Point,
+  control1: Point,
+  control2: Point,
+  end: Point,
   t: number
 ) {
   const inverse = 1 - t;
@@ -72,41 +114,64 @@ function cubicPoint(
   };
 }
 
-function getMarkerPoint(variant: ThreadVariant, position: number) {
-  if (variant === "progress") {
-    const clamped = Math.max(0, Math.min(1, position));
-    const split = 208 / 328;
+function createPathMetric(segments: CubicSegment[]) {
+  const samples: { distance: number; point: Point }[] = [
+    { distance: 0, point: segments[0]?.start ?? { x: 0, y: 0 } }
+  ];
+  let distance = 0;
+  let previousPoint = samples[0]!.point;
 
-    return clamped <= split
-      ? cubicPoint(
-          { x: 8, y: 48 },
-          { x: 84, y: 64 },
-          { x: 142, y: 18 },
-          { x: 216, y: 30 },
-          clamped / split
-        )
-      : cubicPoint(
-          { x: 216, y: 30 },
-          { x: 272, y: 39 },
-          { x: 305, y: 30 },
-          { x: 336, y: 18 },
-          (clamped - split) / (1 - split)
-        );
+  segments.forEach((segment) => {
+    for (let index = 1; index <= 120; index += 1) {
+      const point = cubicPoint(
+        segment.start,
+        segment.control1,
+        segment.control2,
+        segment.end,
+        index / 120
+      );
+      distance += Math.hypot(
+        point.x - previousPoint.x,
+        point.y - previousPoint.y
+      );
+      samples.push({ distance, point });
+      previousPoint = point;
+    }
+  });
+
+  return { length: distance, samples };
+}
+
+const pathMetrics: Record<ThreadVariant, ReturnType<typeof createPathMetric>> = {
+  progress: createPathMetric(pathSegments.progress),
+  chart: createPathMetric(pathSegments.chart)
+};
+
+function getMarkerPoint(variant: ThreadVariant, position: number) {
+  const metric = pathMetrics[variant];
+  const targetDistance =
+    metric.length * Math.max(0, Math.min(1, position));
+  let lowerIndex = 0;
+  let upperIndex = metric.samples.length - 1;
+
+  while (lowerIndex < upperIndex) {
+    const middleIndex = Math.floor((lowerIndex + upperIndex) / 2);
+    if (metric.samples[middleIndex]!.distance < targetDistance) {
+      lowerIndex = middleIndex + 1;
+    } else {
+      upperIndex = middleIndex;
+    }
   }
 
-  const index = chartAnchors.findIndex((anchor) => anchor.position >= position);
-  const upper =
-    chartAnchors[
-      Math.max(1, index === -1 ? chartAnchors.length - 1 : index)
-    ] ?? chartAnchors[chartAnchors.length - 1]!;
-  const lower =
-    chartAnchors[Math.max(0, chartAnchors.indexOf(upper) - 1)] ??
-    chartAnchors[0]!;
-  const range = upper.position - lower.position || 1;
-  const ratio = (position - lower.position) / range;
+  const upper = metric.samples[lowerIndex] ?? metric.samples.at(-1)!;
+  const lower = metric.samples[Math.max(0, lowerIndex - 1)] ?? upper;
+  const distanceRange = upper.distance - lower.distance;
+  const ratio = distanceRange
+    ? (targetDistance - lower.distance) / distanceRange
+    : 0;
   return {
-    x: 4 + position * 336,
-    y: lower.y + (upper.y - lower.y) * ratio
+    x: lower.point.x + (upper.point.x - lower.point.x) * ratio,
+    y: lower.point.y + (upper.point.y - lower.point.y) * ratio
   };
 }
 
@@ -124,7 +189,7 @@ export function Thread({
 }: ThreadProps) {
   const viewBox = "0 0 344 88";
   const strokeWidth = 3;
-  const dashLength = variant === "progress" ? 372 : 390;
+  const dashLength = pathMetrics[variant].length;
   const clampedProgress = Math.max(0, Math.min(1, progress));
   const isProgress = semantic !== "timeline";
   const reducedMotion = useReducedMotion();
