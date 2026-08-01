@@ -563,7 +563,6 @@ export default function HomeScreen() {
                   <ShortcutCard
                     href="/forum"
                     icon={<HeartPulse color={appTheme.primary} size={23} />}
-                    premium
                     subtitle="Deneyimlerini toplulukla paylaş"
                     title="Anne forumu"
                     tint={appTheme.primarySoft}

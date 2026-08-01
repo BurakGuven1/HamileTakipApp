@@ -2,10 +2,6 @@ import "react-native-url-polyfill/auto";
 import "react-native-reanimated";
 
 import {
-  Fraunces_600SemiBold,
-  Fraunces_700Bold
-} from "@expo-google-fonts/fraunces";
-import {
   Manrope_400Regular,
   Manrope_500Medium,
   Manrope_600SemiBold,
@@ -28,8 +24,6 @@ SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    Fraunces_600SemiBold,
-    Fraunces_700Bold,
     Manrope_400Regular,
     Manrope_500Medium,
     Manrope_600SemiBold,

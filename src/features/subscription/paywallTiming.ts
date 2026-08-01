@@ -143,7 +143,7 @@ export function getActiveSeasonalPremiumCampaign(
       cta: "Premium paketlerini gör",
       kind: "seasonal",
       message:
-        "Premium araçları, forumu ve anı galerisini güncel paket seçenekleriyle keşfet.",
+        "Gelişmiş bakım araçlarını, analizleri ve anı galerisini güncel paket seçenekleriyle keşfet.",
       title: "Anne+ Premium'u keşfet"
     };
   }
