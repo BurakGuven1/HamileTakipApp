@@ -36,7 +36,7 @@ import { useReducedMotion } from "react-native-reanimated";
 import { listBabies } from "@/api/babies";
 import { getCareHandoverSnapshot, getCurrentCareUserId, listCareJournalEntries, subscribeToCareCoordination, takeOverBabyCare, type CareJournalEntry } from "@/api/careJournal";
 import { getCurrentFamilyMembership } from "@/api/familyAccess";
-import { getFeaturedArticles } from "@/api/articles";
+import { getFeaturedArticlesForExperience } from "@/api/articles";
 import { getCurrentProfile } from "@/api/profiles";
 import {
   getNextUpcomingVaccination,
@@ -54,6 +54,7 @@ import { Screen } from "@/components/Screen";
 import { Thread } from "@/components/Thread";
 import { syncCareQuickWidget } from "@/features/care-journal/widgetSync";
 import type { Article } from "@/features/articles/articles";
+import { getExperienceStage } from "@/features/life-stage/lifeStage";
 import { getPregnancyWeekInfo } from "@/features/pregnancy/weekInfo";
 import {
   formatDate,
@@ -87,7 +88,9 @@ export default function HomeScreen() {
   const babies = babiesQuery.data ?? [];
   const firstBaby = babies[0];
   const profile = profileQuery.data;
-  const isMotherhoodMode = Boolean(profile && !profile.is_pregnant);
+  const experienceStage = getExperienceStage(profile, Boolean(firstBaby));
+  const isMotherhoodMode = experienceStage === "postpartum";
+  const isPregnancyMode = experienceStage === "pregnancy";
   const careHandoverQuery = useQuery({
     queryKey: ["care-handover", firstBaby?.id],
     queryFn: () => getCareHandoverSnapshot(firstBaby?.id as string),
@@ -111,10 +114,14 @@ export default function HomeScreen() {
   const week = pregnancyProgress?.week
     ? Math.min(40, pregnancyProgress.week)
     : null;
+  const pregnancyProgressRatio = pregnancyProgress
+    ? Math.min(1, pregnancyProgress.day / pregnancyProgress.totalDays)
+    : 0;
   const weekInfo = getPregnancyWeekInfo(week);
   const featuredArticlesQuery = useQuery({
-    queryKey: ["articles", "featured"],
-    queryFn: () => getFeaturedArticles(4)
+    queryKey: ["articles", "featured", experienceStage, week],
+    queryFn: () =>
+      getFeaturedArticlesForExperience(experienceStage, week, 4)
   });
   const nextVaccinationQuery = useQuery({
     queryKey: [
@@ -250,7 +257,7 @@ export default function HomeScreen() {
   return (
     <Screen>
       <View style={styles.container}>
-        {!profile?.is_pregnant ? (
+        {!isPregnancyMode ? (
           <Reveal>
             <View style={[styles.hero, { backgroundColor: appTheme.primarySoft }]}>
               <View style={[styles.visualStage, { backgroundColor: appTheme.accentSoft }]}>
@@ -345,31 +352,29 @@ export default function HomeScreen() {
                           Yaşayan İplik
                         </Text>
                         <Text style={styles.livingThreadTitle}>
-                          {week}. hafta düğümü
+                          Gebeliğin ilerliyor
                         </Text>
                       </View>
                       <Text style={[styles.livingThreadValue, { color: appTheme.primary }]}>
-                        %{Math.round((week / 40) * 100)}
+                        %{Math.round(pregnancyProgressRatio * 100)}
                       </Text>
                     </View>
                     <Thread
-                      accessibilityLabel={`Gebelik ipliği, 40 haftanın ${week} haftası tamamlandı`}
+                      accessibilityLabel={`Gebelik ipliği: bugün ${week} hafta ${pregnancyProgress.dayOfWeek} gün, tahmini doğuma ${pregnancyProgress.daysUntilDue} gün`}
+                      animated
                       color={appTheme.primary}
                       height={72}
-                      markers={[
-                        { kind: "knot", position: week / 40 },
-                        { kind: "loop", position: Math.min(0.98, (week + 4) / 40) }
-                      ]}
+                      markers={[{ kind: "current", position: pregnancyProgressRatio }]}
                       mutedColor={colors.border}
-                      progress={week / 40}
+                      progress={pregnancyProgressRatio}
                       variant="progress"
                     />
                     <View style={styles.livingThreadFooter}>
-                      <Text style={styles.livingThreadMeta}>
-                        {pregnancyProgress.day}. gün
+                      <Text style={[styles.livingThreadMeta, styles.livingThreadMetaStart]}>
+                        Bugün · {week} hafta {pregnancyProgress.dayOfWeek} gün
                       </Text>
-                      <Text style={styles.livingThreadMeta}>
-                        Doğuma {pregnancyProgress.daysUntilDue} gün
+                      <Text style={[styles.livingThreadMeta, styles.livingThreadMetaEnd]}>
+                        Tahmini doğuma {pregnancyProgress.daysUntilDue} gün
                       </Text>
                     </View>
                   </View>
@@ -441,10 +446,14 @@ export default function HomeScreen() {
           <View style={styles.shortcutGroups}>
             <View style={styles.shortcutGroup}>
               <Text style={styles.shortcutGroupTitle}>
-                {profile?.is_pregnant ? "Gebelik takibi" : "Bebek bakımı"}
+                {isPregnancyMode
+                  ? "Gebelik takibi"
+                  : isMotherhoodMode
+                    ? "Bebek bakımı"
+                    : "Takibini başlat"}
               </Text>
               <View style={styles.shortcutPanel}>
-                {profile?.is_pregnant ? (
+                {isPregnancyMode ? (
                   <>
                     <ShortcutCard
                       featured
@@ -462,6 +471,13 @@ export default function HomeScreen() {
                       tint={colors.primarySoft}
                     />
                     <ShortcutCard
+                      href="/baby-names"
+                      icon={<Sparkles color="#934C63" size={23} />}
+                      subtitle="Anlamlarıyla özel isimler keşfet"
+                      title="Bebek isimleri"
+                      tint="#F7E8ED"
+                    />
+                    <ShortcutCard
                       href="/pregnancy-exercise"
                       icon={<Activity color={colors.dustyRose} size={23} />}
                       subtitle="Haftana uygun hareket önerileri"
@@ -476,7 +492,7 @@ export default function HomeScreen() {
                       tint={colors.highlightSoft}
                     />
                   </>
-                ) : (
+                ) : isMotherhoodMode ? (
                   <>
                     <ShortcutCard
                       featured
@@ -501,6 +517,24 @@ export default function HomeScreen() {
                       tint={colors.accentSoft}
                     />
                   </>
+                ) : (
+                  <>
+                    <ShortcutCard
+                      featured
+                      href="/settings"
+                      icon={<CalendarHeart color={appTheme.primary} size={25} />}
+                      subtitle="Hafta ve gününü girerek takibe başla"
+                      title="Hamilelik akışı"
+                      tint={appTheme.primarySoft}
+                    />
+                    <ShortcutCard
+                      href="/baby"
+                      icon={<Baby color={colors.sageGreen} size={23} />}
+                      subtitle="Doğum bilgileriyle bakım alanını hazırla"
+                      title="Bebek profili"
+                      tint={colors.primarySoft}
+                    />
+                  </>
                 )}
               </View>
             </View>
@@ -515,14 +549,16 @@ export default function HomeScreen() {
                   title="Belgeyi Anla"
                   tint={colors.highlightSoft}
                 />
-                <ShortcutCard
-                  href="/gallery"
-                  icon={<Images color={appTheme.accent} size={23} />}
-                  premium
-                  subtitle="Özel anılarını güvenle sakla"
-                  title="Anı galerisi"
-                  tint={appTheme.accentSoft}
-                />
+                {isMotherhoodMode ? (
+                  <ShortcutCard
+                    href="/gallery"
+                    icon={<Images color={appTheme.accent} size={23} />}
+                    premium
+                    subtitle="Özel anılarını güvenle sakla"
+                    title="Anı galerisi"
+                    tint={appTheme.accentSoft}
+                  />
+                ) : null}
                 {!membershipQuery.data ? (
                   <ShortcutCard
                     href="/forum"
@@ -576,7 +612,7 @@ export default function HomeScreen() {
           </Card>
         ) : null}
 
-        {!profile?.is_pregnant && !firstBaby ? (
+        {experienceStage === "general" ? (
           <Card style={[styles.primaryCard, { backgroundColor: appTheme.primarySoft }]}>
             <View style={{ gap: spacing.md }}>
               <View style={styles.cardHeader}>
@@ -589,9 +625,15 @@ export default function HomeScreen() {
                 </View>
                 <Sparkles color={appTheme.primary} size={30} />
               </View>
-              <Link href="/baby" asChild>
-                <Button label="Bebek bilgisi ekle" variant="secondary" />
-              </Link>
+              <Button
+                label="Hamilelik akışını başlat"
+                onPress={() => router.push("/settings")}
+              />
+              <Button
+                label="Bebek bilgisi ekle"
+                onPress={() => router.push("/baby")}
+                variant="secondary"
+              />
             </View>
           </Card>
         ) : null}
@@ -612,7 +654,7 @@ export default function HomeScreen() {
           </View>
         ) : null}
 
-        <Card>
+        {experienceStage !== "general" ? <Card>
           <View style={{ gap: spacing.md }}>
             <View style={styles.cardHeader}>
               <View style={{ gap: spacing.xs, flex: 1 }}>
@@ -639,12 +681,18 @@ export default function HomeScreen() {
               <Button label="Aşı merkezini aç" variant="secondary" />
             </Link>
           </View>
-        </Card>
+        </Card> : null}
 
         <View style={styles.sectionHeader}>
           <View>
             <Text style={typography.heading2}>Makaleler</Text>
-            <Text style={styles.sectionHint}>Gebelikten bebekliğe tüm rehberler</Text>
+            <Text style={styles.sectionHint}>
+              {isPregnancyMode
+                ? "Gebelik haftana uygun rehberler"
+                : isMotherhoodMode
+                  ? "Bebek bakımı ve gelişim rehberleri"
+                  : "Deneyimini seçtiğinde sana uygun rehberler"}
+            </Text>
           </View>
           <Link href="/articles" asChild>
             <Pressable accessibilityRole="button" style={styles.sectionLink}>
@@ -668,7 +716,11 @@ export default function HomeScreen() {
         ) : featuredArticles.length === 0 ? (
           <EmptyState
             actionLabel="Tüm rehberleri gör"
-            description="Gebelik, bakım ve gelişim rehberleri yayınlandığında burada birlikte sıralanır."
+            description={
+              experienceStage === "general"
+                ? "Yaşam evreni seçtiğinde yalnızca sana uygun rehberler burada sıralanır."
+                : "Bu yaşam evresine uygun yeni rehberler yayınlandığında burada sıralanır."
+            }
             onActionPress={() => router.push("/articles")}
             title="İlk rehberini keşfet"
           />
@@ -779,7 +831,7 @@ function ShortcutCard({
   tint
 }: {
   featured?: boolean;
-  href: "/baby" | "/birth-preparation" | "/care-journal" | "/document-insight" | "/forum" | "/gallery" | "/lullaby" | "/pregnancy-exercise" | "/pregnancy-nutrition" | "/pregnancy-tools";
+  href: "/baby" | "/baby-names" | "/birth-preparation" | "/care-journal" | "/document-insight" | "/forum" | "/gallery" | "/lullaby" | "/pregnancy-exercise" | "/pregnancy-nutrition" | "/pregnancy-tools" | "/settings";
   icon: ReactNode;
   premium?: boolean;
   subtitle: string;
@@ -1038,6 +1090,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18
   },
+  livingThreadMetaStart: { flex: 1 },
+  livingThreadMetaEnd: { flex: 1, textAlign: "right" },
   weekCard: {
     borderWidth: 1
   },

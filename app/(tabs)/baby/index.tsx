@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
-import { Link, useLocalSearchParams } from "expo-router";
+import { Link, router, useLocalSearchParams } from "expo-router";
 import {
   Baby as BabyIcon,
   CalendarCheck,
@@ -365,6 +365,20 @@ export default function BabyScreen() {
           onRetry={() => void Promise.all([profileQuery.refetch(), babiesQuery.refetch()])}
           retrying={profileQuery.isFetching || babiesQuery.isFetching}
           title="Bebek ekranı yüklenemedi"
+        />
+      </Screen>
+    );
+  }
+
+  if (profileQuery.data?.is_pregnant) {
+    return (
+      <Screen>
+        <EmptyState
+          actionHint="Gebelik araçları ekranına gider"
+          actionLabel="Gebelik araçlarına dön"
+          description="Bebek profili, bakım ve büyüme araçları doğum bilgilerini kaydettiğinde açılır. Profil ekranından doğum sonrası geçişi tamamlayabilirsin."
+          onActionPress={() => router.replace("/pregnancy-tools")}
+          title="Bu alan doğum sonrasında açılır"
         />
       </Screen>
     );

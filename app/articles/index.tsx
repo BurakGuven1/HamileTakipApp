@@ -4,19 +4,77 @@ import { Link } from "expo-router";
 import { BookOpen, Sparkles } from "lucide-react-native";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { listArticles } from "@/api/articles";
+import { filterArticlesForExperience, listArticles } from "@/api/articles";
+import { listBabies } from "@/api/babies";
+import { getCurrentProfile } from "@/api/profiles";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
+import { getExperienceStage } from "@/features/life-stage/lifeStage";
+import { getPregnancyProgress } from "@/lib/dates";
 import { colors, radii, spacing, typography } from "@/theme";
 
 export default function ArticlesScreen() {
+  const profileQuery = useQuery({
+    queryKey: ["current-profile"],
+    queryFn: getCurrentProfile
+  });
+  const babiesQuery = useQuery({
+    queryKey: ["babies"],
+    queryFn: listBabies
+  });
   const articlesQuery = useQuery({
     queryKey: ["articles"],
     queryFn: listArticles
   });
-  const sortedArticles = articlesQuery.data ?? [];
+  const experienceStage = getExperienceStage(
+    profileQuery.data,
+    Boolean(babiesQuery.data?.length)
+  );
+  const pregnancyWeek = getPregnancyProgress(
+    profileQuery.data?.due_date
+  )?.week;
+  const sortedArticles = filterArticlesForExperience(
+    articlesQuery.data ?? [],
+    experienceStage,
+    pregnancyWeek
+  );
+  const heroTitle =
+    experienceStage === "pregnancy"
+      ? "Gebelik haftana uygun rehberler"
+      : experienceStage === "postpartum"
+        ? "Bebek bakımı ve gelişim rehberleri"
+        : "Sana uygun rehberleri birlikte seçelim";
+  const heroBody =
+    experienceStage === "pregnancy"
+      ? "Haftana denk gelen gelişim ve günlük yaşam içerikleri burada sade bir akışta."
+      : experienceStage === "postpartum"
+        ? "Beslenme, bakım ve gelişim içerikleri bebeğinle başlayan akışta bir arada."
+        : "Profilinden hamilelik veya doğum sonrası deneyimini seçtiğinde içerikler burada kişiselleşir.";
+
+  if (profileQuery.isLoading || babiesQuery.isLoading) {
+    return (
+      <Screen scroll={false}>
+        <QueryState loading description="Kişisel rehberlerin hazırlanıyor…" />
+      </Screen>
+    );
+  }
+
+  if (profileQuery.isError || babiesQuery.isError) {
+    return (
+      <Screen scroll={false}>
+        <QueryState
+          description="Yaşam evren belirlenemediği için rehberler kişiselleştirilemedi."
+          onRetry={() =>
+            void Promise.all([profileQuery.refetch(), babiesQuery.refetch()])
+          }
+          retrying={profileQuery.isFetching || babiesQuery.isFetching}
+          title="Rehberler hazırlanamadı"
+        />
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
@@ -26,14 +84,12 @@ export default function ArticlesScreen() {
             <BookOpen color={colors.primary} size={28} />
           </View>
           <Text style={typography.eyebrow}>Anne+ rehberleri</Text>
-          <Text style={typography.heading1}>Gebelikten bebekliğe güvenilir rehberler</Text>
-          <Text style={styles.heroText}>
-            Gebelik haftaları, bakım, gelişim ve günlük yaşam içerikleri tek bir arşivde.
-          </Text>
+          <Text style={typography.heading1}>{heroTitle}</Text>
+          <Text style={styles.heroText}>{heroBody}</Text>
         </View>
 
         <View style={styles.sectionHeader}>
-          <Text style={typography.heading2}>Tüm yazılar</Text>
+          <Text style={typography.heading2}>Sana uygun yazılar</Text>
           <Sparkles color={colors.accent} size={22} />
         </View>
 
@@ -50,7 +106,11 @@ export default function ArticlesScreen() {
           ) : sortedArticles.length === 0 ? (
             <EmptyState
               title="Yeni rehberler hazırlanıyor"
-              description="Gebelikten bebek bakımına uzanan yeni yayınlar eklendiğinde burada görünecek."
+              description={
+                experienceStage === "general"
+                  ? "Yaşam evreni seçtiğinde yalnızca o döneme uygun yayınlar burada görünecek."
+                  : "Bu yaşam evresine uygun yeni yayınlar eklendiğinde burada görünecek."
+              }
             />
           ) : (
             sortedArticles.map((article) => (

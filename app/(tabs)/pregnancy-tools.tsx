@@ -10,6 +10,7 @@ import {
   HeartPulse,
   Minus,
   Plus,
+  Sparkles,
   Trash2,
   Weight
 } from "lucide-react-native";
@@ -250,6 +251,22 @@ export default function PregnancyToolsScreen() {
               </View>
               <Link href="/birth-preparation" asChild>
                 <Button label="Ortak listeyi aç" />
+              </Link>
+            </Card>
+
+            <Card style={[styles.exerciseCard, styles.featureCard, { backgroundColor: "#F7E8ED" }]}>
+              <View style={styles.cardHeader}>
+                <View style={{ flex: 1, gap: spacing.xs }}>
+                  <Text style={typography.eyebrow}>Özel bir an</Text>
+                  <Text style={typography.heading2}>Bebek isimleri</Text>
+                  <Text numberOfLines={3} style={typography.body}>
+                    Kız, erkek ya da sürpriz seç; anlamıyla birlikte sana özel bir isim keşfet.
+                  </Text>
+                </View>
+                <Sparkles color="#934C63" size={30} />
+              </View>
+              <Link href="/baby-names" asChild>
+                <Button label="Bir isim keşfet" variant="secondary" />
               </Link>
             </Card>
 

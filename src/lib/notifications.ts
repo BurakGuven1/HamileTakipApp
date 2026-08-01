@@ -180,24 +180,14 @@ export async function savePushTokenForCurrentUser(expoPushToken: string) {
 
   // expo_push_token cihaz/uygulama kurulumu için benzersizdir. Aynı telefonda
   // hesap değişirse token yeni kullanıcıya taşınır ve eski hesaba push gitmez.
-  const { data, error } = await supabase
-    .from("push_tokens")
-    .upsert(
-      {
-        user_id: user.id,
-        expo_push_token: expoPushToken,
-        device_type: deviceType,
-        project_id: easProjectId ?? null,
-        enabled: true,
-        disabled_at: null,
-        last_error: null,
-        last_seen_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      { onConflict: "expo_push_token" }
-    )
-    .select()
-    .single();
+  const { data, error } = await supabase.rpc(
+    "save_push_token_for_current_user",
+    {
+      p_device_type: deviceType,
+      p_expo_push_token: expoPushToken,
+      p_project_id: easProjectId ?? null
+    }
+  );
 
   if (error) throw error;
   return data;

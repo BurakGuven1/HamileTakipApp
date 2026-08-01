@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { listBabies } from "@/api/babies";
+import { getCurrentProfile } from "@/api/profiles";
 import {
   deleteBabyPhoto,
   getBabyPhotoSignedUrl,
@@ -29,6 +30,46 @@ import { useAppTheme } from "@/providers/AppThemeProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
 export default function GalleryScreen() {
+  const profileQuery = useQuery({
+    queryKey: ["current-profile"],
+    queryFn: getCurrentProfile
+  });
+
+  if (profileQuery.isLoading) {
+    return (
+      <Screen scroll={false}>
+        <QueryState loading description="Galeri deneyimi hazırlanıyor…" />
+      </Screen>
+    );
+  }
+
+  if (profileQuery.isError) {
+    return (
+      <Screen scroll={false}>
+        <QueryState
+          description="Yaşam evren belirlenemediği için galeri açılamadı."
+          onRetry={() => void profileQuery.refetch()}
+          retrying={profileQuery.isFetching}
+          title="Galeri yüklenemedi"
+        />
+      </Screen>
+    );
+  }
+
+  if (profileQuery.data?.is_pregnant) {
+    return (
+      <Screen>
+        <EmptyState
+          actionHint="Gebelik araçları ekranına gider"
+          actionLabel="Gebelik araçlarına dön"
+          description="Bebek anı galerisi doğum bilgilerini kaydettiğinde açılır. Gebelik boyunca ultrason ve belge içeriklerini Belgeyi Anla alanında kullanabilirsin."
+          onActionPress={() => router.replace("/pregnancy-tools")}
+          title="Anı galerisi doğum sonrasında açılır"
+        />
+      </Screen>
+    );
+  }
+
   return (
     <PremiumFeatureBoundary
       description="Bebeğinin anı fotoğraflarını güvenli bir zaman çizgisinde saklamak Premium ile açılır."

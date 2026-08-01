@@ -5,6 +5,8 @@ import { router } from "expo-router";
 import {
   ArrowLeft,
   BellRing,
+  ChevronDown,
+  ChevronUp,
   Droplets,
   ExternalLink,
   Info,
@@ -23,6 +25,7 @@ import {
   Text,
   View
 } from "react-native";
+import Animated, { FadeIn, FadeOut, useReducedMotion } from "react-native-reanimated";
 import Svg, { Path } from "react-native-svg";
 
 import { getCurrentProfile } from "@/api/profiles";
@@ -64,6 +67,7 @@ import { colors, fonts, radii, spacing, typography } from "@/theme";
 export default function PregnancyNutritionScreen() {
   const appTheme = useAppTheme();
   const { showError, showSuccess } = useFeedback();
+  const reducedMotion = useReducedMotion();
   const profileQuery = useQuery({
     queryKey: ["current-profile"],
     queryFn: getCurrentProfile
@@ -79,6 +83,7 @@ export default function PregnancyNutritionScreen() {
   );
   const [editingWaterGoal, setEditingWaterGoal] = useState(false);
   const [savingWaterIntake, setSavingWaterIntake] = useState(false);
+  const [guidanceExpanded, setGuidanceExpanded] = useState(false);
 
   useEffect(() => {
     setSelectedMonth(currentMonth);
@@ -320,6 +325,43 @@ export default function PregnancyNutritionScreen() {
           </Text>
         </Card>
 
+        <Pressable
+          accessibilityHint="Gebelik ayı, vitamin ve takviye bilgilerini gösterir"
+          accessibilityRole="button"
+          accessibilityState={{ expanded: guidanceExpanded }}
+          onPress={() => setGuidanceExpanded((current) => !current)}
+          style={({ pressed }) => [
+            styles.guidanceDisclosure,
+            { borderColor: appTheme.primary },
+            pressed && styles.controlPressed
+          ]}
+        >
+          <View style={styles.guidanceDisclosureCopy}>
+            <Text style={[styles.guidanceDisclosureEyebrow, { color: appTheme.primary }]}>
+              Daha fazla bilgi al
+            </Text>
+            <Text style={styles.guidanceDisclosureTitle}>
+              Vitamin ve takviye rehberini oku
+            </Text>
+            <Text style={styles.guidanceDisclosureBody}>
+              {selectedMonth}. aya uygun genel program ve güvenlik notları
+            </Text>
+          </View>
+          <View style={[styles.guidanceDisclosureIcon, { backgroundColor: appTheme.theme.primarySoft }]}>
+            {guidanceExpanded ? (
+              <ChevronUp color={appTheme.primary} size={22} strokeWidth={2.4} />
+            ) : (
+              <ChevronDown color={appTheme.primary} size={22} strokeWidth={2.4} />
+            )}
+          </View>
+        </Pressable>
+
+        {guidanceExpanded ? (
+          <Animated.View
+            entering={reducedMotion ? undefined : FadeIn.duration(180)}
+            exiting={reducedMotion ? undefined : FadeOut.duration(120)}
+            style={styles.guidanceContent}
+          >
         <Card>
           <View style={{ gap: spacing.md }}>
             <View style={styles.cardHeader}>
@@ -427,6 +469,8 @@ export default function PregnancyNutritionScreen() {
             ))}
           </View>
         </Card>
+          </Animated.View>
+        ) : null}
       </View>
     </Screen>
   );
@@ -908,6 +952,44 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20
   },
+  guidanceDisclosure: {
+    ...radii.card,
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.md,
+    minHeight: 92,
+    padding: spacing.lg
+  },
+  guidanceDisclosureCopy: {
+    flex: 1,
+    gap: 2
+  },
+  guidanceDisclosureEyebrow: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 12,
+    lineHeight: 18,
+    textTransform: "uppercase"
+  },
+  guidanceDisclosureTitle: {
+    ...typography.heading3,
+    color: colors.text
+  },
+  guidanceDisclosureBody: {
+    color: colors.textMuted,
+    fontFamily: fonts.bodyRegular,
+    fontSize: 13,
+    lineHeight: 19
+  },
+  guidanceDisclosureIcon: {
+    alignItems: "center",
+    borderRadius: radii.pill,
+    height: 48,
+    justifyContent: "center",
+    width: 48
+  },
+  guidanceContent: { gap: spacing.lg },
   monthRail: { gap: spacing.sm, paddingRight: spacing.md },
   monthChip: {
     borderColor: colors.border,

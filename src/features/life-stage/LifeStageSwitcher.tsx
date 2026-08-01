@@ -27,20 +27,29 @@ import Animated, {
   withTiming
 } from "react-native-reanimated";
 
+import {
+  completePregnancyWithBirth,
+  type BabyGender,
+  type FeedingMode
+} from "@/api/babies";
 import { updateCurrentProfile, type Profile } from "@/api/profiles";
 import { Button } from "@/components/Button";
 import { DatePickerField } from "@/components/DatePickerField";
+import { PregnancyAgeField } from "@/components/PregnancyAgeField";
+import { TextField } from "@/components/TextField";
 import { setWaterRemindersEnabled } from "@/features/pregnancy/waterReminders";
 import { trackEvent } from "@/lib/analytics";
 import {
-  getPregnancyDueDateBounds,
-  getPregnancyDueDateError
+  getPregnancyAgeError,
+  getPregnancyAgeFromDueDate,
+  getPregnancyDueDateFromAge,
+  toDateOnly
 } from "@/lib/dates";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 import {
-  getLifeStage,
+  getExperienceStage,
   lifeStageContent,
   suspendLocalCareNotifications,
   type LifeStage
@@ -49,25 +58,46 @@ import {
 type TransitionPhase = "confirm" | "running" | "success" | "error";
 
 type LifeStageSwitcherProps = {
+  hasBaby: boolean;
   profile: Profile;
 };
 
-export function LifeStageSwitcher({ profile }: LifeStageSwitcherProps) {
+export function LifeStageSwitcher({ hasBaby, profile }: LifeStageSwitcherProps) {
   const appTheme = useAppTheme().theme;
   const { showInfo } = useFeedback();
   const queryClient = useQueryClient();
   const reducedMotion = useReducedMotion();
-  const activeStage = getLifeStage(profile);
+  const experienceStage = getExperienceStage(profile, hasBaby);
+  const activeStage: LifeStage | null =
+    experienceStage === "pregnancy"
+      ? "pregnancy"
+      : experienceStage === "postpartum"
+        ? "motherhood"
+        : null;
   const [targetStage, setTargetStage] = useState<LifeStage | null>(null);
   const [phase, setPhase] = useState<TransitionPhase>("confirm");
-  const [dueDate, setDueDate] = useState(profile.due_date ?? "");
+  const initialPregnancyAge = getPregnancyAgeFromDueDate(profile.due_date);
+  const [pregnancyWeek, setPregnancyWeek] = useState(
+    initialPregnancyAge ? String(initialPregnancyAge.week) : ""
+  );
+  const [pregnancyDay, setPregnancyDay] = useState(
+    initialPregnancyAge ? String(initialPregnancyAge.day) : "0"
+  );
+  const [babyName, setBabyName] = useState("");
+  const [birthDate, setBirthDate] = useState(toDateOnly(new Date()));
+  const [babyGender, setBabyGender] = useState<BabyGender>("belirtilmemis");
+  const [feedingMode, setFeedingMode] = useState<FeedingMode>(
+    profile.feeding_mode ?? "mixed"
+  );
   const [progress, setProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState("Tercihin hazırlanıyor");
   const [errorMessage, setErrorMessage] = useState("");
   const animatedProgress = useSharedValue(0);
 
   useEffect(() => {
-    setDueDate(profile.due_date ?? "");
+    const pregnancyAge = getPregnancyAgeFromDueDate(profile.due_date);
+    setPregnancyWeek(pregnancyAge ? String(pregnancyAge.week) : "");
+    setPregnancyDay(pregnancyAge ? String(pregnancyAge.day) : "0");
   }, [profile.due_date]);
 
   const progressStyle = useAnimatedStyle(() => ({
@@ -85,8 +115,15 @@ export function LifeStageSwitcher({ profile }: LifeStageSwitcherProps) {
 
   function requestStage(stage: LifeStage) {
     if (stage === activeStage) return;
-    if (stage === "pregnancy" && getPregnancyDueDateError(dueDate)) {
-      setDueDate("");
+    if (
+      stage === "pregnancy" &&
+      getPregnancyAgeError(
+        Number.parseInt(pregnancyWeek, 10),
+        Number.parseInt(pregnancyDay, 10)
+      )
+    ) {
+      setPregnancyWeek("");
+      setPregnancyDay("0");
     }
     setTargetStage(stage);
     setPhase("confirm");
@@ -105,22 +142,64 @@ export function LifeStageSwitcher({ profile }: LifeStageSwitcherProps) {
 
   async function switchStage() {
     if (!targetStage) return;
-    const dueDateError =
-      targetStage === "pregnancy" ? getPregnancyDueDateError(dueDate) : null;
-    if (dueDateError) {
-      setErrorMessage(dueDateError);
+    const requiresBirthDetails =
+      targetStage === "motherhood" && experienceStage !== "postpartum";
+    const week = Number.parseInt(pregnancyWeek, 10);
+    const day = Number.parseInt(pregnancyDay, 10);
+    const pregnancyAgeError =
+      targetStage === "pregnancy" ? getPregnancyAgeError(week, day) : null;
+    const dueDate =
+      targetStage === "pregnancy"
+        ? getPregnancyDueDateFromAge(week, day)
+        : profile.due_date;
+    if (pregnancyAgeError || (targetStage === "pregnancy" && !dueDate)) {
+      setErrorMessage(
+        pregnancyAgeError ?? "Gebelik haftanı ve gününü kontrol et."
+      );
+      return;
+    }
+    if (requiresBirthDetails && !babyName.trim()) {
+      setErrorMessage("Bebeğinin adını yazmalısın.");
+      return;
+    }
+    if (
+      requiresBirthDetails &&
+      (!birthDate || Date.parse(`${birthDate}T00:00:00`) > Date.now())
+    ) {
+      setErrorMessage("Doğum tarihi bugün veya daha önce olmalı.");
       return;
     }
 
     setErrorMessage("");
     setPhase("running");
-    setTransitionProgress(0.12, "Yaşam evren kaydediliyor");
+    setTransitionProgress(
+      0.12,
+      requiresBirthDetails
+        ? "Bebek profili ve doğum kaydı oluşturuluyor"
+        : "Yaşam evren kaydediliyor"
+    );
 
     try {
-      const updatedProfile = await updateCurrentProfile({
-        is_pregnant: targetStage === "pregnancy",
-        due_date: targetStage === "pregnancy" ? dueDate : profile.due_date
-      });
+      let updatedProfile: Profile;
+      if (requiresBirthDetails) {
+        const result = await completePregnancyWithBirth({
+          babyName,
+          birthDate,
+          gender: babyGender,
+          feedingMode
+        });
+        updatedProfile = result.profile;
+        queryClient.setQueryData(
+          ["babies"],
+          (current: unknown) =>
+            Array.isArray(current) ? [...current, result.baby] : [result.baby]
+        );
+      } else {
+        updatedProfile = await updateCurrentProfile({
+          is_pregnant: targetStage === "pregnancy",
+          due_date: targetStage === "pregnancy" ? dueDate : profile.due_date
+        });
+      }
       queryClient.setQueryData(["current-profile"], updatedProfile);
 
       setTransitionProgress(0.48, "Hatırlatmalar yeni evrene uyarlanıyor");
@@ -138,15 +217,18 @@ export function LifeStageSwitcher({ profile }: LifeStageSwitcherProps) {
       setTransitionProgress(0.76, "Ana ekranın ve menün kişiselleştiriliyor");
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["current-profile"] }),
+        queryClient.invalidateQueries({ queryKey: ["babies"] }),
         queryClient.invalidateQueries({ queryKey: ["active-vaccine-reminders"] }),
         queryClient.invalidateQueries({ queryKey: ["next-upcoming-vaccination"] }),
-        queryClient.invalidateQueries({ queryKey: ["pregnancy-vaccinations"] })
+        queryClient.invalidateQueries({ queryKey: ["pregnancy-vaccinations"] }),
+        queryClient.invalidateQueries({ queryKey: ["baby-vaccinations"] }),
+        queryClient.invalidateQueries({ queryKey: ["care-journal"] })
       ]);
 
       setTransitionProgress(1, "Yeni deneyimin hazır");
       setPhase("success");
       trackEvent("life_stage_changed", {
-        from: activeStage,
+        from: experienceStage,
         to: targetStage
       }).catch(() => undefined);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
@@ -175,7 +257,11 @@ export function LifeStageSwitcher({ profile }: LifeStageSwitcherProps) {
   return (
     <>
       <View
-        accessibilityLabel={`Aktif yaşam evresi: ${lifeStageContent[activeStage].label}`}
+        accessibilityLabel={
+          activeStage
+            ? `Aktif yaşam evresi: ${lifeStageContent[activeStage].label}`
+            : "Yaşam evresi henüz seçilmedi"
+        }
         style={styles.stageSection}
       >
         <View style={styles.headingRow}>
@@ -186,8 +272,14 @@ export function LifeStageSwitcher({ profile }: LifeStageSwitcherProps) {
             </Text>
           </View>
           <View style={[styles.activeBadge, { backgroundColor: appTheme.primarySoft }]}>
-            <Check color={appTheme.primary} size={16} strokeWidth={2.8} />
-            <Text style={[styles.activeBadgeText, { color: appTheme.primary }]}>Aktif</Text>
+            {activeStage ? (
+              <Check color={appTheme.primary} size={16} strokeWidth={2.8} />
+            ) : (
+              <ChevronRight color={appTheme.primary} size={16} strokeWidth={2.8} />
+            )}
+            <Text style={[styles.activeBadgeText, { color: appTheme.primary }]}>
+              {activeStage ? "Aktif" : "Seçim gerekli"}
+            </Text>
           </View>
         </View>
 
@@ -211,7 +303,7 @@ export function LifeStageSwitcher({ profile }: LifeStageSwitcherProps) {
         <View style={[styles.preservationNote, { backgroundColor: appTheme.primarySoft }]}>
           <Text style={[styles.preservationTitle, { color: appTheme.primary }]}>Ortak alanların hep açık kalır</Text>
           <Text style={styles.preservationBody}>
-            Galeri, aşı merkezi ve rehberler iki evrede de kullanılabilir. Evre değiştirmek geçmiş kayıtlarını silmez.
+            Forum, rehberler ve geçmiş kayıtların korunur. Doğum sonrası geçişte bebeğinin profili ve aşı takvimi birlikte hazırlanır.
           </Text>
         </View>
       </View>
@@ -252,10 +344,14 @@ export function LifeStageSwitcher({ profile }: LifeStageSwitcherProps) {
 
               <View style={styles.confirmationCopy}>
                 <Text style={typography.heading1}>
-                  {lifeStageContent[targetStage].label} moduna geç
+                  {targetStage === "motherhood" && experienceStage !== "postpartum"
+                    ? "Doğum gerçekleşti mi?"
+                    : `${lifeStageContent[targetStage].label} moduna geç`}
                 </Text>
                 <Text style={styles.sectionDescription}>
-                  Ana ekranın, menün, bildirimlerin ve kısayolların bu evre için yeniden düzenlenecek.
+                  {targetStage === "motherhood" && experienceStage !== "postpartum"
+                    ? "Doğum bilgilerini bir kez gir; bebek profili, aşı takvimi, bakım araçları ve bildirimler birlikte hazırlansın."
+                    : "Ana ekranın, menün, bildirimlerin ve kısayolların bu evre için yeniden düzenlenecek."}
                 </Text>
               </View>
 
@@ -269,20 +365,66 @@ export function LifeStageSwitcher({ profile }: LifeStageSwitcherProps) {
               </View>
 
               {targetStage === "pregnancy" ? (
-                <DatePickerField
-                  label="Tahmini doğum tarihi"
-                  maximumDate={getPregnancyDueDateBounds().maximumDate}
-                  minimumDate={getPregnancyDueDateBounds().minimumDate}
-                  onChange={(value) => {
-                    setDueDate(value);
+                <PregnancyAgeField
+                  day={pregnancyDay}
+                  error={errorMessage || undefined}
+                  onDayChange={(value) => {
+                    setPregnancyDay(value);
                     setErrorMessage("");
                   }}
-                  placeholder="Doğum tarihini seç"
-                  value={dueDate}
+                  onWeekChange={(value) => {
+                    setPregnancyWeek(value);
+                    setErrorMessage("");
+                  }}
+                  week={pregnancyWeek}
                 />
               ) : null}
 
-              {errorMessage ? (
+              {targetStage === "motherhood" && experienceStage !== "postpartum" ? (
+                <View style={styles.birthForm}>
+                  <TextField
+                    autoCapitalize="words"
+                    label="Bebeğinin adı"
+                    onChangeText={(value) => {
+                      setBabyName(value);
+                      setErrorMessage("");
+                    }}
+                    value={babyName}
+                  />
+                  <DatePickerField
+                    label="Doğum tarihi"
+                    maximumDate={new Date()}
+                    onChange={(value) => {
+                      setBirthDate(value);
+                      setErrorMessage("");
+                    }}
+                    value={birthDate}
+                  />
+                  <ChoiceGroup
+                    label="Cinsiyet"
+                    options={[
+                      { label: "Kız", value: "kiz" },
+                      { label: "Erkek", value: "erkek" },
+                      { label: "Belirtmek istemiyorum", value: "belirtilmemis" }
+                    ]}
+                    value={babyGender}
+                    onChange={(value) => setBabyGender(value as BabyGender)}
+                  />
+                  <ChoiceGroup
+                    label="Beslenme akışı"
+                    options={[
+                      { label: "Emzirme", value: "breastfeeding" },
+                      { label: "Sağım", value: "pumping" },
+                      { label: "Karma", value: "mixed" },
+                      { label: "Mama", value: "formula" }
+                    ]}
+                    value={feedingMode}
+                    onChange={(value) => setFeedingMode(value as FeedingMode)}
+                  />
+                </View>
+              ) : null}
+
+              {errorMessage && targetStage !== "pregnancy" ? (
                 <Text accessibilityLiveRegion="assertive" style={styles.errorText}>
                   {errorMessage}
                 </Text>
@@ -290,7 +432,11 @@ export function LifeStageSwitcher({ profile }: LifeStageSwitcherProps) {
 
               <View style={styles.modalActions}>
                 <Button
-                  label={`${lifeStageContent[targetStage].label} moduna geç`}
+                  label={
+                    targetStage === "motherhood" && experienceStage !== "postpartum"
+                      ? "Doğum sonrası akışı başlat"
+                      : `${lifeStageContent[targetStage].label} moduna geç`
+                  }
                   onPress={() => void switchStage()}
                 />
                 <Button label="Vazgeç" onPress={closeModal} variant="ghost" />
@@ -319,7 +465,7 @@ export function LifeStageSwitcher({ profile }: LifeStageSwitcherProps) {
                 <Text style={[styles.transitionEyebrow, { color: appTheme.primary }]}>Yaşayan İplik</Text>
                 <Text style={styles.transitionTitle}>
                   {phase === "success"
-                    ? `${lifeStageContent[targetStage ?? activeStage].label} deneyimin hazır`
+                    ? `${lifeStageContent[targetStage ?? "motherhood"].label} deneyimin hazır`
                     : phase === "error"
                       ? "Geçiş tamamlanamadı"
                       : "Uygulaman sana göre hazırlanıyor"}
@@ -363,6 +509,57 @@ export function LifeStageSwitcher({ profile }: LifeStageSwitcherProps) {
         )}
       </Modal>
     </>
+  );
+}
+
+function ChoiceGroup({
+  label,
+  onChange,
+  options,
+  value
+}: {
+  label: string;
+  onChange: (value: string) => void;
+  options: { label: string; value: string }[];
+  value: string;
+}) {
+  const appTheme = useAppTheme().theme;
+
+  return (
+    <View style={styles.choiceGroup}>
+      <Text style={typography.label}>{label}</Text>
+      <View accessibilityRole="radiogroup" style={styles.choiceRow}>
+        {options.map((option) => {
+          const active = option.value === value;
+          return (
+            <Pressable
+              accessibilityLabel={`${label}: ${option.label}`}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: active }}
+              key={option.value}
+              onPress={() => onChange(option.value)}
+              style={({ pressed }) => [
+                styles.choiceButton,
+                active && {
+                  backgroundColor: appTheme.primarySoft,
+                  borderColor: appTheme.primary
+                },
+                pressed && styles.stageOptionPressed
+              ]}
+            >
+              <Text
+                style={[
+                  styles.choiceButtonText,
+                  active && { color: appTheme.primary }
+                ]}
+              >
+                {option.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
   );
 }
 
@@ -429,6 +626,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 48
   },
+  birthForm: { gap: spacing.lg },
+  choiceButton: {
+    alignItems: "center",
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 44,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm
+  },
+  choiceButtonText: { ...typography.label, color: colors.text },
+  choiceGroup: { gap: spacing.sm },
+  choiceRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   confirmationCopy: { gap: spacing.sm },
   confirmationSheet: {
     ...radii.cardLarge,

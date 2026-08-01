@@ -313,6 +313,44 @@ export default function NightShiftScreen() {
     return <View style={styles.loading}><ActivityIndicator color={palette.sage} size="large" /></View>;
   }
 
+  if (profileQuery.data?.is_pregnant || !selectedBaby) {
+    const pregnancyMode = profileQuery.data?.is_pregnant === true;
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.stageGate}>
+          <View style={styles.stageGateIcon}>
+            {pregnancyMode ? (
+              <Sparkles color={palette.gold} size={30} />
+            ) : (
+              <Baby color={palette.gold} size={30} />
+            )}
+          </View>
+          <Text style={styles.stageGateTitle}>
+            {pregnancyMode
+              ? "Gece vardiyası doğum sonrasında açılır"
+              : "Gece vardiyası için bebek profili gerekli"}
+          </Text>
+          <Text style={styles.stageGateBody}>
+            {pregnancyMode
+              ? "Bu alan beslenme, uyku ve bez bakımını ailece paylaşmak için doğum sonrası deneyime aittir."
+              : "Doğum bilgilerini eklediğinde bakım vardiyası ve kişisel alarmlar hazırlanır."}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() =>
+              router.replace(pregnancyMode ? "/pregnancy-tools" : "/baby")
+            }
+            style={styles.stageGateButton}
+          >
+            <Text style={styles.stageGateButtonText}>
+              {pregnancyMode ? "Gebelik araçlarına dön" : "Bebek profili ekle"}
+            </Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -622,6 +660,12 @@ const styles = StyleSheet.create({
   rowBetween: { alignItems: "center", flexDirection: "row", gap: 12, justifyContent: "space-between" },
   safe: { backgroundColor: palette.background, flex: 1 },
   safety: { color: "#B99F78", fontSize: 11, lineHeight: 16 },
+  stageGate: { alignItems: "center", flex: 1, gap: 18, justifyContent: "center", paddingHorizontal: 28 },
+  stageGateBody: { color: palette.muted, fontSize: 16, lineHeight: 24, maxWidth: 440, textAlign: "center" },
+  stageGateButton: { alignItems: "center", backgroundColor: palette.sage, borderRadius: 18, justifyContent: "center", minHeight: 56, paddingHorizontal: 22, width: "100%" },
+  stageGateButtonText: { color: "#0A1511", fontSize: 16, fontWeight: "900" },
+  stageGateIcon: { alignItems: "center", backgroundColor: palette.goldSoft, borderColor: "#604C2C", borderRadius: 36, borderWidth: 1, height: 72, justifyContent: "center", width: 72 },
+  stageGateTitle: { color: palette.text, fontSize: 25, fontWeight: "900", lineHeight: 31, maxWidth: 440, textAlign: "center" },
   secondaryButton: { alignItems: "center", backgroundColor: palette.surfaceRaised, borderColor: palette.border, borderRadius: 18, borderWidth: 1, flexDirection: "row", gap: 9, justifyContent: "center", minHeight: 54 },
   secondaryButtonText: { color: palette.text, fontSize: 16, fontWeight: "800" },
   shiftCard: { backgroundColor: palette.surface, borderColor: palette.border, borderRadius: 26, borderWidth: 1, gap: 14, padding: 19 },

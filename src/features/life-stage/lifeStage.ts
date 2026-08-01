@@ -4,6 +4,13 @@ import { Platform } from "react-native";
 import type { Profile } from "@/api/profiles";
 
 export type LifeStage = "pregnancy" | "motherhood";
+export type ExperienceStage = "pregnancy" | "postpartum" | "general";
+
+export const experienceStageLabels: Record<ExperienceStage, string> = {
+  pregnancy: "Hamilelik",
+  postpartum: "Doğum sonrası",
+  general: "Henüz seçilmedi"
+};
 
 export const lifeStageContent: Record<
   LifeStage,
@@ -19,18 +26,19 @@ export const lifeStageContent: Record<
     features: ["Haftalık gebelik akışı", "Tekme, su ve ölçüm takibi", "Doğuma hazırlık"]
   },
   motherhood: {
-    label: "Annelik",
+    label: "Doğum sonrası",
     shortDescription: "Bebek bakımı, beslenme, uyku, büyüme ve aile koordinasyonu",
     features: ["Bakım ve beslenme günlüğü", "Büyüme ve gelişim takibi", "Uyku ve aile koordinasyonu"]
   }
 };
 
-export function getLifeStage(profile?: Pick<Profile, "is_pregnant"> | null): LifeStage {
-  return profile?.is_pregnant ? "pregnancy" : "motherhood";
-}
-
-export function isLifeStage(profile: Pick<Profile, "is_pregnant"> | null | undefined, stage: LifeStage) {
-  return getLifeStage(profile) === stage;
+export function getExperienceStage(
+  profile: Pick<Profile, "is_pregnant"> | null | undefined,
+  hasBaby: boolean
+): ExperienceStage {
+  if (profile?.is_pregnant) return "pregnancy";
+  if (hasBaby) return "postpartum";
+  return "general";
 }
 
 export async function suspendLocalCareNotifications() {
