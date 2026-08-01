@@ -1,0 +1,5338 @@
+{
+  "metadata": {
+    "title": "Türkiye Bebek İsimleri ve Kısa Anlamları",
+    "locale": "tr-TR",
+    "version": "1.0.0",
+    "generatedAt": "2026-08-01",
+    "selection": "2001-2025 TÜİK ulusal eğilimleri, 2025 il bazlı eğilimler ve editoryal olarak seçilmiş yaygın/modern adlar.",
+    "meaningNote": "Kökeni veya tek bir kabul görmüş anlamı bulunmayan modern adlarda kesinlik iddiasından kaçınılmıştır.",
+    "sources": [
+      {
+        "name": "TÜİK Nüfus İstatistikleri Portalı",
+        "url": "https://nip.tuik.gov.tr/?value=YeniDoganIsimleri",
+        "usage": "Güncel ve yakın dönem kullanım eğilimleri"
+      },
+      {
+        "name": "TDK Kişi Adları Sözlüğü",
+        "url": "https://sozluk.gov.tr/",
+        "usage": "Kişi adları sözlüğü referansı"
+      },
+      {
+        "name": "İlk Adımlarım Bebek İsimleri Sözlüğü",
+        "url": "https://ilkadimlarim.com/bebek-isimleri",
+        "usage": "İkincil anlam karşılaştırması"
+      }
+    ],
+    "counts": {
+      "girlSingle": 408,
+      "boySingle": 375,
+      "girlDouble": 127,
+      "boyDouble": 143,
+      "total": 1053
+    }
+  },
+  "singleNames": {
+    "girls": [
+      {
+        "name": "Açelya",
+        "meaning": "Fundagillerden, güzel, renkli, kokusuz çiçekler açan bir bitki."
+      },
+      {
+        "name": "Ada",
+        "meaning": "Deniz veya göl suları ile çevrilmiş küçük kara parçası."
+      },
+      {
+        "name": "Aden",
+        "meaning": "Cennet bahçesi."
+      },
+      {
+        "name": "Afra",
+        "meaning": "Açık renkli, beyaza yakın; parlak ve duru."
+      },
+      {
+        "name": "Ahsen",
+        "meaning": "Çok güzel, en güzel."
+      },
+      {
+        "name": "Ahu",
+        "meaning": "Çok güzel, çekici."
+      },
+      {
+        "name": "Akasya",
+        "meaning": "Yurdumuzda yetişen bir süs ve gölge ağacı."
+      },
+      {
+        "name": "Alara",
+        "meaning": "Efsanevi su perisi."
+      },
+      {
+        "name": "Alev",
+        "meaning": "Yanan maddelerin veya gazların türlü biçimlerde uzanan ışıklı dili."
+      },
+      {
+        "name": "Aleyna",
+        "meaning": "Bizim üzerimize bizim hakkımızda."
+      },
+      {
+        "name": "Alin",
+        "meaning": "Aydınlık, parıldayan."
+      },
+      {
+        "name": "Alisa",
+        "meaning": "Asil soydan olan."
+      },
+      {
+        "name": "Alize",
+        "meaning": "Düzenli esen tropikal rüzgâr, alize yeli."
+      },
+      {
+        "name": "Almila",
+        "meaning": "Kırmızı elma; eski Türkçe kökenli bir ad."
+      },
+      {
+        "name": "Almina",
+        "meaning": "Kızıl, kırmızı renkler."
+      },
+      {
+        "name": "Almira",
+        "meaning": "Farklı kültürlerde kullanılan modern bir ad; kökenine göre anlamı değişir."
+      },
+      {
+        "name": "Alya",
+        "meaning": "Yüksek yer, yücelik; farklı kültürlerde de kullanılan bir ad."
+      },
+      {
+        "name": "Amine",
+        "meaning": "İnanılır, güvenilir."
+      },
+      {
+        "name": "Anıl",
+        "meaning": "Hatırlan, anımsan; kız ve erkek adı olarak kullanılabilir."
+      },
+      {
+        "name": "Arin",
+        "meaning": "Arınmış, temiz; farklı dillerde de kullanılan bir ad."
+      },
+      {
+        "name": "Armina",
+        "meaning": "Farklı kültürlerde kullanılan modern bir ad; kökenine göre anlamı değişir."
+      },
+      {
+        "name": "Arya",
+        "meaning": "Ezgi niteliği taşıyan solo ses eseri."
+      },
+      {
+        "name": "Arzu",
+        "meaning": "İstek, dilek."
+      },
+      {
+        "name": "Asel",
+        "meaning": "Bal; tatlılık ve güzellikle ilişkilendirilen ad."
+      },
+      {
+        "name": "Asena",
+        "meaning": "Dişi kurt; Türk destanlarında yol gösterici kurt."
+      },
+      {
+        "name": "Aslı",
+        "meaning": "Bir şeyin kendisi."
+      },
+      {
+        "name": "Asmin",
+        "meaning": "Yasemin çiçeğiyle ilişkilendirilen bölgesel bir ad."
+      },
+      {
+        "name": "Asu",
+        "meaning": "Yaramaz, haşarı çocuk."
+      },
+      {
+        "name": "Asuman",
+        "meaning": "Gök, gökyüzü."
+      },
+      {
+        "name": "Asya",
+        "meaning": "Doğu."
+      },
+      {
+        "name": "Avesta",
+        "meaning": "Zerdüştlüğün kutsal metinlerinin adı."
+      },
+      {
+        "name": "Avşin",
+        "meaning": "Bölgesel kullanımda görülen; kökeni ve anlamı konusunda farklı görüşler bulunan ad."
+      },
+      {
+        "name": "Avzem",
+        "meaning": "Bölgesel ve modern kullanımda görülen; anlamı konusunda ortak görüş bulunmayan ad."
+      },
+      {
+        "name": "Aybike",
+        "meaning": "Ay gibi güzel, el değmemiş kız."
+      },
+      {
+        "name": "Aybüke",
+        "meaning": "Aybike, ay gibi güzel el değmemiş kız."
+      },
+      {
+        "name": "Ayça",
+        "meaning": "Ayın ilk günlerinde aldığı yay biçimi, hilal."
+      },
+      {
+        "name": "Ayçin",
+        "meaning": "Bir bitki adı."
+      },
+      {
+        "name": "Ayda",
+        "meaning": "Dere kıyılarında, çayırlarda yetişen bir bitki."
+      },
+      {
+        "name": "Aydan",
+        "meaning": "Güzelliğini aydan almış, ay gibi parlak ve güzel."
+      },
+      {
+        "name": "Aydanur",
+        "meaning": "Ay gibi parlak ışık."
+      },
+      {
+        "name": "Aydilge",
+        "meaning": "Ay gibi güzel ve sözü değerli."
+      },
+      {
+        "name": "Ayfer",
+        "meaning": "Ay ışığı."
+      },
+      {
+        "name": "Aygen",
+        "meaning": "Dost, arkadaş."
+      },
+      {
+        "name": "Aygül",
+        "meaning": "Ay gibi parlak, gül gibi güzel olan."
+      },
+      {
+        "name": "Ayla",
+        "meaning": "Ayın ve bazı yıldızların dolayındaki ışık çevresi, ay ağılı, hale."
+      },
+      {
+        "name": "Aylin",
+        "meaning": "Ayın çevresinde görülen ışık halkası."
+      },
+      {
+        "name": "Ayliz",
+        "meaning": "Ay ışığı, ayın bıraktığı iz."
+      },
+      {
+        "name": "Aymira",
+        "meaning": "Ay gibi parlak ve ışıldayan."
+      },
+      {
+        "name": "Ayperi",
+        "meaning": "Ay gibi güzel olan peri."
+      },
+      {
+        "name": "Ayşe",
+        "meaning": "Rahat ve huzur içinde yaşayan."
+      },
+      {
+        "name": "Ayşegül",
+        "meaning": "Rahat ve huzur içinde yaşayan gül gibi güzel."
+      },
+      {
+        "name": "Aysel",
+        "meaning": "Ay gibi parlak, ışıklı, güzel."
+      },
+      {
+        "name": "Ayşen",
+        "meaning": "Ay gibi güzel ve şen olan."
+      },
+      {
+        "name": "Ayşenur",
+        "meaning": "Rahat ve huzur içinde yaşayan güzel."
+      },
+      {
+        "name": "Aysima",
+        "meaning": "Yüzü ay gibi güzel ve aydınlık."
+      },
+      {
+        "name": "Ayşin",
+        "meaning": "Ay gibi güzel olan."
+      },
+      {
+        "name": "Aysu",
+        "meaning": "Ay gibi parlak, su gibi berrak olan."
+      },
+      {
+        "name": "Aysun",
+        "meaning": "Ay gibi güzel ve parlak."
+      },
+      {
+        "name": "Aytül",
+        "meaning": "Ayın tül gibi ince ışığı, mehtap."
+      },
+      {
+        "name": "Azade",
+        "meaning": "Özgür, bağımsız."
+      },
+      {
+        "name": "Azra",
+        "meaning": "El değmemiş, temiz ve saf."
+      },
+      {
+        "name": "Bade",
+        "meaning": "Şarap; tasavvuf edebiyatında aşk ve manevi coşku."
+      },
+      {
+        "name": "Bahar",
+        "meaning": "Yazla kış arasında olan mevsim."
+      },
+      {
+        "name": "Balca",
+        "meaning": "Bal gibi tatlı, sevimli olan."
+      },
+      {
+        "name": "Banu",
+        "meaning": "Kadın, hatun, hanım."
+      },
+      {
+        "name": "Başak",
+        "meaning": "Arpa, buğday, yulaf vb. ekinlerin tanelerini taşıyan kılçıklı başı."
+      },
+      {
+        "name": "Begüm",
+        "meaning": "Hint prenseslerine verilen unvan."
+      },
+      {
+        "name": "Belgin",
+        "meaning": "Tam ve kesin olarak belirlenmiş olan, açık, anlaşılır, belirgin."
+      },
+      {
+        "name": "Belinay",
+        "meaning": "Ay'ın gölün yüzey kısmına yansıması."
+      },
+      {
+        "name": "Beliz",
+        "meaning": "İşaret, im, iz."
+      },
+      {
+        "name": "Belma",
+        "meaning": "Yumuşak, sakin, telaşsız kimse."
+      },
+      {
+        "name": "Bengi",
+        "meaning": "Sonu olmayan, hep kalacak olan, sonsuz, ebedî."
+      },
+      {
+        "name": "Bengisu",
+        "meaning": "Ölümsüzlük suyu, yaşam suyu."
+      },
+      {
+        "name": "Bennu",
+        "meaning": "Eski Mısır mitolojisinde yeniden doğuşla ilişkilendirilen kutsal kuş."
+      },
+      {
+        "name": "Beren",
+        "meaning": "Güçlü, kuvvetli."
+      },
+      {
+        "name": "Berfin",
+        "meaning": "Kardan, kar ile ilgili."
+      },
+      {
+        "name": "Beril",
+        "meaning": "Doğada altıgen billurlar durumunda bulunan, saydam, çoğu yeşil renkli berilyum ve alüminyum silikat."
+      },
+      {
+        "name": "Berjin",
+        "meaning": "Bölgesel kullanımda yaşam ve yücelikle ilişkilendirilen ad."
+      },
+      {
+        "name": "Berna",
+        "meaning": "Genç, körpe."
+      },
+      {
+        "name": "Berra",
+        "meaning": "Hayırsever."
+      },
+      {
+        "name": "Berrak",
+        "meaning": "Duru, temiz, aydınlık, açık."
+      },
+      {
+        "name": "Berrin",
+        "meaning": "Yüce, yüksek ve üstün."
+      },
+      {
+        "name": "Beste",
+        "meaning": "Bir müzik eserini oluşturan ezgilerin tümü."
+      },
+      {
+        "name": "Betül",
+        "meaning": "Namuslu, temiz kadın."
+      },
+      {
+        "name": "Beylem",
+        "meaning": "Modern kullanımda görülen; kökeni ve anlamı konusunda ortak görüş bulunmayan ad."
+      },
+      {
+        "name": "Beyza",
+        "meaning": "Çok beyaz, daha ak; çok temiz, lekesiz."
+      },
+      {
+        "name": "Bige",
+        "meaning": "Bilge, soylu ve saygın kadın."
+      },
+      {
+        "name": "Bilge",
+        "meaning": "Bilgili, iyi ahlaklı, olgun ve örnek kimse."
+      },
+      {
+        "name": "Binnur",
+        "meaning": "Çok nurlu."
+      },
+      {
+        "name": "Birce",
+        "meaning": "Tek, eşsiz, biricik."
+      },
+      {
+        "name": "Birgül",
+        "meaning": "Biricik."
+      },
+      {
+        "name": "Birsen",
+        "meaning": "Biricik ve eşsiz olan."
+      },
+      {
+        "name": "Birsu",
+        "meaning": "Biricik, tek yaşam kaynağı, hayatın anlamı."
+      },
+      {
+        "name": "Buğlem",
+        "meaning": "Cenneti müjdeleyen melek."
+      },
+      {
+        "name": "Buket",
+        "meaning": "Çiçek demeti."
+      },
+      {
+        "name": "Burcu",
+        "meaning": "Güzel koku, ıtır."
+      },
+      {
+        "name": "Buse",
+        "meaning": "Öpücük, öpme, öpüş."
+      },
+      {
+        "name": "Büşra",
+        "meaning": "Müjde, sevinçli haber."
+      },
+      {
+        "name": "Çağıl",
+        "meaning": "Çağla ilgili."
+      },
+      {
+        "name": "Çağın",
+        "meaning": "Yıldırım, şimşek."
+      },
+      {
+        "name": "Çağla",
+        "meaning": "Badem, kayısı, erik vb. tek çekirdekli yemişlerin körpeyken yenilebilen ham şekli."
+      },
+      {
+        "name": "Candan",
+        "meaning": "İçten, yürekten, gönülden, samimi."
+      },
+      {
+        "name": "Canel",
+        "meaning": "Can: yaşam ve sevgili; El: dostluk ve yardım."
+      },
+      {
+        "name": "Canse",
+        "meaning": "Modern kullanımda sevgi ve canlılıkla ilişkilendirilen ad."
+      },
+      {
+        "name": "Cansel",
+        "meaning": "Özü taşkın olan kimse."
+      },
+      {
+        "name": "Cansu",
+        "meaning": "Can suyu, yaşam veren su."
+      },
+      {
+        "name": "Cemre",
+        "meaning": "Şubat ayında birer hafta aralıklarla önce havada, sonra suda en son toprakta oluştuğu sanılan sıcaklık yükselişi."
+      },
+      {
+        "name": "Ceren",
+        "meaning": "Ceylan, ahu."
+      },
+      {
+        "name": "Ceyda",
+        "meaning": "Uzun boyunlu ve güzel kadın."
+      },
+      {
+        "name": "Ceylan",
+        "meaning": "Çift parmaklılardan, boynuzlugiller familyasından, çöllerde yaşayan, çok hızlı koşan, gözlerinin güzelliği ile tanınan, ince bacaklı, zarif."
+      },
+      {
+        "name": "Ceylin",
+        "meaning": "İngilizcedeki Jaylin isminin Türkçeleştirilmiş halidir ve ‘sakin’ anlamına gelir."
+      },
+      {
+        "name": "Ceysu",
+        "meaning": "Ceylan gibi zarif ve su gibi duru."
+      },
+      {
+        "name": "Çiçek",
+        "meaning": "Bir bitkinin, üreme organlarını taşıyan çoğu güzel kokulu, renkli bölümü."
+      },
+      {
+        "name": "Çiğdem",
+        "meaning": "Zambakgillerden, türlü renklerde çiçek açan, çok yıllık, yumrulu bir kır bitkisi, mahmur çiçeği."
+      },
+      {
+        "name": "Çiler",
+        "meaning": "Şarkı söyleyen, şakıyan, öten bülbül."
+      },
+      {
+        "name": "Çise",
+        "meaning": "İnce yağmur, çisenti."
+      },
+      {
+        "name": "Çisel",
+        "meaning": "İnce ve hafif yağmur, çisenti."
+      },
+      {
+        "name": "Çisem",
+        "meaning": "İnce yağmur, çisenti."
+      },
+      {
+        "name": "Çisil",
+        "meaning": "İnce yağmur."
+      },
+      {
+        "name": "Damla",
+        "meaning": "Yuvarlak biçimde, çok küçük miktarda sıvı, katre."
+      },
+      {
+        "name": "Damlasu",
+        "meaning": "Su damlası; saflık ve duruluk."
+      },
+      {
+        "name": "Defne",
+        "meaning": "Yaprakları hoş kokulu, yaz kış yeşil kalan defne ağacı."
+      },
+      {
+        "name": "Defnesu",
+        "meaning": "Defne ağacı ve duru su."
+      },
+      {
+        "name": "Delal",
+        "meaning": "İnsana hoş, sevimli görünen hâl, naz, işve."
+      },
+      {
+        "name": "Deniz",
+        "meaning": "Yer kabuğunun çukur bölümlerini kaplayan, birbiriyle bağlantılı, tuzlu, büyük su kütlesi."
+      },
+      {
+        "name": "Deren",
+        "meaning": "Derleyen, toplayan."
+      },
+      {
+        "name": "Derin",
+        "meaning": "Çok gelişmiş, çok ilerlemiş."
+      },
+      {
+        "name": "Derinsu",
+        "meaning": "Derin ve duru su."
+      },
+      {
+        "name": "Derya",
+        "meaning": "Deniz."
+      },
+      {
+        "name": "Deryasu",
+        "meaning": "Deniz gibi engin su."
+      },
+      {
+        "name": "Devin",
+        "meaning": "Hareket, kımıldanış."
+      },
+      {
+        "name": "Dicle",
+        "meaning": "Bir nehir adı."
+      },
+      {
+        "name": "Didem",
+        "meaning": "Çok sevdiğim, gözüm kadar sevdiğim, yarim."
+      },
+      {
+        "name": "Dila",
+        "meaning": "Ey gönül!"
+      },
+      {
+        "name": "Dilan",
+        "meaning": "Gönüller, yürekler."
+      },
+      {
+        "name": "Dilara",
+        "meaning": "Gönül çalan, sevgili, yar."
+      },
+      {
+        "name": "Dilay",
+        "meaning": "Ay gibi parlak, gönle ışık saçan."
+      },
+      {
+        "name": "Dilşah",
+        "meaning": "Gönül şahı, sevgili."
+      },
+      {
+        "name": "Doğa",
+        "meaning": "Var olan her şeyin, canlı ve nesnelerin tümü."
+      },
+      {
+        "name": "Duru",
+        "meaning": "Bulanık olmayan, temiz, berrak, saf."
+      },
+      {
+        "name": "Duygu",
+        "meaning": "Kimi nesne, olay ya da kişilerin insanın iç dünyasında uyandırdığı izlenim, his."
+      },
+      {
+        "name": "Ebrar",
+        "meaning": "Hayır sahipleri."
+      },
+      {
+        "name": "Ebru",
+        "meaning": "Su yüzeyinde oluşturulan desenleri kâğıda aktarma sanatı."
+      },
+      {
+        "name": "Ece",
+        "meaning": "Kraliçe."
+      },
+      {
+        "name": "Ecrin",
+        "meaning": "Ödül, karşılık; güzel bir sonucun karşılığı."
+      },
+      {
+        "name": "Eda",
+        "meaning": "Davranış, tavır."
+      },
+      {
+        "name": "Eflin",
+        "meaning": "Modern kullanımda sevgi ve güzellikle ilişkilendirilen ad; kökeni kesin değildir."
+      },
+      {
+        "name": "Efnan",
+        "meaning": "Dallar, budaklar; gelişip serpilme."
+      },
+      {
+        "name": "Efsun",
+        "meaning": "Büyü."
+      },
+      {
+        "name": "Ekin",
+        "meaning": "Ekilmiş tahılın filiz vermiş biçimi, tarlada bitmiş tahıl."
+      },
+      {
+        "name": "Ekinay",
+        "meaning": "Ekin: yetişen ürün; Ay: parlaklık ve güzellik."
+      },
+      {
+        "name": "Ekinsu",
+        "meaning": "Ekin ve su; doğa ve bereketle ilişkilendirilen ad."
+      },
+      {
+        "name": "Ela",
+        "meaning": "Gözde sarıya çalan kestane rengi."
+      },
+      {
+        "name": "Elanur",
+        "meaning": "Gözü sarıya çalan kestane rengi olan güzel."
+      },
+      {
+        "name": "Elçin",
+        "meaning": "Demet, deste; farklı Türk lehçelerinde kullanılan bir ad."
+      },
+      {
+        "name": "Elif",
+        "meaning": "Arap alfabesinin ilk harfi."
+      },
+      {
+        "name": "Elisa",
+        "meaning": "Tanrı'ya adanmış; farklı dillerde kullanılan bir ad."
+      },
+      {
+        "name": "Eliz",
+        "meaning": "Emir Veren Prenses, Cennetteki En Büyük Meyva Ağacı."
+      },
+      {
+        "name": "Elvan",
+        "meaning": "Renkler, türlü renklerde olan."
+      },
+      {
+        "name": "Elya",
+        "meaning": "Farklı dillerde kullanılan modern bir ad; kökenine göre anlamı değişir."
+      },
+      {
+        "name": "Emel",
+        "meaning": "Gerçekleştirilmesi zamana bağlı istek."
+      },
+      {
+        "name": "Emine",
+        "meaning": "İnanılır, güvenilir."
+      },
+      {
+        "name": "Erguvan",
+        "meaning": "İlkbaharda morumsu pembe çiçekler açan ağaç."
+      },
+      {
+        "name": "Erva",
+        "meaning": "Letafet, güzellik."
+      },
+      {
+        "name": "Esen",
+        "meaning": "Sağlıklı, sağlam, rahat."
+      },
+      {
+        "name": "Esila",
+        "meaning": "Akşam vakti; kökeni konusunda farklı açıklamalar bulunan bir ad."
+      },
+      {
+        "name": "Esin",
+        "meaning": "Esinti, rüzgâr, sabah rüzgârı."
+      },
+      {
+        "name": "Eslem",
+        "meaning": "Allah'a teslim olan kişi, günahsız ve de çok değerli kimsedir."
+      },
+      {
+        "name": "Esma",
+        "meaning": "Adlar, isimler."
+      },
+      {
+        "name": "Esmanur",
+        "meaning": "Esma: adlar; Nur: ışık, aydınlık."
+      },
+      {
+        "name": "Evin",
+        "meaning": "Bir şeyin içindeki öz, cevher."
+      },
+      {
+        "name": "Evrim",
+        "meaning": "Ağır ağır ve kendiliğinden oluşan değişim."
+      },
+      {
+        "name": "Eylül",
+        "meaning": "Yılın dokuzuncu ayı."
+      },
+      {
+        "name": "Ezgi",
+        "meaning": "Belli bir kurala göre oluşturulan ve kulakta haz uyandıran ses dizisi, nağme."
+      },
+      {
+        "name": "Fatma",
+        "meaning": "Çocuğunu sütten kesen kadın."
+      },
+      {
+        "name": "Fatmanur",
+        "meaning": "Fatma ve nur."
+      },
+      {
+        "name": "Feray",
+        "meaning": "Ay ışığı, ayın parlaklığı."
+      },
+      {
+        "name": "Ferda",
+        "meaning": "Yarın."
+      },
+      {
+        "name": "Feride",
+        "meaning": "Eşi benzeri olmayan, tek, eşsiz, üstün."
+      },
+      {
+        "name": "Feyza",
+        "meaning": "Bolluk, çokluk."
+      },
+      {
+        "name": "Fidan",
+        "meaning": "Yeni yetişen ağaç veya ağaççık."
+      },
+      {
+        "name": "Figen",
+        "meaning": "Yaralayan, kıran, düşüren."
+      },
+      {
+        "name": "Filiz",
+        "meaning": "Tohumdan veya tomurcuktan çıkan körpe sürgün."
+      },
+      {
+        "name": "Firuze",
+        "meaning": "Açık mavi renkli, değerli bir süs taşı."
+      },
+      {
+        "name": "Funda",
+        "meaning": "Kurak yerlerde yetişen çalı türünden bir ağaççık."
+      },
+      {
+        "name": "Gamze",
+        "meaning": "Süzgün ve yan bakış."
+      },
+      {
+        "name": "Gaye",
+        "meaning": "Amaç, erek, hedef."
+      },
+      {
+        "name": "Gizem",
+        "meaning": "Aklın erişemediği veya çözülemeyen şey, sır."
+      },
+      {
+        "name": "Gökben",
+        "meaning": "Özü genç olan kimse."
+      },
+      {
+        "name": "Gökçe",
+        "meaning": "Güzel, gösterişli kimse."
+      },
+      {
+        "name": "Gökçen",
+        "meaning": "Güzel, hoş kimse."
+      },
+      {
+        "name": "Gökşen",
+        "meaning": "Gökyüzü gibi aydınlık ve neşeli."
+      },
+      {
+        "name": "Gonca",
+        "meaning": "Tam açılmamış çiçek, gül."
+      },
+      {
+        "name": "Gönenç",
+        "meaning": "Bolluk, refah ve mutluluk."
+      },
+      {
+        "name": "Gözde",
+        "meaning": "Çok sevilen, beğenilen, nitelikli, üstün tutulan."
+      },
+      {
+        "name": "Gül",
+        "meaning": "Katmerli, kokulu çiçekleri olan, pek çok türleri bulunan gülgillerin örnek bitkisi."
+      },
+      {
+        "name": "Gülay",
+        "meaning": "Güllerin açtığı ay."
+      },
+      {
+        "name": "Gülben",
+        "meaning": "Ben gül gibi güzelim anlamında kullanılan bir ad."
+      },
+      {
+        "name": "Gülcan",
+        "meaning": "Gül gibi güzel olan."
+      },
+      {
+        "name": "Gülce",
+        "meaning": "Gül gibi, güle benzeyen."
+      },
+      {
+        "name": "Gülçin",
+        "meaning": "Gül toplayan, gül devşiren."
+      },
+      {
+        "name": "Gülden",
+        "meaning": "Gül soluklu, nefesi gül kokan."
+      },
+      {
+        "name": "Güliz",
+        "meaning": "Gül gibi güzel iz bırakan."
+      },
+      {
+        "name": "Gülnur",
+        "meaning": "Gül gibi parlak ve aydınlık olan."
+      },
+      {
+        "name": "Gülşen",
+        "meaning": "Gül bahçesi."
+      },
+      {
+        "name": "Gülsu",
+        "meaning": "Gül suyu."
+      },
+      {
+        "name": "Günce",
+        "meaning": "Günlük, günlük yazılan anı."
+      },
+      {
+        "name": "Güneş",
+        "meaning": "Gezegenlere ve yer yuvarlağına ışık ve ısı veren büyük gök cismi."
+      },
+      {
+        "name": "Hafsa",
+        "meaning": "Aslan yavrusu; İslam tarihinde bilinen bir kadın adı."
+      },
+      {
+        "name": "Hande",
+        "meaning": "Gülüş, gülme."
+      },
+      {
+        "name": "Hatice",
+        "meaning": "Erken doğan kız çocuğu."
+      },
+      {
+        "name": "Havin",
+        "meaning": "Yaz mevsimi; bölgesel kullanımda yaygın bir ad."
+      },
+      {
+        "name": "Hayal",
+        "meaning": "Zihinde tasarlanan, canlandırılan ve gerçekleşmesi özlenen şey."
+      },
+      {
+        "name": "Hazal",
+        "meaning": "Kuruyup dökülen ağaç yaprakları."
+      },
+      {
+        "name": "Hazan",
+        "meaning": "Güz, yaprak dökümü mevsimi, sonbahar."
+      },
+      {
+        "name": "Hilal",
+        "meaning": "Ayın ilk günlerdeki durumu, yeni ay, ayça."
+      },
+      {
+        "name": "Hira",
+        "meaning": "Mekke yakınındaki Hira Dağı ve mağarasının adı."
+      },
+      {
+        "name": "Hiranur",
+        "meaning": "Hira: kutsal mekân adı; Nur: ışık, aydınlık."
+      },
+      {
+        "name": "Hivda",
+        "meaning": "Umutla ilişkilendirilen bölgesel bir ad."
+      },
+      {
+        "name": "Hülya",
+        "meaning": "Tatlı düş, hayal."
+      },
+      {
+        "name": "Hüma",
+        "meaning": "Başına konduğu kimseye mutluluk getirdiğine inanılan devlet kuşu, talih kuşu."
+      },
+      {
+        "name": "Hümeyra",
+        "meaning": "Kızıllık, pembelik."
+      },
+      {
+        "name": "İclal",
+        "meaning": "Büyüklük, ululuk."
+      },
+      {
+        "name": "İdil",
+        "meaning": "Volga Nehri'ne Türklerin verdiği isim."
+      },
+      {
+        "name": "İkra",
+        "meaning": "Oku anlamına gelir."
+      },
+      {
+        "name": "İkranur",
+        "meaning": "İkra: oku; Nur: ışık, aydınlık."
+      },
+      {
+        "name": "İlay",
+        "meaning": "Ay'ın hilal durumu, yeni ay."
+      },
+      {
+        "name": "İlayda",
+        "meaning": "Su perisi."
+      },
+      {
+        "name": "Ilgın",
+        "meaning": "Akdeniz Bölgesinde yetişen bir ağaççık."
+      },
+      {
+        "name": "İlke",
+        "meaning": "Temel düşünce, temel kanı."
+      },
+      {
+        "name": "İlkim",
+        "meaning": "İlk doğan çocuklara verilen adlardan biri."
+      },
+      {
+        "name": "İlknur",
+        "meaning": "İlk doğan kız çocuklara verilen adlardan biri."
+      },
+      {
+        "name": "İlsu",
+        "meaning": "Ülkenin su gibi sar ve temiz insanı."
+      },
+      {
+        "name": "İmge",
+        "meaning": "Zihinde tasarlanan ve gerçekleşmesi özlenen şey, hayal."
+      },
+      {
+        "name": "İnci",
+        "meaning": "İstiridye gibi kimi kavkılı deniz hayvanlarının içinde oluşan değerli, küçük, sert, sedef renginde süs tanesi."
+      },
+      {
+        "name": "İpek",
+        "meaning": "Bir tür böceğin ördüğü kozadan elde edilen ve kumaş yapımında kullanılan ince parlak tel ve bundan yapılan kumaş."
+      },
+      {
+        "name": "İrem",
+        "meaning": "Cennete benzetilerek yapılan bahçe."
+      },
+      {
+        "name": "Irmak",
+        "meaning": "Çoğunlukla denize dökülen, genişliği ve taşıdığı su niceliği bakımından en büyük akarsu, nehir."
+      },
+      {
+        "name": "Işıl",
+        "meaning": "Işıldayan, parlak."
+      },
+      {
+        "name": "Işılay",
+        "meaning": "Parlayan, ışıldayan ay, ay ışığı."
+      },
+      {
+        "name": "Işın",
+        "meaning": "Bir ışık kaynağından çıkarak her yöne dağılıp giden ışık demeti."
+      },
+      {
+        "name": "İzel",
+        "meaning": "İz bırakan bir ele sahip olan kimse."
+      },
+      {
+        "name": "Jale",
+        "meaning": "Kırağı, çiy."
+      },
+      {
+        "name": "Janset",
+        "meaning": "Güneşin doğuşu."
+      },
+      {
+        "name": "Jinda",
+        "meaning": "Yaşayan, canlı; bölgesel bir ad."
+      },
+      {
+        "name": "Jülide",
+        "meaning": "Karmakarışık, dağınık, birbirine girmiş."
+      },
+      {
+        "name": "Kader",
+        "meaning": "Alın yazısı, yazgı."
+      },
+      {
+        "name": "Karsu",
+        "meaning": "Kar gibi temiz ve duru su."
+      },
+      {
+        "name": "Kayra",
+        "meaning": "Büyük bir kimseden gelen iyilik, ihsan."
+      },
+      {
+        "name": "Kevser",
+        "meaning": "Cennette bir havuzun adı."
+      },
+      {
+        "name": "Kiraz",
+        "meaning": "Gülgillerden bir meyve ağacı ve bu ağacın etli, sulu, tek çekirdekli, kırmızı renkli meyvesi."
+      },
+      {
+        "name": "Kübra",
+        "meaning": "En büyük, çok büyük olan."
+      },
+      {
+        "name": "Kumsal",
+        "meaning": "Göl ve deniz kıyılarında bulunan kum taneciklerinden oluşan alanın ismi."
+      },
+      {
+        "name": "Lale",
+        "meaning": "Çiçekleri kadeh biçiminde olan, türlü renklerde süs bitkisi."
+      },
+      {
+        "name": "Lalin",
+        "meaning": "Yakut kırmızısı; kırmızı renkle ilişkilendirilen ad."
+      },
+      {
+        "name": "Lara",
+        "meaning": "Bir Ortodoks azizesinin adı olan Larissa'nın Rusça kısa biçimidir."
+      },
+      {
+        "name": "Lavin",
+        "meaning": "Farklı dillerde çeşitli anlamlarla kullanılan modern bir ad."
+      },
+      {
+        "name": "Leyla",
+        "meaning": "Gece."
+      },
+      {
+        "name": "Lidya",
+        "meaning": "Bir şeyin ötesinde bulunan."
+      },
+      {
+        "name": "Lila",
+        "meaning": "Hindu dininde evreni harekete geçiren ve dünyanın yaratılış ve yok oluş simgesi olan bir tanrı."
+      },
+      {
+        "name": "Lina",
+        "meaning": "Narin hurma fidanı; yumuşak ve nazik."
+      },
+      {
+        "name": "Liya",
+        "meaning": "Farklı dillerde çeşitli anlamlar taşıyan modern bir ad."
+      },
+      {
+        "name": "Lora",
+        "meaning": "Defne ağacıyla ilişkilendirilen, farklı dillerde kullanılan bir ad."
+      },
+      {
+        "name": "Lâl",
+        "meaning": "Parlak kırmızı renkte, billurlaşmış, saydam bir alüminyum oksidi olan değerli bir taş."
+      },
+      {
+        "name": "Masal",
+        "meaning": "Genellikle halkın yarattığı, hayale dayanan, sözlü gelenekte yaşayan, çoğunlukla insanlar, hayvanlar ile cadı, cin, dev, peri vb."
+      },
+      {
+        "name": "Maya",
+        "meaning": "Asıl, öz, kendi, yaradılış."
+      },
+      {
+        "name": "Melda",
+        "meaning": "Çok genç, körpe."
+      },
+      {
+        "name": "Melek",
+        "meaning": "Tanrı ile insan arasında aracılık yaptığına ve nurdan olduğuna inanılan manevi varlık."
+      },
+      {
+        "name": "Melike",
+        "meaning": "Kadın hükümdar."
+      },
+      {
+        "name": "Melis",
+        "meaning": "Bal, tatlı şey, sevgili, can."
+      },
+      {
+        "name": "Melisa",
+        "meaning": "Oğul otu."
+      },
+      {
+        "name": "Melodi",
+        "meaning": "Belli bir kurala göre yaratılan, kulağa hoş gelen ses dizisi."
+      },
+      {
+        "name": "Meltem",
+        "meaning": "Yazın karadan denize doğru esen mevsim rüzgârı."
+      },
+      {
+        "name": "Menesa",
+        "meaning": "Modern kullanımda görülen; kökeni ve anlamı konusunda ortak görüş bulunmayan ad."
+      },
+      {
+        "name": "Meral",
+        "meaning": "Geyik, ceylan."
+      },
+      {
+        "name": "Mercan",
+        "meaning": "Tropik ve ılık denizlerde yaşayan, geniş resifler oluşturan, mercanlar sınıfının örneği olan, kırmızı kalker iskeletli hayvan."
+      },
+      {
+        "name": "Meriç",
+        "meaning": "Türkiye ile Yunanistan sınırının bir bölümünü oluşturan nehir."
+      },
+      {
+        "name": "Merve",
+        "meaning": "Çakıl taşı."
+      },
+      {
+        "name": "Meryem",
+        "meaning": "Peygamber İsa’nın annesi."
+      },
+      {
+        "name": "Meva",
+        "meaning": "Sığınacak yer, yurt, mesken."
+      },
+      {
+        "name": "Meyra",
+        "meaning": "Parlayan, parıldayan ışık."
+      },
+      {
+        "name": "Mihra",
+        "meaning": "Sevgi ve iyilikle ilişkilendirilen modern bir ad; kökeni konusunda farklı görüşler vardır."
+      },
+      {
+        "name": "Mihrimah",
+        "meaning": "Güneş ve ay."
+      },
+      {
+        "name": "Mina",
+        "meaning": "Billur, şeffaf."
+      },
+      {
+        "name": "Mine",
+        "meaning": "Metal eşya üzerine vurulan renkli cam katmanı."
+      },
+      {
+        "name": "Mira",
+        "meaning": "Parlayan; farklı dillerde çeşitli anlamları bulunan bir ad."
+      },
+      {
+        "name": "Miray",
+        "meaning": "Ay gibi ışık saçan bey."
+      },
+      {
+        "name": "Mısra",
+        "meaning": "Bir şiiri oluşturan dizelerden her biri."
+      },
+      {
+        "name": "Müge",
+        "meaning": "İnci çiçeği."
+      },
+      {
+        "name": "Naz",
+        "meaning": "Kendini beğendirmek için yapılan davranış, cilve."
+      },
+      {
+        "name": "Nazan",
+        "meaning": "Nazlanan, nazlı, cilveli."
+      },
+      {
+        "name": "Nazenin",
+        "meaning": "İnce, zarif ve nazlı."
+      },
+      {
+        "name": "Nazlı",
+        "meaning": "Naz yapan, kendini ağıra satan, işveli, edalı."
+      },
+      {
+        "name": "Nazlıcan",
+        "meaning": "Nazlı, ince ruhlu ve sevilen kişi."
+      },
+      {
+        "name": "Nefes",
+        "meaning": "Soluk."
+      },
+      {
+        "name": "Nehir",
+        "meaning": "Akarsu, ırmak."
+      },
+      {
+        "name": "Nergis",
+        "meaning": "Çiçekleri ayrı ayrı veya bir kök sap üzerinde şemsiye durumunda, beyaz veya sarı renkte soğanlı bir süs bitkisi."
+      },
+      {
+        "name": "Neşe",
+        "meaning": "Sevinç, mutluluk."
+      },
+      {
+        "name": "Neva",
+        "meaning": "Ses, ahenk; Türk müziğinde bir makam."
+      },
+      {
+        "name": "Nihal",
+        "meaning": "Fidan, taze sürgün."
+      },
+      {
+        "name": "Nihan",
+        "meaning": "Gizli, saklı."
+      },
+      {
+        "name": "Nil",
+        "meaning": "Mavi, lacivert."
+      },
+      {
+        "name": "Nilay",
+        "meaning": "Ayın parlaklığı."
+      },
+      {
+        "name": "Nilda",
+        "meaning": "Farklı kültürlerde kullanılan modern bir ad; kökenine göre anlamı değişir."
+      },
+      {
+        "name": "Nilgün",
+        "meaning": "Koyu mavi renkli, çivit renginde olan."
+      },
+      {
+        "name": "Nilüfer",
+        "meaning": "Yaprakları uzun saplı, çiçekleri büyük, beyaz, su yüzeyinde açan, göl ve su birikintilerinde yetişen su bitkisi."
+      },
+      {
+        "name": "Nisa",
+        "meaning": "Kadınlar; Kur'an'daki Nisa suresinin adı."
+      },
+      {
+        "name": "Nisan",
+        "meaning": "Yılın dördüncü ayı."
+      },
+      {
+        "name": "Nisanur",
+        "meaning": "Nisa: kadınlar; Nur: ışık, aydınlık."
+      },
+      {
+        "name": "Nora",
+        "meaning": "Işıkla ilişkilendirilen, farklı dillerde kullanılan bir ad."
+      },
+      {
+        "name": "Nur",
+        "meaning": "Aydınlık, ışık, parıltı."
+      },
+      {
+        "name": "Nuran",
+        "meaning": "Nurlu, ışıklı, aydınlık."
+      },
+      {
+        "name": "Nuray",
+        "meaning": "Ayın parlaklığı, ay ışığı."
+      },
+      {
+        "name": "Nurcan",
+        "meaning": "Nurlu, ışıklı, aydın kimse."
+      },
+      {
+        "name": "Nursel",
+        "meaning": "Işık seli, bol aydınlık."
+      },
+      {
+        "name": "Nursu",
+        "meaning": "Işık gibi parlak, su gibi duru."
+      },
+      {
+        "name": "Oya",
+        "meaning": "Genellikle ipek ibrişim kullanılarak iğne, mekik, tığ veya firkete ile yapılan ince dantel."
+      },
+      {
+        "name": "Öykü",
+        "meaning": "Ayrıntılarıyla anlatılan olay."
+      },
+      {
+        "name": "Özge",
+        "meaning": "Başka."
+      },
+      {
+        "name": "Özgü",
+        "meaning": "Birine veya bir şeye özgü, kendine has."
+      },
+      {
+        "name": "Özlem",
+        "meaning": "Bir kimse veya bir şeye duyulan aşırı görme, kavuşma arzusu, hasret."
+      },
+      {
+        "name": "Parla",
+        "meaning": "\"Işık saç, ışılda, ün kazan, tanın\" anlamlarında kullanılan bir ad."
+      },
+      {
+        "name": "Pelin",
+        "meaning": "Bileşikgillerden, yapraklarında acı, ıtırlı bir madde bulunan, hekimlikte ve içki yapımında kullanılan bir bitki."
+      },
+      {
+        "name": "Pera",
+        "meaning": "Karşı yaka; tarihî olarak Beyoğlu çevresi için kullanılan ad."
+      },
+      {
+        "name": "Peren",
+        "meaning": "Ülker yıldızı."
+      },
+      {
+        "name": "Peri",
+        "meaning": "Doğaüstü güçleri olduğuna inanılan, düşsel dişi varlık."
+      },
+      {
+        "name": "Petek",
+        "meaning": "Arıların yumurtalarını bırakmak ve bal depo etmek için yaptığı bal mumu yuvacıklar."
+      },
+      {
+        "name": "Pınar",
+        "meaning": "Yerden kaynayarak çıkan su, kaynak."
+      },
+      {
+        "name": "Piraye",
+        "meaning": "Süs, ziynet."
+      },
+      {
+        "name": "Rabia",
+        "meaning": "Dördüncü."
+      },
+      {
+        "name": "Rana",
+        "meaning": "Güzel, göze hoş görünen."
+      },
+      {
+        "name": "Ravza",
+        "meaning": "Çimeni, ağacı bol olan yer, bahçe."
+      },
+      {
+        "name": "Rengin",
+        "meaning": "Renkli, parlak renkli."
+      },
+      {
+        "name": "Reyhan",
+        "meaning": "Güzel kokulu bir süs bitkisi, fesleğen."
+      },
+      {
+        "name": "Reyyan",
+        "meaning": "Suya doymuş, taze; İslami kültürde cennet kapılarından birinin adı."
+      },
+      {
+        "name": "Rojda",
+        "meaning": "Gün doğumu, yeni gün; bölgesel bir ad."
+      },
+      {
+        "name": "Ronya",
+        "meaning": "Işıkla ilişkilendirilen bölgesel bir ad."
+      },
+      {
+        "name": "Roza",
+        "meaning": "Gül; farklı dillerde kullanılan bir ad."
+      },
+      {
+        "name": "Rozerin",
+        "meaning": "Altın renkli gün ve ışıkla ilişkilendirilen bölgesel bir ad."
+      },
+      {
+        "name": "Rüveyda",
+        "meaning": "Yavaşça, nazikçe, adım adım."
+      },
+      {
+        "name": "Rüya",
+        "meaning": "Düş."
+      },
+      {
+        "name": "Sahra",
+        "meaning": "Kır, ova, çöl."
+      },
+      {
+        "name": "Sare",
+        "meaning": "Prenses, soylu kadın; farklı kökenlerde kullanılan bir ad."
+      },
+      {
+        "name": "Sarya",
+        "meaning": "Modern kullanımda görülen; kökeni ve anlamı konusunda farklı görüşler bulunan ad."
+      },
+      {
+        "name": "Şebnem",
+        "meaning": "Çiy."
+      },
+      {
+        "name": "Sedef",
+        "meaning": "Midye ve istiridye gibi deniz hayvanlarının kabuğunda bulunan pırıltılı, beyaz, gök kuşağı renkli değerli madde."
+      },
+      {
+        "name": "Selcan",
+        "meaning": "Coşkulu, taşkın yaradılışlı, hareketli olan kimse."
+      },
+      {
+        "name": "Selen",
+        "meaning": "Müjde."
+      },
+      {
+        "name": "Selenay",
+        "meaning": "Ay gibi parlak ve aydınlık."
+      },
+      {
+        "name": "Selin",
+        "meaning": "Coşkun akan su, sel gibi güçlü akış."
+      },
+      {
+        "name": "Selinay",
+        "meaning": "Ay ışığının seli, bol ay ışığı."
+      },
+      {
+        "name": "Selma",
+        "meaning": "Barış içinde bulunma, huzur, erinç."
+      },
+      {
+        "name": "Selvi",
+        "meaning": "Akdeniz bölgesinde çok yetişen, yapraklarını dökmeyen, ince, uzun bir ağaç."
+      },
+      {
+        "name": "Sema",
+        "meaning": "Gökyüzü."
+      },
+      {
+        "name": "Sena",
+        "meaning": "Övgü; ışık ve şimşek parıltısı."
+      },
+      {
+        "name": "Serra",
+        "meaning": "Genişlik, kolaylık."
+      },
+      {
+        "name": "Seval",
+        "meaning": "Severek al anlamında kullanılan bir ad."
+      },
+      {
+        "name": "Sevda",
+        "meaning": "Aşk, sevgi."
+      },
+      {
+        "name": "Sevgi",
+        "meaning": "Bir şeye veya bir kimseye karşı duyulan sevme duygusu."
+      },
+      {
+        "name": "Sevil",
+        "meaning": "Her zaman sevilen, beğenilen biri ol anlamında kullanılan bir ad."
+      },
+      {
+        "name": "Sevinç",
+        "meaning": "İstenilen şeye ulaşmaktan doğan büyük coşku, hoşnutluk duygusu."
+      },
+      {
+        "name": "Şeyma",
+        "meaning": "Çok kıymetli ve değerli."
+      },
+      {
+        "name": "Sezen",
+        "meaning": "Duyan, hisseden, anlayan, sezgili."
+      },
+      {
+        "name": "Sibel",
+        "meaning": "l. Buğday başağı."
+      },
+      {
+        "name": "Sıla",
+        "meaning": "Doğup büyüdüğü yere gidip ayrı kaldığı yakınlarına kavuşma."
+      },
+      {
+        "name": "Şimal",
+        "meaning": "Kuzey."
+      },
+      {
+        "name": "Simay",
+        "meaning": "Gümmüş gibi parlak güzel."
+      },
+      {
+        "name": "Simge",
+        "meaning": "İşaret, sembol."
+      },
+      {
+        "name": "Sinem",
+        "meaning": "\"Gönlüm, yüreğim, çok sevdiğim\" anlamında kullanılan bir ad."
+      },
+      {
+        "name": "Şirin",
+        "meaning": "Tatlı, sevimli, cana yakın."
+      },
+      {
+        "name": "Solin",
+        "meaning": "Bölgesel kullanımda güneş ve çiçekle ilişkilendirilen bir ad."
+      },
+      {
+        "name": "Su",
+        "meaning": "Canlıların yaşamında önemli bir yeri olan, rengi, tadı, kokusu olmayan sıvı."
+      },
+      {
+        "name": "Sude",
+        "meaning": "Sürülmüş, sürmeli; yerleşik bir kadın adı."
+      },
+      {
+        "name": "Sueda",
+        "meaning": "Mutlu, uğurlu ve talihli olanlar."
+      },
+      {
+        "name": "Şule",
+        "meaning": "Alev, ateş alevi."
+      },
+      {
+        "name": "Sümeyye",
+        "meaning": "İslam tarihinde ilk kadın şehit olarak anılan Sümeyye binti Habbat'ın adı."
+      },
+      {
+        "name": "Suna",
+        "meaning": "Bir tür yaban ördeği, erkek ördek."
+      },
+      {
+        "name": "Tanem",
+        "meaning": "Ay ışığı, Mehtap, Aydınlık."
+      },
+      {
+        "name": "Tansu",
+        "meaning": "Şafağın aydınlattığı su gibi parlak ve temiz olan."
+      },
+      {
+        "name": "Tuana",
+        "meaning": "Cennet bahçelerine düşen yağmur."
+      },
+      {
+        "name": "Tuba",
+        "meaning": "Güzellik, iyilik, hoşluk."
+      },
+      {
+        "name": "Tuğba",
+        "meaning": "İslami inanışta cennette bulunduğu kabul edilen ağaç."
+      },
+      {
+        "name": "Tülin",
+        "meaning": "Kimi kez ayın çevresinde oluşan dairesel hale."
+      },
+      {
+        "name": "Turna",
+        "meaning": "Turnagillerden, Avrupa ve Kuzey Afrika'da toplu olarak yaşayan, göçebe, iri bir kuş."
+      },
+      {
+        "name": "Ülkü",
+        "meaning": "Amaç edinilen, ulaşılmak istenen şey."
+      },
+      {
+        "name": "Umay",
+        "meaning": "Eski Türk inancında çocukları ve anneleri koruduğuna inanılan kutsal varlık."
+      },
+      {
+        "name": "Vera",
+        "meaning": "Günah ve haramdan kaçınmak için şüpheli şeylerden uzak durma, takva, ittika."
+      },
+      {
+        "name": "Vildan",
+        "meaning": "Yeni doğmuş çocuklar."
+      },
+      {
+        "name": "Yade",
+        "meaning": "Hatıra, anı."
+      },
+      {
+        "name": "Yağmur",
+        "meaning": "Havadaki su buğusunun yoğunlaşmasıyla oluşan ve yeryüzüne düşen yağışın sıvı durumunda olanı."
+      },
+      {
+        "name": "Yaren",
+        "meaning": "Arkadaş, yakın dost."
+      },
+      {
+        "name": "Yasemin",
+        "meaning": "Beyaz, kırmızı veya sarı renkli, kokulu çiçekler açan bir ağaççık."
+      },
+      {
+        "name": "Yaz",
+        "meaning": "İlkbaharla sonbahar arasındaki sıcak mevsim."
+      },
+      {
+        "name": "Yelda",
+        "meaning": "Yılın en uzun gecesi."
+      },
+      {
+        "name": "Yeliz",
+        "meaning": "Güzel, aydınlık, havadar."
+      },
+      {
+        "name": "Yeşim",
+        "meaning": "Açık yeşil ve pembe renkli, kolay işlenen, değerli bir taş."
+      },
+      {
+        "name": "Yıldız",
+        "meaning": "Gökyüzündeki ışıklı gök cisimlerinin her biri."
+      },
+      {
+        "name": "Yonca",
+        "meaning": "Başak durumundaki çiçekleri kırmızı veya mor renkli, çayır bitkisi."
+      },
+      {
+        "name": "Yosun",
+        "meaning": "Çoğu sularda yetişen, ilkel yapıdaki bitkilerin genel adı."
+      },
+      {
+        "name": "Yüsra",
+        "meaning": "Sol taraf."
+      },
+      {
+        "name": "Zehra",
+        "meaning": "Yüzü pek beyaz ve parlak olan kimse."
+      },
+      {
+        "name": "Zeren",
+        "meaning": "Anlayışlı, kavrayışlı, zeki."
+      },
+      {
+        "name": "Zerrin",
+        "meaning": "Altından yapılmış."
+      },
+      {
+        "name": "Zerya",
+        "meaning": "Deniz; bölgesel kullanımda görülen bir ad."
+      },
+      {
+        "name": "Zeynep",
+        "meaning": "Değerli taşlar, mücevherler."
+      },
+      {
+        "name": "Züleyha",
+        "meaning": "Su perisi."
+      },
+      {
+        "name": "Zümra",
+        "meaning": "Güzel, iyi ahlaklı ve cesur kadın."
+      },
+      {
+        "name": "Zümrüt",
+        "meaning": "Cam parlaklığında, yeşil renkte, saydam, değerli bir süs taşı."
+      }
+    ],
+    "boys": [
+      {
+        "name": "Abdülkadir",
+        "meaning": "Güç ve kudret sahibi Allah'ın kulu."
+      },
+      {
+        "name": "Abdullah",
+        "meaning": "Tanrı’nın kulu."
+      },
+      {
+        "name": "Abdurrahman",
+        "meaning": "Merhameti sonsuz Allah'ın kulu."
+      },
+      {
+        "name": "Acar",
+        "meaning": "Kuvvetli, güçlü, dinç."
+      },
+      {
+        "name": "Acun",
+        "meaning": "Dünya."
+      },
+      {
+        "name": "Adar",
+        "meaning": "Erginlik, olgunluk."
+      },
+      {
+        "name": "Adem",
+        "meaning": "Dinî inançlara göre ilk yaratılan insan ve ilk peygamber."
+      },
+      {
+        "name": "Adil",
+        "meaning": "Doğruluktan ayrılmayan kimse."
+      },
+      {
+        "name": "Adnan",
+        "meaning": "Bir yere yerleşip ikamet eden, mukim."
+      },
+      {
+        "name": "Afşin",
+        "meaning": "Zırh. Silah."
+      },
+      {
+        "name": "Agâh",
+        "meaning": "Bilen, bilgili, haberli, uyanık."
+      },
+      {
+        "name": "Ahlas",
+        "meaning": "Saf, halis, karışımsız."
+      },
+      {
+        "name": "Ahmet",
+        "meaning": "Övülmeye layık, övülmüş."
+      },
+      {
+        "name": "Akay",
+        "meaning": "Parıltılı ay, ışıklı ay."
+      },
+      {
+        "name": "Akif",
+        "meaning": "İbadet eden, ibadetle uğraşan kişi."
+      },
+      {
+        "name": "Akın",
+        "meaning": "Düşman topraklarına tedirgin etme, yıldırma, çapul gibi amaçlarla toplu olarak yapılan baskın."
+      },
+      {
+        "name": "Aksel",
+        "meaning": "\"Sel gibi ak\" anlamında kullanılan bir ad."
+      },
+      {
+        "name": "Aktan",
+        "meaning": "Parlak, aydınlık sabah."
+      },
+      {
+        "name": "Alaz",
+        "meaning": "Alev."
+      },
+      {
+        "name": "Ali",
+        "meaning": "Yüce, ulu, yüksek."
+      },
+      {
+        "name": "Alican",
+        "meaning": "Yüce, ulu dost."
+      },
+      {
+        "name": "Alihan",
+        "meaning": "Yüce hükümdar, ulu han."
+      },
+      {
+        "name": "Alişan",
+        "meaning": "Herkes tarafından tanınan, ünlü."
+      },
+      {
+        "name": "Alp",
+        "meaning": "Yiğit, kahraman, cesur, bahadır kimse."
+      },
+      {
+        "name": "Alparslan",
+        "meaning": "Yiğit ve güçlü aslan; Büyük Selçuklu hükümdarının adı."
+      },
+      {
+        "name": "Alpaslan",
+        "meaning": "Yiğit ve güçlü aslan; Alparslan adının yaygın yazım biçimi."
+      },
+      {
+        "name": "Alpay",
+        "meaning": "Cesur, yiğit kimse."
+      },
+      {
+        "name": "Alper",
+        "meaning": "Yiğit, kahraman erkek."
+      },
+      {
+        "name": "Alperen",
+        "meaning": "Yiğit, cesur, yürekli kimse."
+      },
+      {
+        "name": "Alphan",
+        "meaning": "Yiğit, cesur, yürekli hükümdar."
+      },
+      {
+        "name": "Alptuğ",
+        "meaning": "Yiğit, cesur, yürekli, savaşçı kimse."
+      },
+      {
+        "name": "Altay",
+        "meaning": "Yüksek dağ."
+      },
+      {
+        "name": "Altuğ",
+        "meaning": "Kırmızı tuğ."
+      },
+      {
+        "name": "Anıl",
+        "meaning": "Amaç, erek."
+      },
+      {
+        "name": "Aral",
+        "meaning": "Birbirine yakın adaların oluşturduğu topluluk, takımada."
+      },
+      {
+        "name": "Aram",
+        "meaning": "Sakinlik ve huzurla ilişkilendirilen, farklı kültürlerde kullanılan bir ad."
+      },
+      {
+        "name": "Aras",
+        "meaning": "Doğu Anadolu'dan doğup Hazar Denizi'ne ulaşan nehir."
+      },
+      {
+        "name": "Arda",
+        "meaning": "Sonra gelen; tarihî bir Türk adı ve bir nehir adı."
+      },
+      {
+        "name": "Arden",
+        "meaning": "Sabırsız, istekli."
+      },
+      {
+        "name": "Arel",
+        "meaning": "Temiz, dürüst kimse."
+      },
+      {
+        "name": "Aren",
+        "meaning": "Farsça: Parlak renkteki kum tanesi. Hititçe: Işık"
+      },
+      {
+        "name": "Arhan",
+        "meaning": "Güçlü ve saygın hükümdar."
+      },
+      {
+        "name": "Arif",
+        "meaning": "Çok anlayışlı ve sezgili kimse."
+      },
+      {
+        "name": "Arın",
+        "meaning": "Temiz, arı, saf."
+      },
+      {
+        "name": "Arkın",
+        "meaning": "Yavaş akan, sakin ve dingin."
+      },
+      {
+        "name": "Armanç",
+        "meaning": "Amaç, ülkü ve özlemle ilişkilendirilen bölgesel bir ad."
+      },
+      {
+        "name": "Arslan",
+        "meaning": "Kedigillerden, Afrika'da ve Asya'da yaşayan, erkekleri yeleli, yırtıcı, uzunluğu 160 cm, kuyruğu 70 cm ve ucu püsküllü."
+      },
+      {
+        "name": "Asaf",
+        "meaning": "İleri görüşlü, yönetimde yetkin kimse; tarihî ve dinî bir ad."
+      },
+      {
+        "name": "Asil",
+        "meaning": "Soylu."
+      },
+      {
+        "name": "Asilhan",
+        "meaning": "Soylu ve yüce hükümdar."
+      },
+      {
+        "name": "Aslan",
+        "meaning": "Gücü ve cesareti simgeleyen yırtıcı hayvan."
+      },
+      {
+        "name": "Ata",
+        "meaning": "Ata, büyükbaba ve geçmiş kuşaklardan gelen öncü."
+      },
+      {
+        "name": "Ataberk",
+        "meaning": "Şehzade eğitmeni, devlet yetkilisi."
+      },
+      {
+        "name": "Atacan",
+        "meaning": "\"Sevgili baba\" anlamında kullanılan bir ad."
+      },
+      {
+        "name": "Atahan",
+        "meaning": "Ataları gibi güçlü ve saygın hükümdar."
+      },
+      {
+        "name": "Atakan",
+        "meaning": "Hükümdar olan ata."
+      },
+      {
+        "name": "Atalay",
+        "meaning": "Ünlü, namlı, şöhretli kimse."
+      },
+      {
+        "name": "Atay",
+        "meaning": "Atadan gelen, atalara bağlı."
+      },
+      {
+        "name": "Ateş",
+        "meaning": "Yanıcı cisimlerin tutuşmasıyla beliren ısı ve ışık."
+      },
+      {
+        "name": "Atilla",
+        "meaning": "Avrupa Hun hükümdarının adı."
+      },
+      {
+        "name": "Atlas",
+        "meaning": "Yeryüzü haritalarını bir araya getiren eser; mitolojide göğü taşıyan figür."
+      },
+      {
+        "name": "Ayaz",
+        "meaning": "Duru ve sakin havada çıkan kuru soğuk."
+      },
+      {
+        "name": "Aybars",
+        "meaning": "Ay gibi parlak ve pars gibi güçlü."
+      },
+      {
+        "name": "Ayberk",
+        "meaning": "Ey güçlü kimse anlamında kullanılan bir ad."
+      },
+      {
+        "name": "Aycan",
+        "meaning": "Ay gibi parlak ve değerli can."
+      },
+      {
+        "name": "Aydın",
+        "meaning": "Işıklı, pırıltılı, aydınlık."
+      },
+      {
+        "name": "Ayhan",
+        "meaning": "\"Ey hükümdar!\" anlamında kullanılan bir ad."
+      },
+      {
+        "name": "Aykan",
+        "meaning": "Parlak soylu, soyu sopu temiz."
+      },
+      {
+        "name": "Aykut",
+        "meaning": "Kutlu, uğurlu ay."
+      },
+      {
+        "name": "Aytaç",
+        "meaning": "Ay gibi parlak taç takmış olan."
+      },
+      {
+        "name": "Aytekin",
+        "meaning": "Ay gibi tek ve uğurlu olan."
+      },
+      {
+        "name": "Azad",
+        "meaning": "Özgür, bağımsız."
+      },
+      {
+        "name": "Aziz",
+        "meaning": "Ermiş, eren."
+      },
+      {
+        "name": "Baran",
+        "meaning": "Yağmur."
+      },
+      {
+        "name": "Barın",
+        "meaning": "Bütün, hep."
+      },
+      {
+        "name": "Barış",
+        "meaning": "Barışma işi."
+      },
+      {
+        "name": "Barlas",
+        "meaning": "Güçlü, savaşçı; tarihî bir Türk-Moğol boy adı."
+      },
+      {
+        "name": "Bartu",
+        "meaning": "Varlık, servet."
+      },
+      {
+        "name": "Batu",
+        "meaning": "Üstün gelen, gücü yeten, galip."
+      },
+      {
+        "name": "Batuhan",
+        "meaning": "Üstün gelen, gücü yeten, galip olan hükümdar."
+      },
+      {
+        "name": "Baver",
+        "meaning": "İnanan, güvenen; bölgesel bir ad."
+      },
+      {
+        "name": "Baybars",
+        "meaning": "Güçlü ve korkusuz; tarihî Memlük hükümdarının adı."
+      },
+      {
+        "name": "Bedirhan",
+        "meaning": "Dolunay gibi güzel olan hükümdar."
+      },
+      {
+        "name": "Behlül",
+        "meaning": "Çok güldüren, şakacı."
+      },
+      {
+        "name": "Bekir",
+        "meaning": "Sabahları erken kalkmayı alışkanlık edinen kimse."
+      },
+      {
+        "name": "Berat",
+        "meaning": "Nişan, rütbe."
+      },
+      {
+        "name": "Berk",
+        "meaning": "Sağlam, güçlü ve dayanıklı."
+      },
+      {
+        "name": "Berkan",
+        "meaning": "Sağlam, güçlü ve tanınmış kişi."
+      },
+      {
+        "name": "Berkant",
+        "meaning": "Güçlü, bozulmaz yemin."
+      },
+      {
+        "name": "Berkay",
+        "meaning": "Sağlam ve güçlü kimse."
+      },
+      {
+        "name": "Berke",
+        "meaning": "Kamçı; güçlü ve çevik kişiyle ilişkilendirilen tarihî bir ad."
+      },
+      {
+        "name": "Berker",
+        "meaning": "Sağlam ve güçlü erkek."
+      },
+      {
+        "name": "Berkin",
+        "meaning": "Sağlam, güçlü, kuvvetli."
+      },
+      {
+        "name": "Bilal",
+        "meaning": "Su ve serinlikle ilişkilendirilen; Bilal-i Habeşi'nin adı."
+      },
+      {
+        "name": "Bilgehan",
+        "meaning": "Bilgili hükümdar."
+      },
+      {
+        "name": "Bora",
+        "meaning": "Genellikle arkasından yağmur getiren sert ve şiddetli fırtına."
+      },
+      {
+        "name": "Boran",
+        "meaning": "Şiddetli fırtına, bora."
+      },
+      {
+        "name": "Buğra",
+        "meaning": "Erkek deve."
+      },
+      {
+        "name": "Bülent",
+        "meaning": "Yüksek, yüce, ulu."
+      },
+      {
+        "name": "Bulut",
+        "meaning": "Atmosferdeki su damlacıkları ve buz taneciklerinin görülebilir yoğunluk kazanmasıyla oluşan, biçimleri."
+      },
+      {
+        "name": "Bünyamin",
+        "meaning": "Yakup Peygamber'in en küçük oğlunun adı."
+      },
+      {
+        "name": "Burak",
+        "meaning": "Hz. Muhammed'in Miraç Gecesi'ndeki biniti."
+      },
+      {
+        "name": "Çağan",
+        "meaning": "Bayram, sevinçli ve kutlu gün."
+      },
+      {
+        "name": "Çağatay",
+        "meaning": "Cengiz Han'ın oğlunun adı; tarihî Türk-Moğol adı."
+      },
+      {
+        "name": "Çağdaş",
+        "meaning": "Aynı çağda yaşayan."
+      },
+      {
+        "name": "Çağrı",
+        "meaning": "Birini çağırma, davet."
+      },
+      {
+        "name": "Can",
+        "meaning": "Ruh."
+      },
+      {
+        "name": "Canberk",
+        "meaning": "Güçlü, sağlam kişilikli kimse."
+      },
+      {
+        "name": "Caner",
+        "meaning": "Çok içten, sevilen, sevimli kimse."
+      },
+      {
+        "name": "Cem",
+        "meaning": "Hükümdar, şah."
+      },
+      {
+        "name": "Cemal",
+        "meaning": "Yüz güzelliği, güzellik."
+      },
+      {
+        "name": "Cemre",
+        "meaning": "Şubat ayında birer hafta aralıklarla önce havada, sonra suda ve en son toprakta oluştuğu sanılan sıcaklık yükselişi."
+      },
+      {
+        "name": "Cengiz",
+        "meaning": "Güçlü, yılmaz, gözü pek kimse."
+      },
+      {
+        "name": "Cenk",
+        "meaning": "Savaş."
+      },
+      {
+        "name": "Cenkay",
+        "meaning": "Savaşçı ve ay gibi parlak."
+      },
+      {
+        "name": "Çetin",
+        "meaning": "Sert, inatçı."
+      },
+      {
+        "name": "Cihan",
+        "meaning": "Evren. Dünya."
+      },
+      {
+        "name": "Cihangir",
+        "meaning": "Dünyaya egemen olan, dünyayı zapt eden kimse."
+      },
+      {
+        "name": "Çınar",
+        "meaning": "Boyu 30 m.ye ulaşabilen, kalın dallı, çok uzun ömürlü bir ağaç türü."
+      },
+      {
+        "name": "Civan",
+        "meaning": "Taze, genç delikanlı."
+      },
+      {
+        "name": "Coşkun",
+        "meaning": "Coşan, coşkulu, heyecanlı kimse."
+      },
+      {
+        "name": "Cuma",
+        "meaning": "Toplanma."
+      },
+      {
+        "name": "Dağhan",
+        "meaning": "Eski Türklerde dağ Tanrısı."
+      },
+      {
+        "name": "Davut",
+        "meaning": "Sevgili; Kur'an'da adı geçen peygamber."
+      },
+      {
+        "name": "Deha",
+        "meaning": "İnsan zekâsının ulaşabileceği en yüksek aşama."
+      },
+      {
+        "name": "Demir",
+        "meaning": "Koyu renkli, kolay işlenen, dayanıklı, kullanılış yerleri çok maden."
+      },
+      {
+        "name": "Demircan",
+        "meaning": "Güçlü, kuvvetli, sert kimse."
+      },
+      {
+        "name": "Demirhan",
+        "meaning": "Güçlü hükümdar."
+      },
+      {
+        "name": "Deniz",
+        "meaning": "Yer kabuğunun çukur bölümlerini kaplayan, birbiriyle bağlantılı, tuzlu, büyük su kütlesi."
+      },
+      {
+        "name": "Derin",
+        "meaning": "Çok gelişmiş, çok ilerlemiş."
+      },
+      {
+        "name": "Devran",
+        "meaning": "Zaman, çağ; dünyanın dönüşü."
+      },
+      {
+        "name": "Devrim",
+        "meaning": "Dünya görüşünde, felsefede, bilimde, sanatta veya toplumsal düzende birdenbire olan niteliksel değişme."
+      },
+      {
+        "name": "Diyar",
+        "meaning": "Ülke, yurt, memleket."
+      },
+      {
+        "name": "Doğan",
+        "meaning": "Doğan, dünyaya gelen."
+      },
+      {
+        "name": "Doğukan",
+        "meaning": "Doğunun hükümdarı, doğudan gelen han."
+      },
+      {
+        "name": "Doruk",
+        "meaning": "Tepe, en yüksek yer, uç, zirve."
+      },
+      {
+        "name": "Ediz",
+        "meaning": "Ulu, yüce, değerli kimse."
+      },
+      {
+        "name": "Efe",
+        "meaning": "Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Ege",
+        "meaning": "Türkiye'nin batısındaki denizin ve bölgenin adı."
+      },
+      {
+        "name": "Egehan",
+        "meaning": "Ege: engin deniz; Han: hükümdar."
+      },
+      {
+        "name": "Egemen",
+        "meaning": "Buyruk ve hüküm sahibi, buyruğunu yürüten, bağımlı olmayan."
+      },
+      {
+        "name": "Ekin",
+        "meaning": "Ekilmiş tahılın filiz vermiş biçimi, tarlada bitmiş tahıl."
+      },
+      {
+        "name": "Ekrem",
+        "meaning": "Çok cömert, eli çok açık."
+      },
+      {
+        "name": "Emin",
+        "meaning": "İnanılır, güvenilir."
+      },
+      {
+        "name": "Emir",
+        "meaning": "Buyruk, komut."
+      },
+      {
+        "name": "Emircan",
+        "meaning": "Emir: buyruk veren; Can: yaşam, sevgili."
+      },
+      {
+        "name": "Emirhan",
+        "meaning": "Buyruk veren hükümdar, bey."
+      },
+      {
+        "name": "Emrah",
+        "meaning": "Âşık, gönül eri; tarihî bir halk ozanının adı."
+      },
+      {
+        "name": "Emre",
+        "meaning": "Âşık, tutkun."
+      },
+      {
+        "name": "Ender",
+        "meaning": "Çok az, çok seyrek, az bulunan."
+      },
+      {
+        "name": "Enes",
+        "meaning": "Soylu Arap atı, küheylan."
+      },
+      {
+        "name": "Engin",
+        "meaning": "Açık deniz."
+      },
+      {
+        "name": "Ensar",
+        "meaning": "Hz. Muhammed'e hicret zamanında yardım eden Medineliler."
+      },
+      {
+        "name": "Enver",
+        "meaning": "Nurlu, çok parlak, çok güzel."
+      },
+      {
+        "name": "Eray",
+        "meaning": "Ayın hilal durumu, yeni ay."
+      },
+      {
+        "name": "Ercan",
+        "meaning": "Yiğit, canlı, cesur kimse."
+      },
+      {
+        "name": "Erdal",
+        "meaning": "Genç kimse."
+      },
+      {
+        "name": "Erdem",
+        "meaning": "Ahlakın övdüğü iyilikçilik, acıma, alçak gönüllülük, yiğitlik, doğruluk gibi niteliklerin genel adı, fazilet."
+      },
+      {
+        "name": "Eren",
+        "meaning": "Ermiş, olgun ve bilge kişi."
+      },
+      {
+        "name": "Ergin",
+        "meaning": "Olgunlaşmış, yetişmiş kimse."
+      },
+      {
+        "name": "Ergün",
+        "meaning": "Yumuşak, uysal kimse."
+      },
+      {
+        "name": "Erhan",
+        "meaning": "Yiğit hükümdar."
+      },
+      {
+        "name": "Erkin",
+        "meaning": "Hiçbir koşula bağlı olmayan, istediği gibi davranabilen, özgür."
+      },
+      {
+        "name": "Erkut",
+        "meaning": "Kutlu, uğurlu ve yiğit kişi."
+      },
+      {
+        "name": "Erol",
+        "meaning": "\"Yiğit ol, doğru ol\" anlamında kullanılan bir ad."
+      },
+      {
+        "name": "Ersin",
+        "meaning": "\"Amacına ulaşsın, kavuşsun\" anlamında kullanılan bir ad."
+      },
+      {
+        "name": "Ertan",
+        "meaning": "Sabahın ilk aydınlığı, erken tan."
+      },
+      {
+        "name": "Ertuğ",
+        "meaning": "Savaşçı kimse."
+      },
+      {
+        "name": "Ertuğrul",
+        "meaning": "Dürüst, doğru, yiğit kimse."
+      },
+      {
+        "name": "Esen",
+        "meaning": "Sağlıklı, sağlam, rahat."
+      },
+      {
+        "name": "Eser",
+        "meaning": "Emek sonucu ortaya konan değerli ürün, yapıt."
+      },
+      {
+        "name": "Ethem",
+        "meaning": "Karayağız, esmer."
+      },
+      {
+        "name": "Evren",
+        "meaning": "Gök varlıklarının tümü, kâinat."
+      },
+      {
+        "name": "Eymen",
+        "meaning": "Uğurlu, bereketli, hayırlı."
+      },
+      {
+        "name": "Faruk",
+        "meaning": "Haklıyı haksızdan ayıran, adaletli."
+      },
+      {
+        "name": "Fatih",
+        "meaning": "Fetheden, zafer kazanan."
+      },
+      {
+        "name": "Ferhat",
+        "meaning": "Güçlüğü yenip bir yeri ele geçiren."
+      },
+      {
+        "name": "Ferman",
+        "meaning": "Buyruk, emir."
+      },
+      {
+        "name": "Fethi",
+        "meaning": "Fethetme, alma ile ilgili olan."
+      },
+      {
+        "name": "Fikret",
+        "meaning": "Düşünce, fikir."
+      },
+      {
+        "name": "Fırat",
+        "meaning": "Doğu Anadolu'dan doğan ve Basra Körfezi'ne ulaşan büyük nehir."
+      },
+      {
+        "name": "Furkan",
+        "meaning": "İyi ile kötü, doğru ile yanlış arasındaki farkı gösteren her şey."
+      },
+      {
+        "name": "Gazi",
+        "meaning": "Düşmanla savaşan veya savaş yapmış kimse."
+      },
+      {
+        "name": "Giray",
+        "meaning": "Eskiden Kırım hanlarının ve han ailesinden olan prenslerin kullandığı san."
+      },
+      {
+        "name": "Gökalp",
+        "meaning": "Gökyüzü gibi yüce yiğit."
+      },
+      {
+        "name": "Gökay",
+        "meaning": "Mavi gözlü kimse."
+      },
+      {
+        "name": "Gökberk",
+        "meaning": "Gökyüzü gibi yüce, sağlam ve güçlü."
+      },
+      {
+        "name": "Gökdeniz",
+        "meaning": "Çakır gözlü kimse."
+      },
+      {
+        "name": "Gökhan",
+        "meaning": "Eski Türklerde gök Tanrısı."
+      },
+      {
+        "name": "Gökmen",
+        "meaning": "Sarışın, mavi gözlü kimse."
+      },
+      {
+        "name": "Göksel",
+        "meaning": "Gökle ilgili, semavi."
+      },
+      {
+        "name": "Göktuğ",
+        "meaning": "Savaşmayı seven kimse."
+      },
+      {
+        "name": "Göktürk",
+        "meaning": "Tarihî Göktürklerin ve devletlerinin adı."
+      },
+      {
+        "name": "Görkem",
+        "meaning": "Gösteriş, heybet."
+      },
+      {
+        "name": "Günalp",
+        "meaning": "Güneş gibi aydınlım ve ışık saçan yiğit."
+      },
+      {
+        "name": "Güney",
+        "meaning": "Dört ana yönden biri, Kuzey kutbuna karşı olan."
+      },
+      {
+        "name": "Güray",
+        "meaning": "Etrafa çokça ışık ve aydınlık saçan."
+      },
+      {
+        "name": "Gürhan",
+        "meaning": "Güçlü ve gür sesli hükümdar."
+      },
+      {
+        "name": "Gürkan",
+        "meaning": "Canlı, kanlı kimse."
+      },
+      {
+        "name": "Gürsel",
+        "meaning": "Gür ve coşkun akan sel."
+      },
+      {
+        "name": "Güven",
+        "meaning": "Korku, çekinme ve kuşku duymadan inanma ve bağlanma duygusu, sevinç, mutluluk."
+      },
+      {
+        "name": "Hakan",
+        "meaning": "Türk, Moğol ve Tatar hanları için \"hükümdarlar hükümdarı\" anlamında kullanılan bir unvan."
+      },
+      {
+        "name": "Halil",
+        "meaning": "Sadık, samimi, dost."
+      },
+      {
+        "name": "Halis",
+        "meaning": "Karışık olmayan, saf, katışıksız."
+      },
+      {
+        "name": "Halit",
+        "meaning": "Sürekli, sonsuz, ebedî."
+      },
+      {
+        "name": "Hamza",
+        "meaning": "Aslan, güçlü adam."
+      },
+      {
+        "name": "Harun",
+        "meaning": "Parlayan."
+      },
+      {
+        "name": "Hasan",
+        "meaning": "Güzel."
+      },
+      {
+        "name": "Hazar",
+        "meaning": "Barış ve güven."
+      },
+      {
+        "name": "Hüseyin",
+        "meaning": "Küçük sevgili."
+      },
+      {
+        "name": "İbrahim",
+        "meaning": "İnananların, halkların babası."
+      },
+      {
+        "name": "İdris",
+        "meaning": "Meyvesi hoş kokulu, kerestesi güzel bir kiraz türü."
+      },
+      {
+        "name": "İhsan",
+        "meaning": "İyilik etme, iyilik."
+      },
+      {
+        "name": "Ilgaz",
+        "meaning": "Atın dört nala koşması."
+      },
+      {
+        "name": "İlhan",
+        "meaning": "Hükümdar, imparator."
+      },
+      {
+        "name": "İlker",
+        "meaning": "İlk doğan erkek çocuklara verilen adlardan biri."
+      },
+      {
+        "name": "İlyas",
+        "meaning": "Kutsal kitaplarda adı geçen, yağmurlara hükmeden İsrail Peygamberi."
+      },
+      {
+        "name": "İmran",
+        "meaning": "Evine bağlı, evcimen."
+      },
+      {
+        "name": "İrfan",
+        "meaning": "Bilme, anlama."
+      },
+      {
+        "name": "İsa",
+        "meaning": "Allah’ın yarlıgaması, mağfireti."
+      },
+      {
+        "name": "İshak",
+        "meaning": "Gülen."
+      },
+      {
+        "name": "Işık",
+        "meaning": "Aydınlık, ziya."
+      },
+      {
+        "name": "İsmail",
+        "meaning": "Tanrı işitti; Kur'an'da adı geçen peygamber."
+      },
+      {
+        "name": "Kaan",
+        "meaning": "Kağan; hanların hanı, hükümdar."
+      },
+      {
+        "name": "Kadir",
+        "meaning": "Kuvvetli, güçlü, kudret sahibi."
+      },
+      {
+        "name": "Kağan",
+        "meaning": "Hanların hanı, hükümdar."
+      },
+      {
+        "name": "Karahan",
+        "meaning": "Tarihte bazı kavimlerde hanlara verilen san."
+      },
+      {
+        "name": "Karan",
+        "meaning": "Kahraman, yürekli."
+      },
+      {
+        "name": "Karel",
+        "meaning": "Farklı kültürlerde kullanılan modern bir ad; kökenine göre anlamı değişir."
+      },
+      {
+        "name": "Kartal",
+        "meaning": "Kartalgillerden, çok güçlü, iri, yırtıcı kuş."
+      },
+      {
+        "name": "Kaya",
+        "meaning": "Büyük ve sert taş kütlesi."
+      },
+      {
+        "name": "Kayra",
+        "meaning": "İyilik, lütuf ve yardım."
+      },
+      {
+        "name": "Kemal",
+        "meaning": "Bilgi ve erdem bakımından olgunluk, yetkinlik, erginlik, eksiksizlik."
+      },
+      {
+        "name": "Kenan",
+        "meaning": "Vaat edilmiş ülke; tarihî bir bölge adı."
+      },
+      {
+        "name": "Kerem",
+        "meaning": "Soyluluk."
+      },
+      {
+        "name": "Kerim",
+        "meaning": "Cömert, eli açık."
+      },
+      {
+        "name": "Kıraç",
+        "meaning": "Bitek olmayan, verimsiz veya sulanmayan yer."
+      },
+      {
+        "name": "Kıvanç",
+        "meaning": "Övünç, iftihar."
+      },
+      {
+        "name": "Koray",
+        "meaning": "Ateşli, canlı, hareketli kimse."
+      },
+      {
+        "name": "Korkut",
+        "meaning": "Büyük dolu tanesi."
+      },
+      {
+        "name": "Kudret",
+        "meaning": "Güç, kuvvet."
+      },
+      {
+        "name": "Kutalmış",
+        "meaning": "Kut ve mutluluk kazanmış, uğurlu olmuş."
+      },
+      {
+        "name": "Kutay",
+        "meaning": "Kutlu, uğurlu ay."
+      },
+      {
+        "name": "Kutlu",
+        "meaning": "Uğurlu, kutsal, mutlu."
+      },
+      {
+        "name": "Kuzey",
+        "meaning": "Sağını doğuya, solunu batıya veren kimsenin tam karşısına düşen yön, dört ana yönden biri, şimal, güney karşıtı."
+      },
+      {
+        "name": "Levent",
+        "meaning": "Boylu boslu yakışıklı kimse."
+      },
+      {
+        "name": "Mahir",
+        "meaning": "Hünerli, becerikli, elinden iş gelen kimse."
+      },
+      {
+        "name": "Mahmut",
+        "meaning": "Övülmüş, övülmeye değer."
+      },
+      {
+        "name": "Mehmet",
+        "meaning": "Övülmüş."
+      },
+      {
+        "name": "Melih",
+        "meaning": "Güzel, şirin, sevimli."
+      },
+      {
+        "name": "Meriç",
+        "meaning": "Türkiye ile Yunanistan sınırının bir bölümünü oluşturan nehir."
+      },
+      {
+        "name": "Mert",
+        "meaning": "Yiğit, cesur, sözünün eri ve dürüst."
+      },
+      {
+        "name": "Mertcan",
+        "meaning": "Mert, cesur ve içten kişi."
+      },
+      {
+        "name": "Mertkan",
+        "meaning": "Mert ve cesur soydan gelen."
+      },
+      {
+        "name": "Mervan",
+        "meaning": "Üzüm Çubuğunu Bağladıkları Ağaç."
+      },
+      {
+        "name": "Mesut",
+        "meaning": "Mutlu, bahtiyar."
+      },
+      {
+        "name": "Mete",
+        "meaning": "Büyük Türk-Hun İmparatoru."
+      },
+      {
+        "name": "Metehan",
+        "meaning": "Mete: tarihî Türk hükümdarı; Han: hükümdar."
+      },
+      {
+        "name": "Metin",
+        "meaning": "Sağlam, dayanıklı, güçlü."
+      },
+      {
+        "name": "Mir",
+        "meaning": "Baş, amir, bey."
+      },
+      {
+        "name": "Miraç",
+        "meaning": "Yükselme; Hz. Muhammed'in göğe yükselişi."
+      },
+      {
+        "name": "Miran",
+        "meaning": "Beyler, emirler; farklı bölgelerde kullanılan bir ad."
+      },
+      {
+        "name": "Mirhan",
+        "meaning": "Bey ve hükümdar."
+      },
+      {
+        "name": "Mirza",
+        "meaning": "İranlılara özgü \"beyzade\" anlamında bir soyluluk sanı."
+      },
+      {
+        "name": "Muaz",
+        "meaning": "Korunmuş, güven içinde olan."
+      },
+      {
+        "name": "Muhammed",
+        "meaning": "Çok övülen, övgüye değer."
+      },
+      {
+        "name": "Murat",
+        "meaning": "İstek, dilek, arzu."
+      },
+      {
+        "name": "Musa",
+        "meaning": "Musevi dininin kurucusu, İsrail peygamberi ve kanun koyucusu."
+      },
+      {
+        "name": "Musab",
+        "meaning": "Zorluklara dayanıklı; İslam tarihinde bilinen bir sahabe adı."
+      },
+      {
+        "name": "Mustafa",
+        "meaning": "Seçilmiş, seçkin."
+      },
+      {
+        "name": "Nadir",
+        "meaning": "Seyrek, az bulunur."
+      },
+      {
+        "name": "Nejat",
+        "meaning": "Soy, nesil."
+      },
+      {
+        "name": "Nihat",
+        "meaning": "Doğa, huy, yaradılış."
+      },
+      {
+        "name": "Nuh",
+        "meaning": "Kur'an'da adı geçen ve tufan anlatısıyla bilinen peygamber."
+      },
+      {
+        "name": "Oğulcan",
+        "meaning": "Çok sevgili çocuk."
+      },
+      {
+        "name": "Oğuz",
+        "meaning": "Sağlam, gürbüz, güçlü delikanlı."
+      },
+      {
+        "name": "Oğuzhan",
+        "meaning": "Güçlü, kuvvetli hükümdar."
+      },
+      {
+        "name": "Okan",
+        "meaning": "Anlayışlı."
+      },
+      {
+        "name": "Oktay",
+        "meaning": "Ok gibi güçlü olan eşsiz kimse."
+      },
+      {
+        "name": "Olcay",
+        "meaning": "Baht, talih, şans."
+      },
+      {
+        "name": "Ömer",
+        "meaning": "Yaşama, yaşayış, hayat, canlılık."
+      },
+      {
+        "name": "Onat",
+        "meaning": "İyi, güzel, düzgün."
+      },
+      {
+        "name": "Önder",
+        "meaning": "Bir topluluğa başkanlık eden kimse."
+      },
+      {
+        "name": "Onur",
+        "meaning": "İnsanın kendine karşı duyduğu saygı."
+      },
+      {
+        "name": "Onurcan",
+        "meaning": "Onurlu ve değerli kişi."
+      },
+      {
+        "name": "Orçun",
+        "meaning": "Ardıllar, halefler."
+      },
+      {
+        "name": "Orhan",
+        "meaning": "Şehrin yöneticisi, hâkimi."
+      },
+      {
+        "name": "Osman",
+        "meaning": "Hz. Osman'ın ve Osmanlı Devleti'nin kurucusu Osman Gazi'nin adı."
+      },
+      {
+        "name": "Özalp",
+        "meaning": "Özünde yiğit olan kimse."
+      },
+      {
+        "name": "Ozan",
+        "meaning": "Şiir yazan, şair."
+      },
+      {
+        "name": "Özgür",
+        "meaning": "Kendi kendine hareket etme, davranma, karar verme gücü olan."
+      },
+      {
+        "name": "Pamir",
+        "meaning": "Orta Asya’da Tacikistan, Çin, Sincan Uygur Özerk sınırında bulunan lalenin ana vatanı olan ve Himalaya Dağlarının kuzey silsilelerini teşki eden sıra."
+      },
+      {
+        "name": "Pars",
+        "meaning": "Leopar; güçlü ve çevik yırtıcı."
+      },
+      {
+        "name": "Polat",
+        "meaning": "Çelik."
+      },
+      {
+        "name": "Poyraz",
+        "meaning": "Kuzeydoğudan esen soğuk rüzgâr."
+      },
+      {
+        "name": "Ramazan",
+        "meaning": "Arabi ayların dokuzuncusu, oruç tutulan ay."
+      },
+      {
+        "name": "Renas",
+        "meaning": "Yol bilen."
+      },
+      {
+        "name": "Rıza",
+        "meaning": "Hoşnutluk, memnuniyet."
+      },
+      {
+        "name": "Rodin",
+        "meaning": "Parlaklık ve aydınlıkla ilişkilendirilen bölgesel bir ad."
+      },
+      {
+        "name": "Rojvan",
+        "meaning": "Gün ışığı ve aydınlıkla ilişkilendirilen bölgesel bir ad."
+      },
+      {
+        "name": "Rüzgar",
+        "meaning": "Havanın yer değiştirmesiyle oluşan esinti, yel."
+      },
+      {
+        "name": "Salih",
+        "meaning": "Elverişli, iyi, uygun, yakışır."
+      },
+      {
+        "name": "Samet",
+        "meaning": "Çok yüksek, ulu."
+      },
+      {
+        "name": "Sancar",
+        "meaning": "Kısa kama."
+      },
+      {
+        "name": "Sarp",
+        "meaning": "Çetin, sert, şiddetli."
+      },
+      {
+        "name": "Savaş",
+        "meaning": "Silahlı çatışma."
+      },
+      {
+        "name": "Sefa",
+        "meaning": "Gönül rahatlığı, rahatlık, kaygısız ve sakin olma."
+      },
+      {
+        "name": "Selçuk",
+        "meaning": "Güzel konuşma yeteneği olan, uz dilli."
+      },
+      {
+        "name": "Selim",
+        "meaning": "Sağlam, kusursuz, doğru."
+      },
+      {
+        "name": "Sencer",
+        "meaning": "Delip geçen, güçlü savaşçı; Büyük Selçuklu hükümdarının adı."
+      },
+      {
+        "name": "Sercan",
+        "meaning": "Sevgili, sevilen."
+      },
+      {
+        "name": "Serdar",
+        "meaning": "Askerin başı, kumandan, komutan."
+      },
+      {
+        "name": "Şeref",
+        "meaning": "Büyüklük, ululuk, üstünlük."
+      },
+      {
+        "name": "Serhan",
+        "meaning": "Baş kağan, baş hükümdar."
+      },
+      {
+        "name": "Serhat",
+        "meaning": "Sınır, hudut."
+      },
+      {
+        "name": "Serkan",
+        "meaning": "Asil bir soydan gelen kimse."
+      },
+      {
+        "name": "Şervan",
+        "meaning": "Savaşçı ve yiğitlikle ilişkilendirilen bölgesel bir ad."
+      },
+      {
+        "name": "Şeyhmus",
+        "meaning": "Şeyh Musa adının bölgesel söyleyiş biçimi."
+      },
+      {
+        "name": "Seyit",
+        "meaning": "Bir topluluğun ileri gelen kişisi."
+      },
+      {
+        "name": "Sezgin",
+        "meaning": "Sezme yeteneği olan, duygulu, anlayışlı."
+      },
+      {
+        "name": "Sidar",
+        "meaning": "Ağaç gölgesiyle ilişkilendirilen bölgesel bir ad."
+      },
+      {
+        "name": "Sinan",
+        "meaning": "Mızrak, süngü."
+      },
+      {
+        "name": "Soner",
+        "meaning": "Son doğan erkek çocuk."
+      },
+      {
+        "name": "Süleyman",
+        "meaning": "Huzur ve esenlik; Kur'an'da adı geçen peygamber."
+      },
+      {
+        "name": "Taha",
+        "meaning": "Kur'an'ın 20. suresinin başındaki iki harf ve surenin adı."
+      },
+      {
+        "name": "Talha",
+        "meaning": "Zamk ağacı."
+      },
+      {
+        "name": "Tan",
+        "meaning": "Güneş doğmadan önceki alaca karanlık, şafak vakti."
+      },
+      {
+        "name": "Tanay",
+        "meaning": "Şafak gibi aydınlık insan."
+      },
+      {
+        "name": "Taner",
+        "meaning": "Şafak vakti gibi aydınlık, güçlü kimse."
+      },
+      {
+        "name": "Tankut",
+        "meaning": "Şafak vakti gibi parlak, mutlu kimse."
+      },
+      {
+        "name": "Tarkan",
+        "meaning": "İslamiyet öncesi Türklerde kullanılan bey ve komutan unvanı."
+      },
+      {
+        "name": "Tayfun",
+        "meaning": "Çin Denizi'nde ve Hint Denizi'nde görülen güçlü kasırga."
+      },
+      {
+        "name": "Taylan",
+        "meaning": "İnce, kibar, güzel, uzun ve düzgün boylu."
+      },
+      {
+        "name": "Teoman",
+        "meaning": "Hun İmparatoru Mete´nin babası."
+      },
+      {
+        "name": "Timur",
+        "meaning": "Demir."
+      },
+      {
+        "name": "Togay",
+        "meaning": "Irmak kıyısındaki koruluk; Türk topluluklarında kullanılan bir ad."
+      },
+      {
+        "name": "Tolga",
+        "meaning": "Miğfer."
+      },
+      {
+        "name": "Toprak",
+        "meaning": "Yer kabuğunun canlılara yaşama ortamı sağlayan yüzey bölümü."
+      },
+      {
+        "name": "Toygar",
+        "meaning": "Turgay olarak da bilinen ötücü kuş."
+      },
+      {
+        "name": "Tuğrul",
+        "meaning": "Yırtıcı bir kuş."
+      },
+      {
+        "name": "Tuna",
+        "meaning": "Çok, bol."
+      },
+      {
+        "name": "Tunahan",
+        "meaning": "Tuna: büyük nehir; Han: hükümdar."
+      },
+      {
+        "name": "Tunç",
+        "meaning": "Koyu kızıl renkte olan, bakır, çinko ve kalay alaşımı, bronz."
+      },
+      {
+        "name": "Tuncay",
+        "meaning": "Tunç renginde ay."
+      },
+      {
+        "name": "Turgut",
+        "meaning": "Konut, oturulacak yer."
+      },
+      {
+        "name": "Ulaş",
+        "meaning": "Amacına ermiş, isteğine kavuşmuş kimse."
+      },
+      {
+        "name": "Uluç",
+        "meaning": "Yüce, saygın kimse."
+      },
+      {
+        "name": "Ulus",
+        "meaning": "Millet, halk, insan topluluğu."
+      },
+      {
+        "name": "Umur",
+        "meaning": "Görgü, bilgi, deneyim."
+      },
+      {
+        "name": "Umut",
+        "meaning": "Ummaktan doğan güven duygusu, ümit."
+      },
+      {
+        "name": "Ural",
+        "meaning": "Avrupa ile Asya arasındaki dağ sırasının ve bir nehrin adı."
+      },
+      {
+        "name": "Uras",
+        "meaning": "Talih, şans; kökeni konusunda farklı görüşler bulunan bir ad."
+      },
+      {
+        "name": "Uraz",
+        "meaning": "Talih, baht ve mutluluk."
+      },
+      {
+        "name": "Utku",
+        "meaning": "Üstünlük, zafer."
+      },
+      {
+        "name": "Uygar",
+        "meaning": "Kültürlü, eğitimli, görgü kurallarına uyan, medeni kimse."
+      },
+      {
+        "name": "Volkan",
+        "meaning": "Yanardağ."
+      },
+      {
+        "name": "Vural",
+        "meaning": "\"Vur ve al\" anlamında kullanılan bir ad."
+      },
+      {
+        "name": "Yağız",
+        "meaning": "Esmer."
+      },
+      {
+        "name": "Yahya",
+        "meaning": "\"Tanrı lütufkârdır\" anlamında bir söz."
+      },
+      {
+        "name": "Yakup",
+        "meaning": "Erkek keklik."
+      },
+      {
+        "name": "Yalçın",
+        "meaning": "Dik, sarp."
+      },
+      {
+        "name": "Yalın",
+        "meaning": "Gösterişsiz, süssüz, sade. Alev."
+      },
+      {
+        "name": "Yamaç",
+        "meaning": "Dağın veya tepenin herhangi bir yanı."
+      },
+      {
+        "name": "Yaman",
+        "meaning": "Kötü, korkulan, şiddetli."
+      },
+      {
+        "name": "Yasin",
+        "meaning": "Kur'an surelerinden biri."
+      },
+      {
+        "name": "Yavuz",
+        "meaning": "İyi, güzel."
+      },
+      {
+        "name": "Yekta",
+        "meaning": "Tek, eşsiz, benzersiz."
+      },
+      {
+        "name": "Yiğit",
+        "meaning": "Güçlü, yürekli, kahraman, alp."
+      },
+      {
+        "name": "Yiğithan",
+        "meaning": "Yiğit ve cesur hükümdar."
+      },
+      {
+        "name": "Yunus",
+        "meaning": "Ilık ve sıcak denizlerde yaşayan etçil memeli hayvan."
+      },
+      {
+        "name": "Yusuf",
+        "meaning": "Tanrı artırır, çoğaltır; Kur'an'da adı geçen peygamber."
+      },
+      {
+        "name": "Zafer",
+        "meaning": "Bir mücadele veya yarışma sonunda kazanılan başarı, yengi."
+      },
+      {
+        "name": "Zanyar",
+        "meaning": "Bilgili, bilgin; bölgesel bir ad."
+      },
+      {
+        "name": "Zeki",
+        "meaning": "Anlayışlı, kavrayışlı, zekâ sahibi."
+      },
+      {
+        "name": "Zeyd",
+        "meaning": "Artış, çoğalma ve bereket."
+      }
+    ]
+  },
+  "doubleNames": {
+    "girls": [
+      {
+        "name": "Alya Lina",
+        "parts": [
+          "Alya",
+          "Lina"
+        ],
+        "meaning": "Alya: Yüksek yer, yücelik; farklı kültürlerde de kullanılan bir ad; Lina: Narin hurma fidanı; yumuşak ve nazik."
+      },
+      {
+        "name": "Arya Lina",
+        "parts": [
+          "Arya",
+          "Lina"
+        ],
+        "meaning": "Arya: Ezgi niteliği taşıyan solo ses eseri; Lina: Narin hurma fidanı; yumuşak ve nazik."
+      },
+      {
+        "name": "Asel Defne",
+        "parts": [
+          "Asel",
+          "Defne"
+        ],
+        "meaning": "Asel: Bal; tatlılık ve güzellikle ilişkilendirilen ad; Defne: Yaprakları hoş kokulu, yaz kış yeşil kalan defne ağacı."
+      },
+      {
+        "name": "Asel Duru",
+        "parts": [
+          "Asel",
+          "Duru"
+        ],
+        "meaning": "Asel: Bal; tatlılık ve güzellikle ilişkilendirilen ad; Duru: Bulanık olmayan, temiz, berrak, saf."
+      },
+      {
+        "name": "Asel Ecrin",
+        "parts": [
+          "Asel",
+          "Ecrin"
+        ],
+        "meaning": "Asel: Bal; tatlılık ve güzellikle ilişkilendirilen ad; Ecrin: Ödül, karşılık; güzel bir sonucun karşılığı."
+      },
+      {
+        "name": "Asel İkra",
+        "parts": [
+          "Asel",
+          "İkra"
+        ],
+        "meaning": "Asel: Bal; tatlılık ve güzellikle ilişkilendirilen ad; İkra: Oku anlamına gelir."
+      },
+      {
+        "name": "Asel Lina",
+        "parts": [
+          "Asel",
+          "Lina"
+        ],
+        "meaning": "Asel: Bal; tatlılık ve güzellikle ilişkilendirilen ad; Lina: Narin hurma fidanı; yumuşak ve nazik."
+      },
+      {
+        "name": "Asel Mina",
+        "parts": [
+          "Asel",
+          "Mina"
+        ],
+        "meaning": "Asel: Bal; tatlılık ve güzellikle ilişkilendirilen ad; Mina: Billur, şeffaf."
+      },
+      {
+        "name": "Asel Mira",
+        "parts": [
+          "Asel",
+          "Mira"
+        ],
+        "meaning": "Asel: Bal; tatlılık ve güzellikle ilişkilendirilen ad; Mira: Parlayan; farklı dillerde çeşitli anlamları bulunan bir ad."
+      },
+      {
+        "name": "Asel Nehir",
+        "parts": [
+          "Asel",
+          "Nehir"
+        ],
+        "meaning": "Asel: Bal; tatlılık ve güzellikle ilişkilendirilen ad; Nehir: Akarsu, ırmak."
+      },
+      {
+        "name": "Azra Lina",
+        "parts": [
+          "Azra",
+          "Lina"
+        ],
+        "meaning": "Azra: El değmemiş, temiz ve saf; Lina: Narin hurma fidanı; yumuşak ve nazik."
+      },
+      {
+        "name": "Azra Nur",
+        "parts": [
+          "Azra",
+          "Nur"
+        ],
+        "meaning": "Azra: El değmemiş, temiz ve saf; Nur: Aydınlık, ışık, parıltı."
+      },
+      {
+        "name": "Bade Su",
+        "parts": [
+          "Bade",
+          "Su"
+        ],
+        "meaning": "Bade: Şarap; tasavvuf edebiyatında aşk ve manevi coşku; Su: Canlıların yaşamında önemli bir yeri olan, rengi, tadı, kokusu olmayan sıvı."
+      },
+      {
+        "name": "Beren Su",
+        "parts": [
+          "Beren",
+          "Su"
+        ],
+        "meaning": "Beren: Güçlü, kuvvetli; Su: Canlıların yaşamında önemli bir yeri olan, rengi, tadı, kokusu olmayan sıvı."
+      },
+      {
+        "name": "Beril Su",
+        "parts": [
+          "Beril",
+          "Su"
+        ],
+        "meaning": "Beril: Doğada altıgen billurlar durumunda bulunan, saydam, çoğu yeşil renkli berilyum ve alüminyum silikat; Su: Canlıların yaşamında önemli bir yeri olan, rengi, tadı, kokusu olmayan sıvı."
+      },
+      {
+        "name": "Ceylin Su",
+        "parts": [
+          "Ceylin",
+          "Su"
+        ],
+        "meaning": "Ceylin: İngilizcedeki Jaylin isminin Türkçeleştirilmiş halidir ve ‘sakin’ anlamına gelir; Su: Canlıların yaşamında önemli bir yeri olan, rengi, tadı, kokusu olmayan sıvı."
+      },
+      {
+        "name": "Defne Duru",
+        "parts": [
+          "Defne",
+          "Duru"
+        ],
+        "meaning": "Defne: Yaprakları hoş kokulu, yaz kış yeşil kalan defne ağacı; Duru: Bulanık olmayan, temiz, berrak, saf."
+      },
+      {
+        "name": "Defne Ece",
+        "parts": [
+          "Defne",
+          "Ece"
+        ],
+        "meaning": "Defne: Yaprakları hoş kokulu, yaz kış yeşil kalan defne ağacı; Ece: Kraliçe."
+      },
+      {
+        "name": "Defne Ela",
+        "parts": [
+          "Defne",
+          "Ela"
+        ],
+        "meaning": "Defne: Yaprakları hoş kokulu, yaz kış yeşil kalan defne ağacı; Ela: Gözde sarıya çalan kestane rengi."
+      },
+      {
+        "name": "Defne İpek",
+        "parts": [
+          "Defne",
+          "İpek"
+        ],
+        "meaning": "Defne: Yaprakları hoş kokulu, yaz kış yeşil kalan defne ağacı; İpek: Bir tür böceğin ördüğü kozadan elde edilen ve kumaş yapımında kullanılan ince parlak tel ve bundan yapılan kumaş."
+      },
+      {
+        "name": "Defne Lina",
+        "parts": [
+          "Defne",
+          "Lina"
+        ],
+        "meaning": "Defne: Yaprakları hoş kokulu, yaz kış yeşil kalan defne ağacı; Lina: Narin hurma fidanı; yumuşak ve nazik."
+      },
+      {
+        "name": "Defne Su",
+        "parts": [
+          "Defne",
+          "Su"
+        ],
+        "meaning": "Defne: Yaprakları hoş kokulu, yaz kış yeşil kalan defne ağacı; Su: Canlıların yaşamında önemli bir yeri olan, rengi, tadı, kokusu olmayan sıvı."
+      },
+      {
+        "name": "Duru Ada",
+        "parts": [
+          "Duru",
+          "Ada"
+        ],
+        "meaning": "Duru: Bulanık olmayan, temiz, berrak, saf; Ada: Deniz veya göl suları ile çevrilmiş küçük kara parçası."
+      },
+      {
+        "name": "Duru Ece",
+        "parts": [
+          "Duru",
+          "Ece"
+        ],
+        "meaning": "Duru: Bulanık olmayan, temiz, berrak, saf; Ece: Kraliçe."
+      },
+      {
+        "name": "Duru Ela",
+        "parts": [
+          "Duru",
+          "Ela"
+        ],
+        "meaning": "Duru: Bulanık olmayan, temiz, berrak, saf; Ela: Gözde sarıya çalan kestane rengi."
+      },
+      {
+        "name": "Duru İpek",
+        "parts": [
+          "Duru",
+          "İpek"
+        ],
+        "meaning": "Duru: Bulanık olmayan, temiz, berrak, saf; İpek: Bir tür böceğin ördüğü kozadan elde edilen ve kumaş yapımında kullanılan ince parlak tel ve bundan yapılan kumaş."
+      },
+      {
+        "name": "Duru Lina",
+        "parts": [
+          "Duru",
+          "Lina"
+        ],
+        "meaning": "Duru: Bulanık olmayan, temiz, berrak, saf; Lina: Narin hurma fidanı; yumuşak ve nazik."
+      },
+      {
+        "name": "Duru Nehir",
+        "parts": [
+          "Duru",
+          "Nehir"
+        ],
+        "meaning": "Duru: Bulanık olmayan, temiz, berrak, saf; Nehir: Akarsu, ırmak."
+      },
+      {
+        "name": "Ece Defne",
+        "parts": [
+          "Ece",
+          "Defne"
+        ],
+        "meaning": "Ece: Kraliçe; Defne: Yaprakları hoş kokulu, yaz kış yeşil kalan defne ağacı."
+      },
+      {
+        "name": "Ece Naz",
+        "parts": [
+          "Ece",
+          "Naz"
+        ],
+        "meaning": "Ece: Kraliçe; Naz: Kendini beğendirmek için yapılan davranış, cilve."
+      },
+      {
+        "name": "Ece Nur",
+        "parts": [
+          "Ece",
+          "Nur"
+        ],
+        "meaning": "Ece: Kraliçe; Nur: Aydınlık, ışık, parıltı."
+      },
+      {
+        "name": "Ece Su",
+        "parts": [
+          "Ece",
+          "Su"
+        ],
+        "meaning": "Ece: Kraliçe; Su: Canlıların yaşamında önemli bir yeri olan, rengi, tadı, kokusu olmayan sıvı."
+      },
+      {
+        "name": "Ecrin Su",
+        "parts": [
+          "Ecrin",
+          "Su"
+        ],
+        "meaning": "Ecrin: Ödül, karşılık; güzel bir sonucun karşılığı; Su: Canlıların yaşamında önemli bir yeri olan, rengi, tadı, kokusu olmayan sıvı."
+      },
+      {
+        "name": "Eflin Su",
+        "parts": [
+          "Eflin",
+          "Su"
+        ],
+        "meaning": "Eflin: Modern kullanımda sevgi ve güzellikle ilişkilendirilen ad; kökeni kesin değildir; Su: Canlıların yaşamında önemli bir yeri olan, rengi, tadı, kokusu olmayan sıvı."
+      },
+      {
+        "name": "Ela Defne",
+        "parts": [
+          "Ela",
+          "Defne"
+        ],
+        "meaning": "Ela: Gözde sarıya çalan kestane rengi; Defne: Yaprakları hoş kokulu, yaz kış yeşil kalan defne ağacı."
+      },
+      {
+        "name": "Ela Naz",
+        "parts": [
+          "Ela",
+          "Naz"
+        ],
+        "meaning": "Ela: Gözde sarıya çalan kestane rengi; Naz: Kendini beğendirmek için yapılan davranış, cilve."
+      },
+      {
+        "name": "Ela Nur",
+        "parts": [
+          "Ela",
+          "Nur"
+        ],
+        "meaning": "Ela: Gözde sarıya çalan kestane rengi; Nur: Aydınlık, ışık, parıltı."
+      },
+      {
+        "name": "Ela Su",
+        "parts": [
+          "Ela",
+          "Su"
+        ],
+        "meaning": "Ela: Gözde sarıya çalan kestane rengi; Su: Canlıların yaşamında önemli bir yeri olan, rengi, tadı, kokusu olmayan sıvı."
+      },
+      {
+        "name": "Elif Ada",
+        "parts": [
+          "Elif",
+          "Ada"
+        ],
+        "meaning": "Elif: Arap alfabesinin ilk harfi; Ada: Deniz veya göl suları ile çevrilmiş küçük kara parçası."
+      },
+      {
+        "name": "Elif Duru",
+        "parts": [
+          "Elif",
+          "Duru"
+        ],
+        "meaning": "Elif: Arap alfabesinin ilk harfi; Duru: Bulanık olmayan, temiz, berrak, saf."
+      },
+      {
+        "name": "Elif Ece",
+        "parts": [
+          "Elif",
+          "Ece"
+        ],
+        "meaning": "Elif: Arap alfabesinin ilk harfi; Ece: Kraliçe."
+      },
+      {
+        "name": "Elif Naz",
+        "parts": [
+          "Elif",
+          "Naz"
+        ],
+        "meaning": "Elif: Arap alfabesinin ilk harfi; Naz: Kendini beğendirmek için yapılan davranış, cilve."
+      },
+      {
+        "name": "Elif Sare",
+        "parts": [
+          "Elif",
+          "Sare"
+        ],
+        "meaning": "Elif: Arap alfabesinin ilk harfi; Sare: Prenses, soylu kadın; farklı kökenlerde kullanılan bir ad."
+      },
+      {
+        "name": "Elif Sena",
+        "parts": [
+          "Elif",
+          "Sena"
+        ],
+        "meaning": "Elif: Arap alfabesinin ilk harfi; Sena: Övgü; ışık ve şimşek parıltısı."
+      },
+      {
+        "name": "Elif Su",
+        "parts": [
+          "Elif",
+          "Su"
+        ],
+        "meaning": "Elif: Arap alfabesinin ilk harfi; Su: Canlıların yaşamında önemli bir yeri olan, rengi, tadı, kokusu olmayan sıvı."
+      },
+      {
+        "name": "Elif Zeynep",
+        "parts": [
+          "Elif",
+          "Zeynep"
+        ],
+        "meaning": "Elif: Arap alfabesinin ilk harfi; Zeynep: Değerli taşlar, mücevherler."
+      },
+      {
+        "name": "Esma Nur",
+        "parts": [
+          "Esma",
+          "Nur"
+        ],
+        "meaning": "Esma: Adlar, isimler; Nur: Aydınlık, ışık, parıltı."
+      },
+      {
+        "name": "Eylül Ada",
+        "parts": [
+          "Eylül",
+          "Ada"
+        ],
+        "meaning": "Eylül: Yılın dokuzuncu ayı; Ada: Deniz veya göl suları ile çevrilmiş küçük kara parçası."
+      },
+      {
+        "name": "Eylül Defne",
+        "parts": [
+          "Eylül",
+          "Defne"
+        ],
+        "meaning": "Eylül: Yılın dokuzuncu ayı; Defne: Yaprakları hoş kokulu, yaz kış yeşil kalan defne ağacı."
+      },
+      {
+        "name": "Eylül Su",
+        "parts": [
+          "Eylül",
+          "Su"
+        ],
+        "meaning": "Eylül: Yılın dokuzuncu ayı; Su: Canlıların yaşamında önemli bir yeri olan, rengi, tadı, kokusu olmayan sıvı."
+      },
+      {
+        "name": "Fatma Nur",
+        "parts": [
+          "Fatma",
+          "Nur"
+        ],
+        "meaning": "Fatma: Çocuğunu sütten kesen kadın; Nur: Aydınlık, ışık, parıltı."
+      },
+      {
+        "name": "Fatma Zehra",
+        "parts": [
+          "Fatma",
+          "Zehra"
+        ],
+        "meaning": "Fatma: Çocuğunu sütten kesen kadın; Zehra: Yüzü pek beyaz ve parlak olan kimse."
+      },
+      {
+        "name": "Feyza Nur",
+        "parts": [
+          "Feyza",
+          "Nur"
+        ],
+        "meaning": "Feyza: Bolluk, çokluk; Nur: Aydınlık, ışık, parıltı."
+      },
+      {
+        "name": "Gökçe Hüma",
+        "parts": [
+          "Gökçe",
+          "Hüma"
+        ],
+        "meaning": "Gökçe: Güzel, gösterişli kimse; Hüma: Başına konduğu kimseye mutluluk getirdiğine inanılan devlet kuşu, talih kuşu."
+      },
+      {
+        "name": "Gökçe Lina",
+        "parts": [
+          "Gökçe",
+          "Lina"
+        ],
+        "meaning": "Gökçe: Güzel, gösterişli kimse; Lina: Narin hurma fidanı; yumuşak ve nazik."
+      },
+      {
+        "name": "Gökçe Meva",
+        "parts": [
+          "Gökçe",
+          "Meva"
+        ],
+        "meaning": "Gökçe: Güzel, gösterişli kimse; Meva: Sığınacak yer, yurt, mesken."
+      },
+      {
+        "name": "Gökçe Sare",
+        "parts": [
+          "Gökçe",
+          "Sare"
+        ],
+        "meaning": "Gökçe: Güzel, gösterişli kimse; Sare: Prenses, soylu kadın; farklı kökenlerde kullanılan bir ad."
+      },
+      {
+        "name": "Gökçe Sena",
+        "parts": [
+          "Gökçe",
+          "Sena"
+        ],
+        "meaning": "Gökçe: Güzel, gösterişli kimse; Sena: Övgü; ışık ve şimşek parıltısı."
+      },
+      {
+        "name": "Gökçe Umay",
+        "parts": [
+          "Gökçe",
+          "Umay"
+        ],
+        "meaning": "Gökçe: Güzel, gösterişli kimse; Umay: Eski Türk inancında çocukları ve anneleri koruduğuna inanılan kutsal varlık."
+      },
+      {
+        "name": "Gülce Defne",
+        "parts": [
+          "Gülce",
+          "Defne"
+        ],
+        "meaning": "Gülce: Gül gibi, güle benzeyen; Defne: Yaprakları hoş kokulu, yaz kış yeşil kalan defne ağacı."
+      },
+      {
+        "name": "Güneş Duru",
+        "parts": [
+          "Güneş",
+          "Duru"
+        ],
+        "meaning": "Güneş: Gezegenlere ve yer yuvarlağına ışık ve ısı veren büyük gök cismi; Duru: Bulanık olmayan, temiz, berrak, saf."
+      },
+      {
+        "name": "Hatice Kübra",
+        "parts": [
+          "Hatice",
+          "Kübra"
+        ],
+        "meaning": "Hatice: Erken doğan kız çocuğu; Kübra: En büyük, çok büyük olan."
+      },
+      {
+        "name": "Hira Nur",
+        "parts": [
+          "Hira",
+          "Nur"
+        ],
+        "meaning": "Hira: Mekke yakınındaki Hira Dağı ve mağarasının adı; Nur: Aydınlık, ışık, parıltı."
+      },
+      {
+        "name": "İdil Su",
+        "parts": [
+          "İdil",
+          "Su"
+        ],
+        "meaning": "İdil: Volga Nehri'ne Türklerin verdiği isim; Su: Canlıların yaşamında önemli bir yeri olan, rengi, tadı, kokusu olmayan sıvı."
+      },
+      {
+        "name": "İkra Nur",
+        "parts": [
+          "İkra",
+          "Nur"
+        ],
+        "meaning": "İkra: Oku anlamına gelir; Nur: Aydınlık, ışık, parıltı."
+      },
+      {
+        "name": "İlayda Su",
+        "parts": [
+          "İlayda",
+          "Su"
+        ],
+        "meaning": "İlayda: Su perisi; Su: Canlıların yaşamında önemli bir yeri olan, rengi, tadı, kokusu olmayan sıvı."
+      },
+      {
+        "name": "İnci Sare",
+        "parts": [
+          "İnci",
+          "Sare"
+        ],
+        "meaning": "İnci: İstiridye gibi kimi kavkılı deniz hayvanlarının içinde oluşan değerli, küçük, sert, sedef renginde süs tanesi; Sare: Prenses, soylu kadın; farklı kökenlerde kullanılan bir ad."
+      },
+      {
+        "name": "İpek Duru",
+        "parts": [
+          "İpek",
+          "Duru"
+        ],
+        "meaning": "İpek: Bir tür böceğin ördüğü kozadan elde edilen ve kumaş yapımında kullanılan ince parlak tel ve bundan yapılan kumaş; Duru: Bulanık olmayan, temiz, berrak, saf."
+      },
+      {
+        "name": "İpek Sare",
+        "parts": [
+          "İpek",
+          "Sare"
+        ],
+        "meaning": "İpek: Bir tür böceğin ördüğü kozadan elde edilen ve kumaş yapımında kullanılan ince parlak tel ve bundan yapılan kumaş; Sare: Prenses, soylu kadın; farklı kökenlerde kullanılan bir ad."
+      },
+      {
+        "name": "Lalin Su",
+        "parts": [
+          "Lalin",
+          "Su"
+        ],
+        "meaning": "Lalin: Yakut kırmızısı; kırmızı renkle ilişkilendirilen ad; Su: Canlıların yaşamında önemli bir yeri olan, rengi, tadı, kokusu olmayan sıvı."
+      },
+      {
+        "name": "Lara Su",
+        "parts": [
+          "Lara",
+          "Su"
+        ],
+        "meaning": "Lara: Bir Ortodoks azizesinin adı olan Larissa'nın Rusça kısa biçimidir; Su: Canlıların yaşamında önemli bir yeri olan, rengi, tadı, kokusu olmayan sıvı."
+      },
+      {
+        "name": "Lila Su",
+        "parts": [
+          "Lila",
+          "Su"
+        ],
+        "meaning": "Lila: Hindu dininde evreni harekete geçiren ve dünyanın yaratılış ve yok oluş simgesi olan bir tanrı; Su: Canlıların yaşamında önemli bir yeri olan, rengi, tadı, kokusu olmayan sıvı."
+      },
+      {
+        "name": "Lina Defne",
+        "parts": [
+          "Lina",
+          "Defne"
+        ],
+        "meaning": "Lina: Narin hurma fidanı; yumuşak ve nazik; Defne: Yaprakları hoş kokulu, yaz kış yeşil kalan defne ağacı."
+      },
+      {
+        "name": "Lina Duru",
+        "parts": [
+          "Lina",
+          "Duru"
+        ],
+        "meaning": "Lina: Narin hurma fidanı; yumuşak ve nazik; Duru: Bulanık olmayan, temiz, berrak, saf."
+      },
+      {
+        "name": "Lina Ela",
+        "parts": [
+          "Lina",
+          "Ela"
+        ],
+        "meaning": "Lina: Narin hurma fidanı; yumuşak ve nazik; Ela: Gözde sarıya çalan kestane rengi."
+      },
+      {
+        "name": "Lina Nehir",
+        "parts": [
+          "Lina",
+          "Nehir"
+        ],
+        "meaning": "Lina: Narin hurma fidanı; yumuşak ve nazik; Nehir: Akarsu, ırmak."
+      },
+      {
+        "name": "Liya Defne",
+        "parts": [
+          "Liya",
+          "Defne"
+        ],
+        "meaning": "Liya: Farklı dillerde çeşitli anlamlar taşıyan modern bir ad; Defne: Yaprakları hoş kokulu, yaz kış yeşil kalan defne ağacı."
+      },
+      {
+        "name": "Masal Duru",
+        "parts": [
+          "Masal",
+          "Duru"
+        ],
+        "meaning": "Masal: Genellikle halkın yarattığı, hayale dayanan, sözlü gelenekte yaşayan, çoğunlukla insanlar, hayvanlar ile cadı, cin, dev, peri vb; Duru: Bulanık olmayan, temiz, berrak, saf."
+      },
+      {
+        "name": "Maya Defne",
+        "parts": [
+          "Maya",
+          "Defne"
+        ],
+        "meaning": "Maya: Asıl, öz, kendi, yaradılış; Defne: Yaprakları hoş kokulu, yaz kış yeşil kalan defne ağacı."
+      },
+      {
+        "name": "Melis Su",
+        "parts": [
+          "Melis",
+          "Su"
+        ],
+        "meaning": "Melis: Bal, tatlı şey, sevgili, can; Su: Canlıların yaşamında önemli bir yeri olan, rengi, tadı, kokusu olmayan sıvı."
+      },
+      {
+        "name": "Mina Defne",
+        "parts": [
+          "Mina",
+          "Defne"
+        ],
+        "meaning": "Mina: Billur, şeffaf; Defne: Yaprakları hoş kokulu, yaz kış yeşil kalan defne ağacı."
+      },
+      {
+        "name": "Mira Defne",
+        "parts": [
+          "Mira",
+          "Defne"
+        ],
+        "meaning": "Mira: Parlayan; farklı dillerde çeşitli anlamları bulunan bir ad; Defne: Yaprakları hoş kokulu, yaz kış yeşil kalan defne ağacı."
+      },
+      {
+        "name": "Mira Duru",
+        "parts": [
+          "Mira",
+          "Duru"
+        ],
+        "meaning": "Mira: Parlayan; farklı dillerde çeşitli anlamları bulunan bir ad; Duru: Bulanık olmayan, temiz, berrak, saf."
+      },
+      {
+        "name": "Mira Lina",
+        "parts": [
+          "Mira",
+          "Lina"
+        ],
+        "meaning": "Mira: Parlayan; farklı dillerde çeşitli anlamları bulunan bir ad; Lina: Narin hurma fidanı; yumuşak ve nazik."
+      },
+      {
+        "name": "Miray Duru",
+        "parts": [
+          "Miray",
+          "Duru"
+        ],
+        "meaning": "Miray: Ay gibi ışık saçan bey; Duru: Bulanık olmayan, temiz, berrak, saf."
+      },
+      {
+        "name": "Nehir Defne",
+        "parts": [
+          "Nehir",
+          "Defne"
+        ],
+        "meaning": "Nehir: Akarsu, ırmak; Defne: Yaprakları hoş kokulu, yaz kış yeşil kalan defne ağacı."
+      },
+      {
+        "name": "Nehir Duru",
+        "parts": [
+          "Nehir",
+          "Duru"
+        ],
+        "meaning": "Nehir: Akarsu, ırmak; Duru: Bulanık olmayan, temiz, berrak, saf."
+      },
+      {
+        "name": "Neva Defne",
+        "parts": [
+          "Neva",
+          "Defne"
+        ],
+        "meaning": "Neva: Ses, ahenk; Türk müziğinde bir makam; Defne: Yaprakları hoş kokulu, yaz kış yeşil kalan defne ağacı."
+      },
+      {
+        "name": "Neva Duru",
+        "parts": [
+          "Neva",
+          "Duru"
+        ],
+        "meaning": "Neva: Ses, ahenk; Türk müziğinde bir makam; Duru: Bulanık olmayan, temiz, berrak, saf."
+      },
+      {
+        "name": "Neva Lina",
+        "parts": [
+          "Neva",
+          "Lina"
+        ],
+        "meaning": "Neva: Ses, ahenk; Türk müziğinde bir makam; Lina: Narin hurma fidanı; yumuşak ve nazik."
+      },
+      {
+        "name": "Nil Su",
+        "parts": [
+          "Nil",
+          "Su"
+        ],
+        "meaning": "Nil: Mavi, lacivert; Su: Canlıların yaşamında önemli bir yeri olan, rengi, tadı, kokusu olmayan sıvı."
+      },
+      {
+        "name": "Nisa Nur",
+        "parts": [
+          "Nisa",
+          "Nur"
+        ],
+        "meaning": "Nisa: Kadınlar; Kur'an'daki Nisa suresinin adı; Nur: Aydınlık, ışık, parıltı."
+      },
+      {
+        "name": "Öykü Ada",
+        "parts": [
+          "Öykü",
+          "Ada"
+        ],
+        "meaning": "Öykü: Ayrıntılarıyla anlatılan olay; Ada: Deniz veya göl suları ile çevrilmiş küçük kara parçası."
+      },
+      {
+        "name": "Öykü Duru",
+        "parts": [
+          "Öykü",
+          "Duru"
+        ],
+        "meaning": "Öykü: Ayrıntılarıyla anlatılan olay; Duru: Bulanık olmayan, temiz, berrak, saf."
+      },
+      {
+        "name": "Öykü Ece",
+        "parts": [
+          "Öykü",
+          "Ece"
+        ],
+        "meaning": "Öykü: Ayrıntılarıyla anlatılan olay; Ece: Kraliçe."
+      },
+      {
+        "name": "Öykü Su",
+        "parts": [
+          "Öykü",
+          "Su"
+        ],
+        "meaning": "Öykü: Ayrıntılarıyla anlatılan olay; Su: Canlıların yaşamında önemli bir yeri olan, rengi, tadı, kokusu olmayan sıvı."
+      },
+      {
+        "name": "Rüya Duru",
+        "parts": [
+          "Rüya",
+          "Duru"
+        ],
+        "meaning": "Rüya: Düş; Duru: Bulanık olmayan, temiz, berrak, saf."
+      },
+      {
+        "name": "Sare Lina",
+        "parts": [
+          "Sare",
+          "Lina"
+        ],
+        "meaning": "Sare: Prenses, soylu kadın; farklı kökenlerde kullanılan bir ad; Lina: Narin hurma fidanı; yumuşak ve nazik."
+      },
+      {
+        "name": "Selin Su",
+        "parts": [
+          "Selin",
+          "Su"
+        ],
+        "meaning": "Selin: Coşkun akan su, sel gibi güçlü akış; Su: Canlıların yaşamında önemli bir yeri olan, rengi, tadı, kokusu olmayan sıvı."
+      },
+      {
+        "name": "Serra Nur",
+        "parts": [
+          "Serra",
+          "Nur"
+        ],
+        "meaning": "Serra: Genişlik, kolaylık; Nur: Aydınlık, ışık, parıltı."
+      },
+      {
+        "name": "Sude Naz",
+        "parts": [
+          "Sude",
+          "Naz"
+        ],
+        "meaning": "Sude: Sürülmüş, sürmeli; yerleşik bir kadın adı; Naz: Kendini beğendirmek için yapılan davranış, cilve."
+      },
+      {
+        "name": "Umay Ada",
+        "parts": [
+          "Umay",
+          "Ada"
+        ],
+        "meaning": "Umay: Eski Türk inancında çocukları ve anneleri koruduğuna inanılan kutsal varlık; Ada: Deniz veya göl suları ile çevrilmiş küçük kara parçası."
+      },
+      {
+        "name": "Umay Defne",
+        "parts": [
+          "Umay",
+          "Defne"
+        ],
+        "meaning": "Umay: Eski Türk inancında çocukları ve anneleri koruduğuna inanılan kutsal varlık; Defne: Yaprakları hoş kokulu, yaz kış yeşil kalan defne ağacı."
+      },
+      {
+        "name": "Umay Duru",
+        "parts": [
+          "Umay",
+          "Duru"
+        ],
+        "meaning": "Umay: Eski Türk inancında çocukları ve anneleri koruduğuna inanılan kutsal varlık; Duru: Bulanık olmayan, temiz, berrak, saf."
+      },
+      {
+        "name": "Umay Gökçe",
+        "parts": [
+          "Umay",
+          "Gökçe"
+        ],
+        "meaning": "Umay: Eski Türk inancında çocukları ve anneleri koruduğuna inanılan kutsal varlık; Gökçe: Güzel, gösterişli kimse."
+      },
+      {
+        "name": "Vera Defne",
+        "parts": [
+          "Vera",
+          "Defne"
+        ],
+        "meaning": "Vera: Günah ve haramdan kaçınmak için şüpheli şeylerden uzak durma, takva, ittika; Defne: Yaprakları hoş kokulu, yaz kış yeşil kalan defne ağacı."
+      },
+      {
+        "name": "Yağmur Ada",
+        "parts": [
+          "Yağmur",
+          "Ada"
+        ],
+        "meaning": "Yağmur: Havadaki su buğusunun yoğunlaşmasıyla oluşan ve yeryüzüne düşen yağışın sıvı durumunda olanı; Ada: Deniz veya göl suları ile çevrilmiş küçük kara parçası."
+      },
+      {
+        "name": "Yağmur Ece",
+        "parts": [
+          "Yağmur",
+          "Ece"
+        ],
+        "meaning": "Yağmur: Havadaki su buğusunun yoğunlaşmasıyla oluşan ve yeryüzüne düşen yağışın sıvı durumunda olanı; Ece: Kraliçe."
+      },
+      {
+        "name": "Yağmur Su",
+        "parts": [
+          "Yağmur",
+          "Su"
+        ],
+        "meaning": "Yağmur: Havadaki su buğusunun yoğunlaşmasıyla oluşan ve yeryüzüne düşen yağışın sıvı durumunda olanı; Su: Canlıların yaşamında önemli bir yeri olan, rengi, tadı, kokusu olmayan sıvı."
+      },
+      {
+        "name": "Yasemin Duru",
+        "parts": [
+          "Yasemin",
+          "Duru"
+        ],
+        "meaning": "Yasemin: Beyaz, kırmızı veya sarı renkli, kokulu çiçekler açan bir ağaççık; Duru: Bulanık olmayan, temiz, berrak, saf."
+      },
+      {
+        "name": "Zeynep Alya",
+        "parts": [
+          "Zeynep",
+          "Alya"
+        ],
+        "meaning": "Zeynep: Değerli taşlar, mücevherler; Alya: Yüksek yer, yücelik; farklı kültürlerde de kullanılan bir ad."
+      },
+      {
+        "name": "Zeynep Asel",
+        "parts": [
+          "Zeynep",
+          "Asel"
+        ],
+        "meaning": "Zeynep: Değerli taşlar, mücevherler; Asel: Bal; tatlılık ve güzellikle ilişkilendirilen ad."
+      },
+      {
+        "name": "Zeynep Azra",
+        "parts": [
+          "Zeynep",
+          "Azra"
+        ],
+        "meaning": "Zeynep: Değerli taşlar, mücevherler; Azra: El değmemiş, temiz ve saf."
+      },
+      {
+        "name": "Zeynep Defne",
+        "parts": [
+          "Zeynep",
+          "Defne"
+        ],
+        "meaning": "Zeynep: Değerli taşlar, mücevherler; Defne: Yaprakları hoş kokulu, yaz kış yeşil kalan defne ağacı."
+      },
+      {
+        "name": "Zeynep Duru",
+        "parts": [
+          "Zeynep",
+          "Duru"
+        ],
+        "meaning": "Zeynep: Değerli taşlar, mücevherler; Duru: Bulanık olmayan, temiz, berrak, saf."
+      },
+      {
+        "name": "Zeynep Ece",
+        "parts": [
+          "Zeynep",
+          "Ece"
+        ],
+        "meaning": "Zeynep: Değerli taşlar, mücevherler; Ece: Kraliçe."
+      },
+      {
+        "name": "Zeynep Ela",
+        "parts": [
+          "Zeynep",
+          "Ela"
+        ],
+        "meaning": "Zeynep: Değerli taşlar, mücevherler; Ela: Gözde sarıya çalan kestane rengi."
+      },
+      {
+        "name": "Zeynep Elif",
+        "parts": [
+          "Zeynep",
+          "Elif"
+        ],
+        "meaning": "Zeynep: Değerli taşlar, mücevherler; Elif: Arap alfabesinin ilk harfi."
+      },
+      {
+        "name": "Zeynep Esma",
+        "parts": [
+          "Zeynep",
+          "Esma"
+        ],
+        "meaning": "Zeynep: Değerli taşlar, mücevherler; Esma: Adlar, isimler."
+      },
+      {
+        "name": "Zeynep Gökçe",
+        "parts": [
+          "Zeynep",
+          "Gökçe"
+        ],
+        "meaning": "Zeynep: Değerli taşlar, mücevherler; Gökçe: Güzel, gösterişli kimse."
+      },
+      {
+        "name": "Zeynep Hüma",
+        "parts": [
+          "Zeynep",
+          "Hüma"
+        ],
+        "meaning": "Zeynep: Değerli taşlar, mücevherler; Hüma: Başına konduğu kimseye mutluluk getirdiğine inanılan devlet kuşu, talih kuşu."
+      },
+      {
+        "name": "Zeynep İkra",
+        "parts": [
+          "Zeynep",
+          "İkra"
+        ],
+        "meaning": "Zeynep: Değerli taşlar, mücevherler; İkra: Oku anlamına gelir."
+      },
+      {
+        "name": "Zeynep Lina",
+        "parts": [
+          "Zeynep",
+          "Lina"
+        ],
+        "meaning": "Zeynep: Değerli taşlar, mücevherler; Lina: Narin hurma fidanı; yumuşak ve nazik."
+      },
+      {
+        "name": "Zeynep Mira",
+        "parts": [
+          "Zeynep",
+          "Mira"
+        ],
+        "meaning": "Zeynep: Değerli taşlar, mücevherler; Mira: Parlayan; farklı dillerde çeşitli anlamları bulunan bir ad."
+      },
+      {
+        "name": "Zeynep Nehir",
+        "parts": [
+          "Zeynep",
+          "Nehir"
+        ],
+        "meaning": "Zeynep: Değerli taşlar, mücevherler; Nehir: Akarsu, ırmak."
+      },
+      {
+        "name": "Zeynep Sare",
+        "parts": [
+          "Zeynep",
+          "Sare"
+        ],
+        "meaning": "Zeynep: Değerli taşlar, mücevherler; Sare: Prenses, soylu kadın; farklı kökenlerde kullanılan bir ad."
+      },
+      {
+        "name": "Zeynep Serra",
+        "parts": [
+          "Zeynep",
+          "Serra"
+        ],
+        "meaning": "Zeynep: Değerli taşlar, mücevherler; Serra: Genişlik, kolaylık."
+      }
+    ],
+    "boys": [
+      {
+        "name": "Ahmet Asaf",
+        "parts": [
+          "Ahmet",
+          "Asaf"
+        ],
+        "meaning": "Ahmet: Övülmeye layık, övülmüş; Asaf: İleri görüşlü, yönetimde yetkin kimse; tarihî ve dinî bir ad."
+      },
+      {
+        "name": "Ahmet Efe",
+        "parts": [
+          "Ahmet",
+          "Efe"
+        ],
+        "meaning": "Ahmet: Övülmeye layık, övülmüş; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Ahmet Emir",
+        "parts": [
+          "Ahmet",
+          "Emir"
+        ],
+        "meaning": "Ahmet: Övülmeye layık, övülmüş; Emir: Buyruk, komut."
+      },
+      {
+        "name": "Ahmet Kerem",
+        "parts": [
+          "Ahmet",
+          "Kerem"
+        ],
+        "meaning": "Ahmet: Övülmeye layık, övülmüş; Kerem: Soyluluk."
+      },
+      {
+        "name": "Ali Asaf",
+        "parts": [
+          "Ali",
+          "Asaf"
+        ],
+        "meaning": "Ali: Yüce, ulu, yüksek; Asaf: İleri görüşlü, yönetimde yetkin kimse; tarihî ve dinî bir ad."
+      },
+      {
+        "name": "Ali Efe",
+        "parts": [
+          "Ali",
+          "Efe"
+        ],
+        "meaning": "Ali: Yüce, ulu, yüksek; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Ali Emir",
+        "parts": [
+          "Ali",
+          "Emir"
+        ],
+        "meaning": "Ali: Yüce, ulu, yüksek; Emir: Buyruk, komut."
+      },
+      {
+        "name": "Ali Eren",
+        "parts": [
+          "Ali",
+          "Eren"
+        ],
+        "meaning": "Ali: Yüce, ulu, yüksek; Eren: Ermiş, olgun ve bilge kişi."
+      },
+      {
+        "name": "Ali İmran",
+        "parts": [
+          "Ali",
+          "İmran"
+        ],
+        "meaning": "Ali: Yüce, ulu, yüksek; İmran: Evine bağlı, evcimen."
+      },
+      {
+        "name": "Ali Kerem",
+        "parts": [
+          "Ali",
+          "Kerem"
+        ],
+        "meaning": "Ali: Yüce, ulu, yüksek; Kerem: Soyluluk."
+      },
+      {
+        "name": "Ali Mert",
+        "parts": [
+          "Ali",
+          "Mert"
+        ],
+        "meaning": "Ali: Yüce, ulu, yüksek; Mert: Yiğit, cesur, sözünün eri ve dürüst."
+      },
+      {
+        "name": "Ali Poyraz",
+        "parts": [
+          "Ali",
+          "Poyraz"
+        ],
+        "meaning": "Ali: Yüce, ulu, yüksek; Poyraz: Kuzeydoğudan esen soğuk rüzgâr."
+      },
+      {
+        "name": "Ali Yiğit",
+        "parts": [
+          "Ali",
+          "Yiğit"
+        ],
+        "meaning": "Ali: Yüce, ulu, yüksek; Yiğit: Güçlü, yürekli, kahraman, alp."
+      },
+      {
+        "name": "Alp Eren",
+        "parts": [
+          "Alp",
+          "Eren"
+        ],
+        "meaning": "Alp: Yiğit, kahraman, cesur, bahadır kimse; Eren: Ermiş, olgun ve bilge kişi."
+      },
+      {
+        "name": "Altay Tuna",
+        "parts": [
+          "Altay",
+          "Tuna"
+        ],
+        "meaning": "Altay: Yüksek dağ; Tuna: Çok, bol."
+      },
+      {
+        "name": "Aras Alp",
+        "parts": [
+          "Aras",
+          "Alp"
+        ],
+        "meaning": "Aras: Doğu Anadolu'dan doğup Hazar Denizi'ne ulaşan nehir; Alp: Yiğit, kahraman, cesur, bahadır kimse."
+      },
+      {
+        "name": "Aras Can",
+        "parts": [
+          "Aras",
+          "Can"
+        ],
+        "meaning": "Aras: Doğu Anadolu'dan doğup Hazar Denizi'ne ulaşan nehir; Can: Ruh."
+      },
+      {
+        "name": "Aras Deniz",
+        "parts": [
+          "Aras",
+          "Deniz"
+        ],
+        "meaning": "Aras: Doğu Anadolu'dan doğup Hazar Denizi'ne ulaşan nehir; Deniz: Yer kabuğunun çukur bölümlerini kaplayan, birbiriyle bağlantılı, tuzlu, büyük su kütlesi."
+      },
+      {
+        "name": "Aras Efe",
+        "parts": [
+          "Aras",
+          "Efe"
+        ],
+        "meaning": "Aras: Doğu Anadolu'dan doğup Hazar Denizi'ne ulaşan nehir; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Aras Ege",
+        "parts": [
+          "Aras",
+          "Ege"
+        ],
+        "meaning": "Aras: Doğu Anadolu'dan doğup Hazar Denizi'ne ulaşan nehir; Ege: Türkiye'nin batısındaki denizin ve bölgenin adı."
+      },
+      {
+        "name": "Aras Eymen",
+        "parts": [
+          "Aras",
+          "Eymen"
+        ],
+        "meaning": "Aras: Doğu Anadolu'dan doğup Hazar Denizi'ne ulaşan nehir; Eymen: Uğurlu, bereketli, hayırlı."
+      },
+      {
+        "name": "Aras Kerem",
+        "parts": [
+          "Aras",
+          "Kerem"
+        ],
+        "meaning": "Aras: Doğu Anadolu'dan doğup Hazar Denizi'ne ulaşan nehir; Kerem: Soyluluk."
+      },
+      {
+        "name": "Arda Alp",
+        "parts": [
+          "Arda",
+          "Alp"
+        ],
+        "meaning": "Arda: Sonra gelen; tarihî bir Türk adı ve bir nehir adı; Alp: Yiğit, kahraman, cesur, bahadır kimse."
+      },
+      {
+        "name": "Arda Efe",
+        "parts": [
+          "Arda",
+          "Efe"
+        ],
+        "meaning": "Arda: Sonra gelen; tarihî bir Türk adı ve bir nehir adı; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Arda Emir",
+        "parts": [
+          "Arda",
+          "Emir"
+        ],
+        "meaning": "Arda: Sonra gelen; tarihî bir Türk adı ve bir nehir adı; Emir: Buyruk, komut."
+      },
+      {
+        "name": "Arda Kerem",
+        "parts": [
+          "Arda",
+          "Kerem"
+        ],
+        "meaning": "Arda: Sonra gelen; tarihî bir Türk adı ve bir nehir adı; Kerem: Soyluluk."
+      },
+      {
+        "name": "Arda Kuzey",
+        "parts": [
+          "Arda",
+          "Kuzey"
+        ],
+        "meaning": "Arda: Sonra gelen; tarihî bir Türk adı ve bir nehir adı; Kuzey: Sağını doğuya, solunu batıya veren kimsenin tam karşısına düşen yön, dört ana yönden biri, şimal, güney karşıtı."
+      },
+      {
+        "name": "Asil Aslan",
+        "parts": [
+          "Asil",
+          "Aslan"
+        ],
+        "meaning": "Asil: Soylu; Aslan: Gücü ve cesareti simgeleyen yırtıcı hayvan."
+      },
+      {
+        "name": "Aslan Zeyd",
+        "parts": [
+          "Aslan",
+          "Zeyd"
+        ],
+        "meaning": "Aslan: Gücü ve cesareti simgeleyen yırtıcı hayvan; Zeyd: Artış, çoğalma ve bereket."
+      },
+      {
+        "name": "Atlas Alp",
+        "parts": [
+          "Atlas",
+          "Alp"
+        ],
+        "meaning": "Atlas: Yeryüzü haritalarını bir araya getiren eser; mitolojide göğü taşıyan figür; Alp: Yiğit, kahraman, cesur, bahadır kimse."
+      },
+      {
+        "name": "Atlas Aras",
+        "parts": [
+          "Atlas",
+          "Aras"
+        ],
+        "meaning": "Atlas: Yeryüzü haritalarını bir araya getiren eser; mitolojide göğü taşıyan figür; Aras: Doğu Anadolu'dan doğup Hazar Denizi'ne ulaşan nehir."
+      },
+      {
+        "name": "Atlas Can",
+        "parts": [
+          "Atlas",
+          "Can"
+        ],
+        "meaning": "Atlas: Yeryüzü haritalarını bir araya getiren eser; mitolojide göğü taşıyan figür; Can: Ruh."
+      },
+      {
+        "name": "Atlas Demir",
+        "parts": [
+          "Atlas",
+          "Demir"
+        ],
+        "meaning": "Atlas: Yeryüzü haritalarını bir araya getiren eser; mitolojide göğü taşıyan figür; Demir: Koyu renkli, kolay işlenen, dayanıklı, kullanılış yerleri çok maden."
+      },
+      {
+        "name": "Atlas Ege",
+        "parts": [
+          "Atlas",
+          "Ege"
+        ],
+        "meaning": "Atlas: Yeryüzü haritalarını bir araya getiren eser; mitolojide göğü taşıyan figür; Ege: Türkiye'nin batısındaki denizin ve bölgenin adı."
+      },
+      {
+        "name": "Atlas Poyraz",
+        "parts": [
+          "Atlas",
+          "Poyraz"
+        ],
+        "meaning": "Atlas: Yeryüzü haritalarını bir araya getiren eser; mitolojide göğü taşıyan figür; Poyraz: Kuzeydoğudan esen soğuk rüzgâr."
+      },
+      {
+        "name": "Ayaz Alp",
+        "parts": [
+          "Ayaz",
+          "Alp"
+        ],
+        "meaning": "Ayaz: Duru ve sakin havada çıkan kuru soğuk; Alp: Yiğit, kahraman, cesur, bahadır kimse."
+      },
+      {
+        "name": "Ayaz Efe",
+        "parts": [
+          "Ayaz",
+          "Efe"
+        ],
+        "meaning": "Ayaz: Duru ve sakin havada çıkan kuru soğuk; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Ayaz Emir",
+        "parts": [
+          "Ayaz",
+          "Emir"
+        ],
+        "meaning": "Ayaz: Duru ve sakin havada çıkan kuru soğuk; Emir: Buyruk, komut."
+      },
+      {
+        "name": "Ayaz Kerem",
+        "parts": [
+          "Ayaz",
+          "Kerem"
+        ],
+        "meaning": "Ayaz: Duru ve sakin havada çıkan kuru soğuk; Kerem: Soyluluk."
+      },
+      {
+        "name": "Aybars Alp",
+        "parts": [
+          "Aybars",
+          "Alp"
+        ],
+        "meaning": "Aybars: Ay gibi parlak ve pars gibi güçlü; Alp: Yiğit, kahraman, cesur, bahadır kimse."
+      },
+      {
+        "name": "Aybars Efe",
+        "parts": [
+          "Aybars",
+          "Efe"
+        ],
+        "meaning": "Aybars: Ay gibi parlak ve pars gibi güçlü; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Can Alp",
+        "parts": [
+          "Can",
+          "Alp"
+        ],
+        "meaning": "Can: Ruh; Alp: Yiğit, kahraman, cesur, bahadır kimse."
+      },
+      {
+        "name": "Can Efe",
+        "parts": [
+          "Can",
+          "Efe"
+        ],
+        "meaning": "Can: Ruh; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Can Kerem",
+        "parts": [
+          "Can",
+          "Kerem"
+        ],
+        "meaning": "Can: Ruh; Kerem: Soyluluk."
+      },
+      {
+        "name": "Çınar Ege",
+        "parts": [
+          "Çınar",
+          "Ege"
+        ],
+        "meaning": "Çınar: Boyu 30 m.ye ulaşabilen, kalın dallı, çok uzun ömürlü bir ağaç türü; Ege: Türkiye'nin batısındaki denizin ve bölgenin adı."
+      },
+      {
+        "name": "Demir Alp",
+        "parts": [
+          "Demir",
+          "Alp"
+        ],
+        "meaning": "Demir: Koyu renkli, kolay işlenen, dayanıklı, kullanılış yerleri çok maden; Alp: Yiğit, kahraman, cesur, bahadır kimse."
+      },
+      {
+        "name": "Demir Aras",
+        "parts": [
+          "Demir",
+          "Aras"
+        ],
+        "meaning": "Demir: Koyu renkli, kolay işlenen, dayanıklı, kullanılış yerleri çok maden; Aras: Doğu Anadolu'dan doğup Hazar Denizi'ne ulaşan nehir."
+      },
+      {
+        "name": "Demir Efe",
+        "parts": [
+          "Demir",
+          "Efe"
+        ],
+        "meaning": "Demir: Koyu renkli, kolay işlenen, dayanıklı, kullanılış yerleri çok maden; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Deniz Alp",
+        "parts": [
+          "Deniz",
+          "Alp"
+        ],
+        "meaning": "Deniz: Yer kabuğunun çukur bölümlerini kaplayan, birbiriyle bağlantılı, tuzlu, büyük su kütlesi; Alp: Yiğit, kahraman, cesur, bahadır kimse."
+      },
+      {
+        "name": "Efe Can",
+        "parts": [
+          "Efe",
+          "Can"
+        ],
+        "meaning": "Efe: Batı Anadolu köy yiğidi; Can: Ruh."
+      },
+      {
+        "name": "Efe Deniz",
+        "parts": [
+          "Efe",
+          "Deniz"
+        ],
+        "meaning": "Efe: Batı Anadolu köy yiğidi; Deniz: Yer kabuğunun çukur bölümlerini kaplayan, birbiriyle bağlantılı, tuzlu, büyük su kütlesi."
+      },
+      {
+        "name": "Efe Emir",
+        "parts": [
+          "Efe",
+          "Emir"
+        ],
+        "meaning": "Efe: Batı Anadolu köy yiğidi; Emir: Buyruk, komut."
+      },
+      {
+        "name": "Ege Alp",
+        "parts": [
+          "Ege",
+          "Alp"
+        ],
+        "meaning": "Ege: Türkiye'nin batısındaki denizin ve bölgenin adı; Alp: Yiğit, kahraman, cesur, bahadır kimse."
+      },
+      {
+        "name": "Ege Can",
+        "parts": [
+          "Ege",
+          "Can"
+        ],
+        "meaning": "Ege: Türkiye'nin batısındaki denizin ve bölgenin adı; Can: Ruh."
+      },
+      {
+        "name": "Ege Efe",
+        "parts": [
+          "Ege",
+          "Efe"
+        ],
+        "meaning": "Ege: Türkiye'nin batısındaki denizin ve bölgenin adı; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Emir Alp",
+        "parts": [
+          "Emir",
+          "Alp"
+        ],
+        "meaning": "Emir: Buyruk, komut; Alp: Yiğit, kahraman, cesur, bahadır kimse."
+      },
+      {
+        "name": "Emir Asaf",
+        "parts": [
+          "Emir",
+          "Asaf"
+        ],
+        "meaning": "Emir: Buyruk, komut; Asaf: İleri görüşlü, yönetimde yetkin kimse; tarihî ve dinî bir ad."
+      },
+      {
+        "name": "Emir Can",
+        "parts": [
+          "Emir",
+          "Can"
+        ],
+        "meaning": "Emir: Buyruk, komut; Can: Ruh."
+      },
+      {
+        "name": "Emir Efe",
+        "parts": [
+          "Emir",
+          "Efe"
+        ],
+        "meaning": "Emir: Buyruk, komut; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Emir Ege",
+        "parts": [
+          "Emir",
+          "Ege"
+        ],
+        "meaning": "Emir: Buyruk, komut; Ege: Türkiye'nin batısındaki denizin ve bölgenin adı."
+      },
+      {
+        "name": "Emirhan Efe",
+        "parts": [
+          "Emirhan",
+          "Efe"
+        ],
+        "meaning": "Emirhan: Buyruk veren hükümdar, bey; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Eren Alp",
+        "parts": [
+          "Eren",
+          "Alp"
+        ],
+        "meaning": "Eren: Ermiş, olgun ve bilge kişi; Alp: Yiğit, kahraman, cesur, bahadır kimse."
+      },
+      {
+        "name": "Eren Can",
+        "parts": [
+          "Eren",
+          "Can"
+        ],
+        "meaning": "Eren: Ermiş, olgun ve bilge kişi; Can: Ruh."
+      },
+      {
+        "name": "Eren Deniz",
+        "parts": [
+          "Eren",
+          "Deniz"
+        ],
+        "meaning": "Eren: Ermiş, olgun ve bilge kişi; Deniz: Yer kabuğunun çukur bölümlerini kaplayan, birbiriyle bağlantılı, tuzlu, büyük su kütlesi."
+      },
+      {
+        "name": "Eren Efe",
+        "parts": [
+          "Eren",
+          "Efe"
+        ],
+        "meaning": "Eren: Ermiş, olgun ve bilge kişi; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Eymen Efe",
+        "parts": [
+          "Eymen",
+          "Efe"
+        ],
+        "meaning": "Eymen: Uğurlu, bereketli, hayırlı; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Göktuğ Alp",
+        "parts": [
+          "Göktuğ",
+          "Alp"
+        ],
+        "meaning": "Göktuğ: Savaşmayı seven kimse; Alp: Yiğit, kahraman, cesur, bahadır kimse."
+      },
+      {
+        "name": "Halil İbrahim",
+        "parts": [
+          "Halil",
+          "İbrahim"
+        ],
+        "meaning": "Halil: Sadık, samimi, dost; İbrahim: İnananların, halkların babası."
+      },
+      {
+        "name": "İbrahim Halil",
+        "parts": [
+          "İbrahim",
+          "Halil"
+        ],
+        "meaning": "İbrahim: İnananların, halkların babası; Halil: Sadık, samimi, dost."
+      },
+      {
+        "name": "Kaan Efe",
+        "parts": [
+          "Kaan",
+          "Efe"
+        ],
+        "meaning": "Kaan: Kağan; hanların hanı, hükümdar; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Kerem Ali",
+        "parts": [
+          "Kerem",
+          "Ali"
+        ],
+        "meaning": "Kerem: Soyluluk; Ali: Yüce, ulu, yüksek."
+      },
+      {
+        "name": "Kerem Alp",
+        "parts": [
+          "Kerem",
+          "Alp"
+        ],
+        "meaning": "Kerem: Soyluluk; Alp: Yiğit, kahraman, cesur, bahadır kimse."
+      },
+      {
+        "name": "Kerem Asaf",
+        "parts": [
+          "Kerem",
+          "Asaf"
+        ],
+        "meaning": "Kerem: Soyluluk; Asaf: İleri görüşlü, yönetimde yetkin kimse; tarihî ve dinî bir ad."
+      },
+      {
+        "name": "Kerem Efe",
+        "parts": [
+          "Kerem",
+          "Efe"
+        ],
+        "meaning": "Kerem: Soyluluk; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Kuzey Alp",
+        "parts": [
+          "Kuzey",
+          "Alp"
+        ],
+        "meaning": "Kuzey: Sağını doğuya, solunu batıya veren kimsenin tam karşısına düşen yön, dört ana yönden biri, şimal, güney karşıtı; Alp: Yiğit, kahraman, cesur, bahadır kimse."
+      },
+      {
+        "name": "Kuzey Ege",
+        "parts": [
+          "Kuzey",
+          "Ege"
+        ],
+        "meaning": "Kuzey: Sağını doğuya, solunu batıya veren kimsenin tam karşısına düşen yön, dört ana yönden biri, şimal, güney karşıtı; Ege: Türkiye'nin batısındaki denizin ve bölgenin adı."
+      },
+      {
+        "name": "Mehmet Ali",
+        "parts": [
+          "Mehmet",
+          "Ali"
+        ],
+        "meaning": "Mehmet: Övülmüş; Ali: Yüce, ulu, yüksek."
+      },
+      {
+        "name": "Mehmet Aras",
+        "parts": [
+          "Mehmet",
+          "Aras"
+        ],
+        "meaning": "Mehmet: Övülmüş; Aras: Doğu Anadolu'dan doğup Hazar Denizi'ne ulaşan nehir."
+      },
+      {
+        "name": "Mehmet Asaf",
+        "parts": [
+          "Mehmet",
+          "Asaf"
+        ],
+        "meaning": "Mehmet: Övülmüş; Asaf: İleri görüşlü, yönetimde yetkin kimse; tarihî ve dinî bir ad."
+      },
+      {
+        "name": "Mehmet Efe",
+        "parts": [
+          "Mehmet",
+          "Efe"
+        ],
+        "meaning": "Mehmet: Övülmüş; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Mehmet Emin",
+        "parts": [
+          "Mehmet",
+          "Emin"
+        ],
+        "meaning": "Mehmet: Övülmüş; Emin: İnanılır, güvenilir."
+      },
+      {
+        "name": "Mehmet Emir",
+        "parts": [
+          "Mehmet",
+          "Emir"
+        ],
+        "meaning": "Mehmet: Övülmüş; Emir: Buyruk, komut."
+      },
+      {
+        "name": "Mehmet Fatih",
+        "parts": [
+          "Mehmet",
+          "Fatih"
+        ],
+        "meaning": "Mehmet: Övülmüş; Fatih: Fetheden, zafer kazanan."
+      },
+      {
+        "name": "Mert Alp",
+        "parts": [
+          "Mert",
+          "Alp"
+        ],
+        "meaning": "Mert: Yiğit, cesur, sözünün eri ve dürüst; Alp: Yiğit, kahraman, cesur, bahadır kimse."
+      },
+      {
+        "name": "Mert Efe",
+        "parts": [
+          "Mert",
+          "Efe"
+        ],
+        "meaning": "Mert: Yiğit, cesur, sözünün eri ve dürüst; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Mete Alp",
+        "parts": [
+          "Mete",
+          "Alp"
+        ],
+        "meaning": "Mete: Büyük Türk-Hun İmparatoru; Alp: Yiğit, kahraman, cesur, bahadır kimse."
+      },
+      {
+        "name": "Mete Efe",
+        "parts": [
+          "Mete",
+          "Efe"
+        ],
+        "meaning": "Mete: Büyük Türk-Hun İmparatoru; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Metehan Alp",
+        "parts": [
+          "Metehan",
+          "Alp"
+        ],
+        "meaning": "Metehan: Mete: tarihî Türk hükümdarı; Han: hükümdar; Alp: Yiğit, kahraman, cesur, bahadır kimse."
+      },
+      {
+        "name": "Mir Ali",
+        "parts": [
+          "Mir",
+          "Ali"
+        ],
+        "meaning": "Mir: Baş, amir, bey; Ali: Yüce, ulu, yüksek."
+      },
+      {
+        "name": "Miraç Efe",
+        "parts": [
+          "Miraç",
+          "Efe"
+        ],
+        "meaning": "Miraç: Yükselme; Hz. Muhammed'in göğe yükselişi; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Miran Ali",
+        "parts": [
+          "Miran",
+          "Ali"
+        ],
+        "meaning": "Miran: Beyler, emirler; farklı bölgelerde kullanılan bir ad; Ali: Yüce, ulu, yüksek."
+      },
+      {
+        "name": "Muhammed Ali",
+        "parts": [
+          "Muhammed",
+          "Ali"
+        ],
+        "meaning": "Muhammed: Çok övülen, övgüye değer; Ali: Yüce, ulu, yüksek."
+      },
+      {
+        "name": "Muhammed Alparslan",
+        "parts": [
+          "Muhammed",
+          "Alparslan"
+        ],
+        "meaning": "Muhammed: Çok övülen, övgüye değer; Alparslan: Yiğit ve güçlü aslan; Büyük Selçuklu hükümdarının adı."
+      },
+      {
+        "name": "Muhammed Asaf",
+        "parts": [
+          "Muhammed",
+          "Asaf"
+        ],
+        "meaning": "Muhammed: Çok övülen, övgüye değer; Asaf: İleri görüşlü, yönetimde yetkin kimse; tarihî ve dinî bir ad."
+      },
+      {
+        "name": "Muhammed Emin",
+        "parts": [
+          "Muhammed",
+          "Emin"
+        ],
+        "meaning": "Muhammed: Çok övülen, övgüye değer; Emin: İnanılır, güvenilir."
+      },
+      {
+        "name": "Muhammed Emir",
+        "parts": [
+          "Muhammed",
+          "Emir"
+        ],
+        "meaning": "Muhammed: Çok övülen, övgüye değer; Emir: Buyruk, komut."
+      },
+      {
+        "name": "Muhammed Miraç",
+        "parts": [
+          "Muhammed",
+          "Miraç"
+        ],
+        "meaning": "Muhammed: Çok övülen, övgüye değer; Miraç: Yükselme; Hz. Muhammed'in göğe yükselişi."
+      },
+      {
+        "name": "Muhammed Taha",
+        "parts": [
+          "Muhammed",
+          "Taha"
+        ],
+        "meaning": "Muhammed: Çok övülen, övgüye değer; Taha: Kur'an'ın 20. suresinin başındaki iki harf ve surenin adı."
+      },
+      {
+        "name": "Muhammed Yusuf",
+        "parts": [
+          "Muhammed",
+          "Yusuf"
+        ],
+        "meaning": "Muhammed: Çok övülen, övgüye değer; Yusuf: Tanrı artırır, çoğaltır; Kur'an'da adı geçen peygamber."
+      },
+      {
+        "name": "Muhammed Zeyd",
+        "parts": [
+          "Muhammed",
+          "Zeyd"
+        ],
+        "meaning": "Muhammed: Çok övülen, övgüye değer; Zeyd: Artış, çoğalma ve bereket."
+      },
+      {
+        "name": "Mustafa Efe",
+        "parts": [
+          "Mustafa",
+          "Efe"
+        ],
+        "meaning": "Mustafa: Seçilmiş, seçkin; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Mustafa Emir",
+        "parts": [
+          "Mustafa",
+          "Emir"
+        ],
+        "meaning": "Mustafa: Seçilmiş, seçkin; Emir: Buyruk, komut."
+      },
+      {
+        "name": "Mustafa Kaan",
+        "parts": [
+          "Mustafa",
+          "Kaan"
+        ],
+        "meaning": "Mustafa: Seçilmiş, seçkin; Kaan: Kağan; hanların hanı, hükümdar."
+      },
+      {
+        "name": "Mustafa Kemal",
+        "parts": [
+          "Mustafa",
+          "Kemal"
+        ],
+        "meaning": "Mustafa: Seçilmiş, seçkin; Kemal: Bilgi ve erdem bakımından olgunluk, yetkinlik, erginlik, eksiksizlik."
+      },
+      {
+        "name": "Oğuz Kaan",
+        "parts": [
+          "Oğuz",
+          "Kaan"
+        ],
+        "meaning": "Oğuz: Sağlam, gürbüz, güçlü delikanlı; Kaan: Kağan; hanların hanı, hükümdar."
+      },
+      {
+        "name": "Oğuz Kağan",
+        "parts": [
+          "Oğuz",
+          "Kağan"
+        ],
+        "meaning": "Oğuz: Sağlam, gürbüz, güçlü delikanlı; Kağan: Hanların hanı, hükümdar."
+      },
+      {
+        "name": "Ömer Ali",
+        "parts": [
+          "Ömer",
+          "Ali"
+        ],
+        "meaning": "Ömer: Yaşama, yaşayış, hayat, canlılık; Ali: Yüce, ulu, yüksek."
+      },
+      {
+        "name": "Ömer Asaf",
+        "parts": [
+          "Ömer",
+          "Asaf"
+        ],
+        "meaning": "Ömer: Yaşama, yaşayış, hayat, canlılık; Asaf: İleri görüşlü, yönetimde yetkin kimse; tarihî ve dinî bir ad."
+      },
+      {
+        "name": "Ömer Efe",
+        "parts": [
+          "Ömer",
+          "Efe"
+        ],
+        "meaning": "Ömer: Yaşama, yaşayış, hayat, canlılık; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Ömer Emir",
+        "parts": [
+          "Ömer",
+          "Emir"
+        ],
+        "meaning": "Ömer: Yaşama, yaşayış, hayat, canlılık; Emir: Buyruk, komut."
+      },
+      {
+        "name": "Ömer Faruk",
+        "parts": [
+          "Ömer",
+          "Faruk"
+        ],
+        "meaning": "Ömer: Yaşama, yaşayış, hayat, canlılık; Faruk: Haklıyı haksızdan ayıran, adaletli."
+      },
+      {
+        "name": "Ömer Halis",
+        "parts": [
+          "Ömer",
+          "Halis"
+        ],
+        "meaning": "Ömer: Yaşama, yaşayış, hayat, canlılık; Halis: Karışık olmayan, saf, katışıksız."
+      },
+      {
+        "name": "Poyraz Alp",
+        "parts": [
+          "Poyraz",
+          "Alp"
+        ],
+        "meaning": "Poyraz: Kuzeydoğudan esen soğuk rüzgâr; Alp: Yiğit, kahraman, cesur, bahadır kimse."
+      },
+      {
+        "name": "Poyraz Aras",
+        "parts": [
+          "Poyraz",
+          "Aras"
+        ],
+        "meaning": "Poyraz: Kuzeydoğudan esen soğuk rüzgâr; Aras: Doğu Anadolu'dan doğup Hazar Denizi'ne ulaşan nehir."
+      },
+      {
+        "name": "Poyraz Efe",
+        "parts": [
+          "Poyraz",
+          "Efe"
+        ],
+        "meaning": "Poyraz: Kuzeydoğudan esen soğuk rüzgâr; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Tuna Alp",
+        "parts": [
+          "Tuna",
+          "Alp"
+        ],
+        "meaning": "Tuna: Çok, bol; Alp: Yiğit, kahraman, cesur, bahadır kimse."
+      },
+      {
+        "name": "Uras Alp",
+        "parts": [
+          "Uras",
+          "Alp"
+        ],
+        "meaning": "Uras: Talih, şans; kökeni konusunda farklı görüşler bulunan bir ad; Alp: Yiğit, kahraman, cesur, bahadır kimse."
+      },
+      {
+        "name": "Uras Efe",
+        "parts": [
+          "Uras",
+          "Efe"
+        ],
+        "meaning": "Uras: Talih, şans; kökeni konusunda farklı görüşler bulunan bir ad; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Yağız Ali",
+        "parts": [
+          "Yağız",
+          "Ali"
+        ],
+        "meaning": "Yağız: Esmer; Ali: Yüce, ulu, yüksek."
+      },
+      {
+        "name": "Yağız Alp",
+        "parts": [
+          "Yağız",
+          "Alp"
+        ],
+        "meaning": "Yağız: Esmer; Alp: Yiğit, kahraman, cesur, bahadır kimse."
+      },
+      {
+        "name": "Yağız Efe",
+        "parts": [
+          "Yağız",
+          "Efe"
+        ],
+        "meaning": "Yağız: Esmer; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Yağız Ege",
+        "parts": [
+          "Yağız",
+          "Ege"
+        ],
+        "meaning": "Yağız: Esmer; Ege: Türkiye'nin batısındaki denizin ve bölgenin adı."
+      },
+      {
+        "name": "Yaman Ali",
+        "parts": [
+          "Yaman",
+          "Ali"
+        ],
+        "meaning": "Yaman: Kötü, korkulan, şiddetli; Ali: Yüce, ulu, yüksek."
+      },
+      {
+        "name": "Yaman Efe",
+        "parts": [
+          "Yaman",
+          "Efe"
+        ],
+        "meaning": "Yaman: Kötü, korkulan, şiddetli; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Yavuz Selim",
+        "parts": [
+          "Yavuz",
+          "Selim"
+        ],
+        "meaning": "Yavuz: İyi, güzel; Selim: Sağlam, kusursuz, doğru."
+      },
+      {
+        "name": "Yiğit Ali",
+        "parts": [
+          "Yiğit",
+          "Ali"
+        ],
+        "meaning": "Yiğit: Güçlü, yürekli, kahraman, alp; Ali: Yüce, ulu, yüksek."
+      },
+      {
+        "name": "Yiğit Alp",
+        "parts": [
+          "Yiğit",
+          "Alp"
+        ],
+        "meaning": "Yiğit: Güçlü, yürekli, kahraman, alp; Alp: Yiğit, kahraman, cesur, bahadır kimse."
+      },
+      {
+        "name": "Yiğit Aras",
+        "parts": [
+          "Yiğit",
+          "Aras"
+        ],
+        "meaning": "Yiğit: Güçlü, yürekli, kahraman, alp; Aras: Doğu Anadolu'dan doğup Hazar Denizi'ne ulaşan nehir."
+      },
+      {
+        "name": "Yiğit Can",
+        "parts": [
+          "Yiğit",
+          "Can"
+        ],
+        "meaning": "Yiğit: Güçlü, yürekli, kahraman, alp; Can: Ruh."
+      },
+      {
+        "name": "Yiğit Efe",
+        "parts": [
+          "Yiğit",
+          "Efe"
+        ],
+        "meaning": "Yiğit: Güçlü, yürekli, kahraman, alp; Efe: Batı Anadolu köy yiğidi."
+      },
+      {
+        "name": "Yiğit Ege",
+        "parts": [
+          "Yiğit",
+          "Ege"
+        ],
+        "meaning": "Yiğit: Güçlü, yürekli, kahraman, alp; Ege: Türkiye'nin batısındaki denizin ve bölgenin adı."
+      },
+      {
+        "name": "Yiğit Eren",
+        "parts": [
+          "Yiğit",
+          "Eren"
+        ],
+        "meaning": "Yiğit: Güçlü, yürekli, kahraman, alp; Eren: Ermiş, olgun ve bilge kişi."
+      },
+      {
+        "name": "Yiğit Hamza",
+        "parts": [
+          "Yiğit",
+          "Hamza"
+        ],
+        "meaning": "Yiğit: Güçlü, yürekli, kahraman, alp; Hamza: Aslan, güçlü adam."
+      },
+      {
+        "name": "Yiğit Kerem",
+        "parts": [
+          "Yiğit",
+          "Kerem"
+        ],
+        "meaning": "Yiğit: Güçlü, yürekli, kahraman, alp; Kerem: Soyluluk."
+      },
+      {
+        "name": "Yunus Emre",
+        "parts": [
+          "Yunus",
+          "Emre"
+        ],
+        "meaning": "Yunus: Ilık ve sıcak denizlerde yaşayan etçil memeli hayvan; Emre: Âşık, tutkun."
+      },
+      {
+        "name": "Yusuf Ali",
+        "parts": [
+          "Yusuf",
+          "Ali"
+        ],
+        "meaning": "Yusuf: Tanrı artırır, çoğaltır; Kur'an'da adı geçen peygamber; Ali: Yüce, ulu, yüksek."
+      },
+      {
+        "name": "Yusuf Asaf",
+        "parts": [
+          "Yusuf",
+          "Asaf"
+        ],
+        "meaning": "Yusuf: Tanrı artırır, çoğaltır; Kur'an'da adı geçen peygamber; Asaf: İleri görüşlü, yönetimde yetkin kimse; tarihî ve dinî bir ad."
+      },
+      {
+        "name": "Yusuf Ege",
+        "parts": [
+          "Yusuf",
+          "Ege"
+        ],
+        "meaning": "Yusuf: Tanrı artırır, çoğaltır; Kur'an'da adı geçen peygamber; Ege: Türkiye'nin batısındaki denizin ve bölgenin adı."
+      },
+      {
+        "name": "Yusuf Emir",
+        "parts": [
+          "Yusuf",
+          "Emir"
+        ],
+        "meaning": "Yusuf: Tanrı artırır, çoğaltır; Kur'an'da adı geçen peygamber; Emir: Buyruk, komut."
+      },
+      {
+        "name": "Yusuf Eren",
+        "parts": [
+          "Yusuf",
+          "Eren"
+        ],
+        "meaning": "Yusuf: Tanrı artırır, çoğaltır; Kur'an'da adı geçen peygamber; Eren: Ermiş, olgun ve bilge kişi."
+      },
+      {
+        "name": "Yusuf Eymen",
+        "parts": [
+          "Yusuf",
+          "Eymen"
+        ],
+        "meaning": "Yusuf: Tanrı artırır, çoğaltır; Kur'an'da adı geçen peygamber; Eymen: Uğurlu, bereketli, hayırlı."
+      },
+      {
+        "name": "Yusuf Kerem",
+        "parts": [
+          "Yusuf",
+          "Kerem"
+        ],
+        "meaning": "Yusuf: Tanrı artırır, çoğaltır; Kur'an'da adı geçen peygamber; Kerem: Soyluluk."
+      },
+      {
+        "name": "Zeyd Ali",
+        "parts": [
+          "Zeyd",
+          "Ali"
+        ],
+        "meaning": "Zeyd: Artış, çoğalma ve bereket; Ali: Yüce, ulu, yüksek."
+      }
+    ]
+  }
+}

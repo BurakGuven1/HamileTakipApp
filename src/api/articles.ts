@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { fallbackArticles, type Article } from "@/features/articles/articles";
+import type { ExperienceStage } from "@/features/life-stage/lifeStage";
 import type { Tables } from "@/types/database";
 
 const ARTICLE_IMAGE_BUCKET = "article-images";
@@ -87,4 +88,46 @@ export async function getFeaturedArticles(limit = 4) {
   }
 
   return (data ?? []).map(toArticle);
+}
+
+export function filterArticlesForExperience(
+  articles: Article[],
+  stage: ExperienceStage,
+  pregnancyWeek?: number | null
+) {
+  return articles.filter((article) => {
+    if (stage === "postpartum") {
+      return article.category === "bebek";
+    }
+
+    if (stage === "general") {
+      return (
+        article.category === "ipuclari" &&
+        article.timelineStartWeek == null &&
+        article.timelineEndWeek == null
+      );
+    }
+
+    if (article.category === "bebek") return false;
+    if (!pregnancyWeek) return true;
+    if (
+      article.timelineStartWeek == null ||
+      article.timelineEndWeek == null
+    ) {
+      return article.category === "ipuclari";
+    }
+    return (
+      pregnancyWeek >= article.timelineStartWeek &&
+      pregnancyWeek <= article.timelineEndWeek
+    );
+  });
+}
+
+export async function getFeaturedArticlesForExperience(
+  stage: ExperienceStage,
+  pregnancyWeek?: number | null,
+  limit = 4
+) {
+  const articles = await listArticles();
+  return filterArticlesForExperience(articles, stage, pregnancyWeek).slice(0, limit);
 }

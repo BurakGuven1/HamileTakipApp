@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Clipboard from "expo-clipboard";
 import * as Linking from "expo-linking";
 import { Link, router } from "expo-router";
-import { Copy, UserRound } from "lucide-react-native";
+import { ChevronDown, Copy, UserRound } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
@@ -21,11 +21,16 @@ import {
   updateCurrentProfile,
   type ProfileUpdate
 } from "@/api/profiles";
+import { listBabies } from "@/api/babies";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
 import { LifeStageSwitcher } from "@/features/life-stage/LifeStageSwitcher";
+import {
+  experienceStageLabels,
+  getExperienceStage
+} from "@/features/life-stage/lifeStage";
 import {
   getWaterRemindersEnabled,
   setWaterRemindersEnabled,
@@ -79,6 +84,7 @@ export default function SettingsScreen() {
   const [feedingMode, setFeedingMode] = useState<"breastfeeding" | "pumping" | "mixed" | "formula">("mixed");
   const [ownUserId, setOwnUserId] = useState<string>();
   const [restoringPurchases, setRestoringPurchases] = useState(false);
+  const [showMoreProfileSettings, setShowMoreProfileSettings] = useState(false);
   const [showMoreNotificationPreferences, setShowMoreNotificationPreferences] =
     useState(false);
   const [waterRemindersEnabled, setWaterRemindersEnabledState] = useState(false);
@@ -90,8 +96,14 @@ export default function SettingsScreen() {
     queryKey: ["current-profile"],
     queryFn: getCurrentProfile
   });
+  const babiesQuery = useQuery({
+    queryKey: ["babies"],
+    queryFn: listBabies
+  });
 
   const profile = profileQuery.data;
+  const hasBaby = Boolean(babiesQuery.data?.length);
+  const experienceStage = getExperienceStage(profile, hasBaby);
   const appTheme = accentColor.theme;
 
   useEffect(() => {
@@ -169,7 +181,9 @@ export default function SettingsScreen() {
         father_name: cleanFatherName,
         forum_nickname: cleanNickname,
         mother_name: cleanMotherName,
-        feeding_mode: feedingMode,
+        ...(experienceStage === "postpartum"
+          ? { feeding_mode: feedingMode }
+          : {}),
         theme_preference: themePreference
       });
     },
@@ -327,6 +341,7 @@ export default function SettingsScreen() {
     setMotherName(profile?.mother_name ?? profile?.display_name ?? "");
     setFatherName(profile?.father_name ?? "");
     setThemePreference(profile?.theme_preference ?? "auto");
+    setShowMoreProfileSettings(true);
     setProfileEditOpen(true);
     requestAnimationFrame(() => scrollToProfileEditor());
   }
@@ -401,7 +416,13 @@ export default function SettingsScreen() {
               />
               <StatusPill
                 label="Durum"
-                value={profile?.is_pregnant ? "Hamilelik" : "Annelik"}
+                value={
+                  babiesQuery.isLoading
+                    ? "Kontrol ediliyor"
+                    : babiesQuery.isError
+                      ? "Kontrol edilemedi"
+                      : experienceStageLabels[experienceStage]
+                }
               />
               <StatusPill label="Tema" value={appTheme.label} />
             </View>
@@ -427,9 +448,9 @@ export default function SettingsScreen() {
           </View>
         </Card>
 
-        {profile && profile.id === ownUserId ? (
+        {profile && profile.id === ownUserId && babiesQuery.isSuccess ? (
           <Card>
-            <LifeStageSwitcher profile={profile} />
+            <LifeStageSwitcher hasBaby={hasBaby} profile={profile} />
           </Card>
         ) : null}
 
@@ -461,6 +482,45 @@ export default function SettingsScreen() {
             </View>
           </Pressable>
         ) : null}
+
+        <Pressable
+          accessibilityHint="Bildirim, abonelik, gizlilik ve hesap ayarlarını açar veya kapatır"
+          accessibilityLabel={
+            showMoreProfileSettings
+              ? "Daha az profil ayarı göster"
+              : "Daha fazla profil ayarı göster"
+          }
+          accessibilityRole="button"
+          accessibilityState={{ expanded: showMoreProfileSettings }}
+          onPress={() =>
+            setShowMoreProfileSettings((current) => !current)
+          }
+          style={({ pressed }) => [
+            styles.moreSettingsToggle,
+            pressed && styles.moreSettingsTogglePressed
+          ]}
+        >
+          <View style={styles.moreSettingsCopy}>
+            <Text style={styles.moreSettingsTitle}>
+              {showMoreProfileSettings ? "Daha az göster" : "Daha fazla gör"}
+            </Text>
+            <Text style={styles.moreSettingsDescription}>
+              Bildirimler, abonelik, gizlilik ve hesap işlemleri
+            </Text>
+          </View>
+          <ChevronDown
+            color={appTheme.primary}
+            size={22}
+            style={
+              showMoreProfileSettings
+                ? styles.moreSettingsChevronOpen
+                : undefined
+            }
+          />
+        </Pressable>
+
+        {showMoreProfileSettings ? (
+          <>
 
         {profileEditOpen ? (
           <View onLayout={handleProfileEditorLayout}>
@@ -494,7 +554,7 @@ export default function SettingsScreen() {
                 onChangeText={setForumNickname}
               />
 
-              {!profile?.is_pregnant ? (
+              {experienceStage === "postpartum" ? (
                 <View style={{ gap: spacing.sm }}>
                   <Text style={typography.label}>Beslenme akışı</Text>
                   <Text style={typography.body}>Bakım günlüğünde en sık kullandığın kayıtları öne çıkarır; sağlık önerisi değildir.</Text>
@@ -578,18 +638,20 @@ export default function SettingsScreen() {
                 updatePreferenceMutation.mutate({ notify_forum_likes: value })
               }
             />
-            <PreferenceRow
-              label="Aşı hatırlatmaları"
-              description="Yaklaşan aşı tarihleri için bildirim al."
-              value={Boolean(profile?.notify_vaccine_reminders)}
-              disabled={!profile || updatePreferenceMutation.isPending}
-              onValueChange={(value) =>
-                updatePreferenceMutation.mutate({ notify_vaccine_reminders: value })
-              }
-            />
+            {experienceStage !== "general" ? (
+              <PreferenceRow
+                label="Aşı hatırlatmaları"
+                description="Yaklaşan aşı tarihleri için bildirim al."
+                value={Boolean(profile?.notify_vaccine_reminders)}
+                disabled={!profile || updatePreferenceMutation.isPending}
+                onValueChange={(value) =>
+                  updatePreferenceMutation.mutate({ notify_vaccine_reminders: value })
+                }
+              />
+            ) : null}
             {showMoreNotificationPreferences ? (
               <>
-                {profile?.is_pregnant ? (
+                {experienceStage === "pregnancy" ? (
                   <PreferenceRow
                     label="Haftalık gebelik güncellemesi"
                     description="Gebelik haftana göre özet bildirimler al."
@@ -604,14 +666,18 @@ export default function SettingsScreen() {
                 ) : null}
                 <PreferenceRow
                   label="Günlük kişisel destek"
-                  description="Gebelik haftana veya doğum sonrası dönemine uygun makale, küçük öneri ve destek mesajı al."
+                  description={
+                    experienceStage === "general"
+                      ? "Yaşam evreni seçene kadar genel, nazik destek mesajları al."
+                      : "Yaşam evrene uygun makale, küçük öneri ve destek mesajı al."
+                  }
                   value={Boolean(profile?.notify_daily_support)}
                   disabled={!profile || updatePreferenceMutation.isPending}
                   onValueChange={(value) =>
                     updatePreferenceMutation.mutate({ notify_daily_support: value })
                   }
                 />
-                {profile?.is_pregnant ? (
+                {experienceStage === "pregnancy" ? (
                   <PreferenceRow
                     label="Günlük su hatırlatmaları · Ücretsiz"
                     description={`${WATER_REMINDER_TIME_LABEL} saatlerinde cihazında nazik su molaları planla. İstediğin an kapatabilirsin.`}
@@ -619,7 +685,7 @@ export default function SettingsScreen() {
                     disabled={updatingWaterReminders}
                     onValueChange={(value) => void updateWaterReminders(value)}
                   />
-                ) : (
+                ) : experienceStage === "postpartum" ? (
                   <>
                     <PreferenceRow
                       label="Akıllı uyku tahminleri"
@@ -658,7 +724,7 @@ export default function SettingsScreen() {
                       }
                     />
                   </>
-                )}
+                ) : null}
               </>
             ) : null}
 
@@ -781,6 +847,8 @@ export default function SettingsScreen() {
             />
           </View>
         </Card>
+          </>
+        ) : null}
       </View>
     </Screen>
   );
@@ -975,6 +1043,37 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     color: colors.text,
     padding: spacing.md
+  },
+  moreSettingsChevronOpen: {
+    transform: [{ rotate: "180deg" }]
+  },
+  moreSettingsCopy: {
+    flex: 1,
+    gap: spacing.xs,
+    minWidth: 0
+  },
+  moreSettingsDescription: {
+    ...typography.body,
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 20
+  },
+  moreSettingsTitle: {
+    ...typography.heading3,
+    color: colors.text
+  },
+  moreSettingsToggle: {
+    alignItems: "center",
+    borderBottomColor: colors.border,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    gap: spacing.md,
+    minHeight: 64,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.sm
+  },
+  moreSettingsTogglePressed: {
+    opacity: 0.72
   },
   parentRow: {
     flexDirection: "row",

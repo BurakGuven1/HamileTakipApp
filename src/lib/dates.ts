@@ -21,6 +21,66 @@ export function parseDateOnly(value?: string | null) {
 const dayInMs = 1000 * 60 * 60 * 24;
 const pregnancyPastDueToleranceDays = 14;
 const pregnancyMaximumDaysUntilDue = 294;
+const pregnancyTermDays = 280;
+
+export type PregnancyAge = {
+  day: number;
+  week: number;
+};
+
+export function getPregnancyAgeError(
+  week?: number | null,
+  day?: number | null
+) {
+  if (typeof week !== "number" || !Number.isInteger(week) || week < 1 || week > 42) {
+    return "Gebelik haftasını 1 ile 42 arasında girmelisin.";
+  }
+
+  if (typeof day !== "number" || !Number.isInteger(day) || day < 0 || day > 6) {
+    return "Haftanın gününü 0 ile 6 arasında girmelisin.";
+  }
+
+  if (week === 42 && day > 0) {
+    return "42. haftadaysan gün değerini 0 seçmelisin.";
+  }
+
+  return null;
+}
+
+export function getPregnancyDueDateFromAge(
+  week?: number | null,
+  day?: number | null,
+  reference = new Date()
+) {
+  if (
+    getPregnancyAgeError(week, day) ||
+    typeof week !== "number" ||
+    typeof day !== "number"
+  ) {
+    return null;
+  }
+
+  const dueDate = new Date(reference);
+  dueDate.setHours(0, 0, 0, 0);
+  dueDate.setDate(dueDate.getDate() + pregnancyTermDays - (week * 7 + day));
+  return toDateOnly(dueDate);
+}
+
+export function getPregnancyAgeFromDueDate(
+  dueDate?: string | null,
+  reference = new Date()
+): PregnancyAge | null {
+  const due = parseDateOnly(dueDate);
+  if (!due) return null;
+
+  const elapsedDays = pregnancyTermDays - getDateOnlyDiffDays(due, reference);
+  const boundedDays = Math.max(7, Math.min(294, elapsedDays));
+
+  return {
+    day: boundedDays % 7,
+    week: Math.floor(boundedDays / 7)
+  };
+}
 
 export function getPregnancyDueDateBounds(reference = new Date()) {
   const minimumDate = new Date(reference);
@@ -74,7 +134,7 @@ export function getPregnancyProgress(dueDate?: string | null) {
     return null;
   }
 
-  const totalDays = 280;
+  const totalDays = pregnancyTermDays;
   const maxTrackedDays = 294;
   const daysUntilDue = getDateOnlyDiffDays(due);
   const day = Math.max(1, Math.min(maxTrackedDays, totalDays - daysUntilDue));
@@ -82,6 +142,7 @@ export function getPregnancyProgress(dueDate?: string | null) {
 
   return {
     day,
+    dayOfWeek: day % 7,
     daysUntilDue: Math.max(0, daysUntilDue),
     totalDays,
     week

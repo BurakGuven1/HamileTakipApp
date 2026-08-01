@@ -1210,6 +1210,15 @@ export type Database = {
       };
     };
     Functions: {
+      complete_pregnancy_with_birth: {
+        Args: {
+          p_baby_name: string;
+          p_birth_date: string;
+          p_gender?: "kiz" | "erkek" | "belirtilmemis";
+          p_feeding_mode?: "breastfeeding" | "pumping" | "mixed" | "formula";
+        };
+        Returns: Json;
+      };
       record_age_assurance: {
         Args: {
           p_birth_date?: string;
@@ -1301,6 +1310,14 @@ export type Database = {
       get_active_profile_id: {
         Args: Record<PropertyKey, never>;
         Returns: string;
+      };
+      save_push_token_for_current_user: {
+        Args: {
+          p_device_type?: "ios" | "android" | null;
+          p_expo_push_token: string;
+          p_project_id?: string | null;
+        };
+        Returns: Database["public"]["Tables"]["push_tokens"]["Row"];
       };
       get_effective_premium_access: {
         Args: Record<PropertyKey, never>;

@@ -539,6 +539,7 @@ class CareSectionBoundary extends Component<
 }
 
 function AdvancedCareJournalContent() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const appTheme = useAppTheme();
   const { showError, showInfo, showSuccess } = useFeedback();
@@ -991,6 +992,20 @@ function AdvancedCareJournalContent() {
           }}
           retrying={babiesQuery.isFetching || profileQuery.isFetching || membershipQuery.isFetching}
           title="Bakım bilgileri yüklenemedi"
+        />
+      </Screen>
+    );
+  }
+
+  if (profileQuery.data?.is_pregnant) {
+    return (
+      <Screen>
+        <EmptyState
+          actionHint="Gebelik araçları ekranına gider"
+          actionLabel="Gebelik araçlarına dön"
+          description="Beslenme, uyku ve bez kayıtları doğum sonrası deneyime aittir. Doğum gerçekleştiğinde Profil ekranından geçişi tamamlayabilirsin."
+          onActionPress={() => router.replace("/pregnancy-tools")}
+          title="Bakım günlüğü doğum sonrasında açılır"
         />
       </Screen>
     );

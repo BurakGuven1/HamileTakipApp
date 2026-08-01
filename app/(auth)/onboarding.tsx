@@ -27,13 +27,15 @@ import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { DatePickerField } from "@/components/DatePickerField";
 import { OnboardingThreadMoment } from "@/components/OnboardingThreadMoment";
+import { PregnancyAgeField } from "@/components/PregnancyAgeField";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
 import { Thread } from "@/components/Thread";
 import { registerAndSavePushToken } from "@/lib/notifications";
 import {
-  getPregnancyDueDateBounds,
-  getPregnancyDueDateError
+  getPregnancyAgeError,
+  getPregnancyAgeFromDueDate,
+  getPregnancyDueDateFromAge
 } from "@/lib/dates";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { useFeedback } from "@/providers/FeedbackProvider";
@@ -81,7 +83,9 @@ export default function OnboardingScreen() {
   const [status, setStatus] = useState<ParentStatus>();
   const [motherName, setMotherName] = useState("");
   const [fatherName, setFatherName] = useState("");
-  const [dueDate, setDueDate] = useState("");
+  const [pregnancyWeek, setPregnancyWeek] = useState("");
+  const [pregnancyDay, setPregnancyDay] = useState("0");
+  const [pregnancyAgeError, setPregnancyAgeError] = useState("");
   const [babyName, setBabyName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [babyGender, setBabyGender] = useState<BabyGender>("belirtilmemis");
@@ -90,6 +94,7 @@ export default function OnboardingScreen() {
   const [themePreference, setThemePreference] = useState<ThemePreference>("auto");
   const [nickname, setNickname] = useState("");
   const [nicknameAvailable, setNicknameAvailable] = useState<boolean | null>(null);
+  const [completing, setCompleting] = useState(false);
 
   const profileQuery = useQuery({
     queryKey: ["current-profile"],
@@ -133,7 +138,13 @@ export default function OnboardingScreen() {
         ? profile.father_name
         : ""
     );
-    setDueDate(profile.due_date ?? "");
+    const restoredPregnancyAge = getPregnancyAgeFromDueDate(profile.due_date);
+    setPregnancyWeek(
+      restoredPregnancyAge ? String(restoredPregnancyAge.week) : ""
+    );
+    setPregnancyDay(
+      restoredPregnancyAge ? String(restoredPregnancyAge.day) : "0"
+    );
     setFeedingMode(profile.feeding_mode ?? "mixed");
     setThemePreference(profile.theme_preference ?? "auto");
     setNickname(profile.forum_nickname ?? "");
@@ -147,14 +158,14 @@ export default function OnboardingScreen() {
 
     const restoredStep: Record<string, OnboardingStep> = {
       family_names_added: "status",
-      details_added: "feeding",
+      details_added: restoredStatus === "baby" ? "feeding" : "theme",
       feeding_mode_selected: "theme",
       nickname_set: "notifications",
       theme_selected: "nickname"
     };
 
     if (profile.onboarding_step === "status_selected") {
-      setStep(restoredStatus === "skip" ? "feeding" : "details");
+      setStep(restoredStatus === "skip" ? "theme" : "details");
       return;
     }
 
@@ -185,10 +196,21 @@ export default function OnboardingScreen() {
     []
   );
 
-  const activeIndex = steps.findIndex((item) => item.id === step);
+  const visibleSteps = useMemo(() => {
+    if (status === "pregnant") {
+      return steps.filter((item) => item.id !== "feeding");
+    }
+    if (status === "skip") {
+      return steps.filter(
+        (item) => item.id !== "details" && item.id !== "feeding"
+      );
+    }
+    return steps;
+  }, [status]);
+  const activeIndex = visibleSteps.findIndex((item) => item.id === step);
   const progressValue = useMemo(
-    () => (activeIndex + 1) / steps.length,
-    [activeIndex]
+    () => (activeIndex + 1) / visibleSteps.length,
+    [activeIndex, visibleSteps.length]
   );
   const suggestedThemeId =
     status === "baby" ? getSuggestedThemeForGender(babyGender) : "sage";
@@ -258,7 +280,7 @@ export default function OnboardingScreen() {
         due_date: null,
         onboarding_step: "status_selected"
       });
-      setStep("feeding");
+      setStep("theme");
     } catch (error) {
       showError(error, "Seçim kaydedilemedi");
     }
@@ -273,18 +295,24 @@ export default function OnboardingScreen() {
       }
 
       if (status === "pregnant") {
-        const dueDateError = getPregnancyDueDateError(dueDate);
-        if (dueDateError) {
-          showInfo(dueDateError, "Tarihi kontrol et");
+        const week = Number.parseInt(pregnancyWeek, 10);
+        const day = Number.parseInt(pregnancyDay, 10);
+        const ageError = getPregnancyAgeError(week, day);
+        const dueDate = getPregnancyDueDateFromAge(week, day);
+        if (ageError || !dueDate) {
+          const message = ageError ?? "Gebelik haftanı ve gününü kontrol et.";
+          setPregnancyAgeError(message);
+          showInfo(message, "Gebelik süresini kontrol et");
           return;
         }
 
+        setPregnancyAgeError("");
         await updateStepMutation.mutateAsync({
           is_pregnant: true,
           due_date: dueDate,
           onboarding_step: "details_added"
         });
-        setStep("feeding");
+        setStep("theme");
         return;
       }
 
@@ -316,7 +344,7 @@ export default function OnboardingScreen() {
         return;
       }
 
-      setStep("feeding");
+      setStep("theme");
     } catch (error) {
       showError(error, "Bilgiler kaydedilemedi");
     }
@@ -371,9 +399,17 @@ export default function OnboardingScreen() {
   }
 
   async function completeOnboarding(requestNotifications: boolean) {
+    if (completing) return;
+    setCompleting(true);
+    let notificationSetupFailed = false;
+
     try {
       if (requestNotifications) {
-        await registerAndSavePushToken();
+        try {
+          await registerAndSavePushToken();
+        } catch {
+          notificationSetupFailed = true;
+        }
       }
 
       await updateStepMutation.mutateAsync({
@@ -385,8 +421,16 @@ export default function OnboardingScreen() {
         () => router.replace("/home"),
         reducedMotion ? 720 : 1_850
       );
+      if (notificationSetupFailed) {
+        showInfo(
+          "Kurulum tamamlandı. Bildirim kaydı şu anda tamamlanamadı; Profil > Bildirim tercihleri bölümünden yeniden deneyebilirsin.",
+          "Bildirimleri sonra açabilirsin"
+        );
+      }
     } catch (error) {
       showError(error, "Kurulum tamamlanamadı");
+    } finally {
+      setCompleting(false);
     }
   }
 
@@ -402,7 +446,21 @@ export default function OnboardingScreen() {
     }
 
     if (step === "details") {
-      setStep("feeding");
+      if (status === "pregnant") {
+        showInfo(
+          "Gebelik akışını hesaplamak için hafta ve gün bilgini girmelisin.",
+          "Gebelik süresi gerekli"
+        );
+        return;
+      }
+      if (status === "baby") {
+        showInfo(
+          "Bebek akışını hazırlamak için ad ve doğum tarihini girmelisin.",
+          "Bebek bilgisi gerekli"
+        );
+        return;
+      }
+      setStep("theme");
       return;
     }
 
@@ -427,12 +485,7 @@ export default function OnboardingScreen() {
   function goToPreviousStep() {
     if (activeIndex <= 0 || updateStepMutation.isPending) return;
 
-    if (step === "feeding" && status === "skip") {
-      setStep("status");
-      return;
-    }
-
-    const previousStep = steps[activeIndex - 1];
+    const previousStep = visibleSteps[activeIndex - 1];
     if (previousStep) setStep(previousStep.id);
   }
 
@@ -488,7 +541,7 @@ export default function OnboardingScreen() {
         <View style={styles.progressWrap}>
           <View style={styles.threadProgress}>
             <Thread
-              accessibilityLabel={`Kurulum ilerlemesi: ${steps.length} adımın ${activeIndex + 1}. adımı`}
+              accessibilityLabel={`Kurulum ilerlemesi: ${visibleSteps.length} adımın ${activeIndex + 1}. adımı`}
               color={appTheme.primary}
               height={42}
               mutedColor={colors.border}
@@ -497,7 +550,7 @@ export default function OnboardingScreen() {
               variant="progress"
             />
             <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.stepDots}>
-              {steps.map((item, index) => (
+              {visibleSteps.map((item, index) => (
                 <View
                   key={item.id}
                   style={[
@@ -514,7 +567,7 @@ export default function OnboardingScreen() {
           </View>
           <View style={styles.stepLabels}>
             <Text style={[styles.stepLabel, { color: appTheme.primary }]}>
-              Adım {activeIndex + 1}/{steps.length} · {steps[activeIndex]?.label}
+              Adım {activeIndex + 1}/{visibleSteps.length} · {visibleSteps[activeIndex]?.label}
             </Text>
           </View>
         </View>
@@ -610,13 +663,18 @@ export default function OnboardingScreen() {
               />
 
               {status === "pregnant" ? (
-                <DatePickerField
-                  label="Tahmini doğum tarihi"
-                  maximumDate={getPregnancyDueDateBounds().maximumDate}
-                  minimumDate={getPregnancyDueDateBounds().minimumDate}
-                  placeholder="Doğum tarihini seç"
-                  value={dueDate}
-                  onChange={setDueDate}
+                <PregnancyAgeField
+                  day={pregnancyDay}
+                  error={pregnancyAgeError || undefined}
+                  onDayChange={(value) => {
+                    setPregnancyDay(value);
+                    setPregnancyAgeError("");
+                  }}
+                  onWeekChange={(value) => {
+                    setPregnancyWeek(value);
+                    setPregnancyAgeError("");
+                  }}
+                  week={pregnancyWeek}
                 />
               ) : (
                 <View style={{ gap: spacing.md }}>
@@ -769,10 +827,12 @@ export default function OnboardingScreen() {
                 <FeatureRow label="Forum yorum ve beğeni bildirimleri" />
               </View>
               <Button
-                label="Bildirimleri aç ve başla"
+                disabled={completing}
+                label={completing ? "Kurulum tamamlanıyor…" : "Bildirimleri aç ve başla"}
                 onPress={() => completeOnboarding(true)}
               />
               <Button
+                disabled={completing}
                 label="Şimdilik bildirim alma"
                 variant="ghost"
                 onPress={() => completeOnboarding(false)}

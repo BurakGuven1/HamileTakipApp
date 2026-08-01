@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Tabs } from "expo-router";
 import {
   Baby,
+  CalendarHeart,
   Home,
   Images,
   MessageCircleHeart,
@@ -9,8 +10,10 @@ import {
   UserRound
 } from "lucide-react-native";
 import type { ColorValue } from "react-native";
+import { listBabies } from "@/api/babies";
 import { isCurrentUserFamilyFather } from "@/api/familyAccess";
 import { getCurrentProfile } from "@/api/profiles";
+import { getExperienceStage } from "@/features/life-stage/lifeStage";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
@@ -30,9 +33,20 @@ export default function TabsLayout() {
     queryKey: ["current-profile"],
     queryFn: getCurrentProfile
   });
-  const isPregnancyMode = profileQuery.data?.is_pregnant === true;
+  const babiesQuery = useQuery({
+    queryKey: ["babies"],
+    queryFn: listBabies
+  });
+  const experienceStage = getExperienceStage(
+    profileQuery.data,
+    Boolean(babiesQuery.data?.length)
+  );
   const lifeStageUnavailable =
-    profileQuery.isPending || profileQuery.isError || !profileQuery.data;
+    profileQuery.isPending ||
+    profileQuery.isError ||
+    babiesQuery.isPending ||
+    babiesQuery.isError ||
+    !profileQuery.data;
   const hideWomensForum =
     fatherRoleQuery.isPending || fatherRoleQuery.isError || fatherRoleQuery.data === true;
 
@@ -71,9 +85,23 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="pregnancy-tools"
+        options={{
+          href:
+            lifeStageUnavailable || experienceStage !== "pregnancy"
+              ? null
+              : undefined,
+          title: "Gebelik",
+          tabBarIcon: (props) => <PregnancyIcon {...props} />
+        }}
+      />
+      <Tabs.Screen
         name="baby"
         options={{
-          href: lifeStageUnavailable || isPregnancyMode ? null : undefined,
+          href:
+            lifeStageUnavailable || experienceStage === "pregnancy"
+              ? null
+              : undefined,
           title: "Bebek",
           tabBarIcon: (props) => <BabyIcon {...props} />
         }}
@@ -81,6 +109,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="gallery"
         options={{
+          href:
+            lifeStageUnavailable || experienceStage !== "postpartum"
+              ? null
+              : undefined,
           title: "Galeri",
           tabBarIcon: (props) => <GalleryIcon {...props} />
         }}
@@ -113,13 +145,6 @@ export default function TabsLayout() {
         options={{ href: null, title: "Aşı merkezi" }}
       />
       <Tabs.Screen
-        name="pregnancy-tools"
-        options={{
-          href: null,
-          title: "Hamilelik Araçları"
-        }}
-      />
-      <Tabs.Screen
         name="pregnancy-exercise"
         options={{
           href: null,
@@ -136,6 +161,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="pregnancy-nutrition"
         options={{ href: null, title: "Su ve Takviye Rehberi" }}
+      />
+      <Tabs.Screen
+        name="baby-names"
+        options={{ href: null, title: "Bebek İsimleri", tabBarStyle: { display: "none" } }}
       />
       <Tabs.Screen
         name="care-journal"
@@ -163,6 +192,16 @@ function HomeIcon({ color, focused, size }: TabIconProps) {
 
 function BabyIcon({ color, focused, size }: TabIconProps) {
   return <Baby color={resolveIconColor(color, focused)} size={size} strokeWidth={2.4} />;
+}
+
+function PregnancyIcon({ color, focused, size }: TabIconProps) {
+  return (
+    <CalendarHeart
+      color={resolveIconColor(color, focused)}
+      size={size}
+      strokeWidth={2.4}
+    />
+  );
 }
 
 function GalleryIcon({ color, focused, size }: TabIconProps) {

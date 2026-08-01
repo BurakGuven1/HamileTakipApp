@@ -11,7 +11,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   name: isDevelopment ? "Anne+ Dev" : "Anne+",
   slug: "hamileliktakipapp",
   scheme: "hamiletakip",
-  version: "1.0.0",
+  version: "1.0.1",
   icon: "./assets/branding/app-icon.png",
   orientation: "portrait",
   userInterfaceStyle: "light",
