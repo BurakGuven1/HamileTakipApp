@@ -38,6 +38,13 @@ type PushToken = {
   expo_push_token: string;
 };
 
+type FamilyMembershipRow = {
+  owner_id: string;
+  member_id: string;
+  display_name: string;
+  access_scope: "full_family" | "baby_care_only";
+};
+
 const pregnancySupport = [
   "Bugün her şeyi yetiştirmek zorunda değilsin. Kısa bir mola da bakımın bir parçası.",
   "Bedeninin hızına güven; su içmek ve birkaç sakin nefes almak bugün için güzel bir başlangıç olabilir.",
@@ -89,7 +96,9 @@ Deno.serve(async (req) => {
             "id,mother_name,father_name,is_pregnant,due_date,notify_daily_support",
           )
           .eq("notify_daily_support", true),
-        supabase.from("family_members").select("owner_id,member_id"),
+        supabase
+          .from("family_members")
+          .select("owner_id,member_id,display_name,access_scope"),
         supabase
           .from("babies")
           .select("id,parent_id,name,birth_date")
@@ -109,8 +118,16 @@ Deno.serve(async (req) => {
     if (babyResult.error) throw babyResult.error;
     if (articleResult.error) throw articleResult.error;
 
-    const memberships = membershipResult.data ?? [];
+    const memberships = (membershipResult.data ?? []) as FamilyMembershipRow[];
     const memberIds = new Set(memberships.map((item) => item.member_id));
+    const memberNames = new Map(
+      memberships.map((item) => [item.member_id, item.display_name]),
+    );
+    const babyCareOnlyMemberIds = new Set(
+      memberships
+        .filter((item) => item.access_scope === "baby_care_only")
+        .map((item) => item.member_id),
+    );
     const ownerProfiles = ((profileResult.data ?? []) as ProfileRow[])
       .filter((profile) => !memberIds.has(profile.id));
 
@@ -172,9 +189,13 @@ Deno.serve(async (req) => {
           : generalSupport[dayIndex % generalSupport.length];
 
       for (const userId of familyByOwner.get(profile.id) ?? []) {
+        // A caregiver may coordinate explicitly shared pregnancy tasks, but
+        // pregnancy week, maternal articles and wellbeing copy remain private.
+        if (profile.is_pregnant && babyCareOnlyMemberIds.has(userId)) continue;
+
         const recipientName = userId === profile.id
           ? profile.mother_name || "Anne"
-          : profile.father_name || "Baba";
+          : memberNames.get(userId) || profile.father_name || "Aile üyesi";
         const title = article
           ? `${recipientName}, ${week}. hafta rehberin hazır`
           : week

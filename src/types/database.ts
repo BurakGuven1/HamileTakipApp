@@ -124,20 +124,26 @@ export type Database = {
           id: string;
           owner_id: string;
           member_id: string;
-          role: "father";
+          role: "father" | "caregiver";
+          display_name: string;
+          access_scope: "full_family" | "baby_care_only";
           created_at: string;
         };
         Insert: {
           id?: string;
           owner_id: string;
           member_id: string;
-          role?: "father";
+          role?: "father" | "caregiver";
+          display_name?: string;
+          access_scope?: "full_family" | "baby_care_only";
           created_at?: string;
         };
         Update: {
           owner_id?: string;
           member_id?: string;
-          role?: "father";
+          role?: "father" | "caregiver";
+          display_name?: string;
+          access_scope?: "full_family" | "baby_care_only";
         };
         Relationships: [
           {
@@ -153,6 +159,70 @@ export type Database = {
             referencedColumns: ["id"];
           }
         ];
+      };
+      family_code_login_attempts: {
+        Row: {
+          key_hash: string;
+          window_started_at: string;
+          attempt_count: number;
+          blocked_until: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          key_hash: string;
+          window_started_at?: string;
+          attempt_count?: number;
+          blocked_until?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          window_started_at?: string;
+          attempt_count?: number;
+          blocked_until?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      family_feature_credit_ledger: {
+        Row: {
+          id: string;
+          owner_id: string;
+          actor_id: string;
+          feature_key: string;
+          life_stage: "pregnancy" | "postpartum";
+          operation_id: string;
+          state: "reserved" | "committed" | "released";
+          reserved_at: string;
+          committed_at: string | null;
+          released_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          actor_id: string;
+          feature_key: string;
+          life_stage: "pregnancy" | "postpartum";
+          operation_id: string;
+          state?: "reserved" | "committed" | "released";
+          reserved_at?: string;
+          committed_at?: string | null;
+          released_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          actor_id?: string;
+          feature_key?: string;
+          life_stage?: "pregnancy" | "postpartum";
+          state?: "reserved" | "committed" | "released";
+          reserved_at?: string;
+          committed_at?: string | null;
+          released_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
       };
       family_premium_trials: {
         Row: {
@@ -623,9 +693,222 @@ export type Database = {
         Relationships: [];
       };
       care_tasks: {
-        Row: { id: string; baby_id: string; title: string; due_at: string | null; completed_at: string | null; assigned_to_name: string | null; created_by: string; created_at: string };
-        Insert: { id?: string; baby_id: string; title: string; due_at?: string | null; completed_at?: string | null; assigned_to_name?: string | null; created_by?: string; created_at?: string };
-        Update: { title?: string; due_at?: string | null; completed_at?: string | null; assigned_to_name?: string | null };
+        Row: {
+          id: string;
+          profile_id: string;
+          baby_id: string | null;
+          life_stage: "pregnancy" | "postpartum";
+          title: string;
+          preset_key: string | null;
+          notes: string | null;
+          due_at: string | null;
+          completed_at: string | null;
+          completed_by: string | null;
+          assigned_to_name: string | null;
+          created_by: string;
+          client_operation_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          baby_id?: string | null;
+          life_stage?: "pregnancy" | "postpartum";
+          title: string;
+          preset_key?: string | null;
+          notes?: string | null;
+          due_at?: string | null;
+          completed_at?: string | null;
+          completed_by?: string | null;
+          assigned_to_name?: string | null;
+          created_by?: string;
+          client_operation_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          baby_id?: string | null;
+          life_stage?: "pregnancy" | "postpartum";
+          title?: string;
+          preset_key?: string | null;
+          notes?: string | null;
+          due_at?: string | null;
+          completed_at?: string | null;
+          completed_by?: string | null;
+          assigned_to_name?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      care_task_assignments: {
+        Row: {
+          id: string;
+          profile_id: string;
+          task_id: string;
+          user_id: string;
+          role_snapshot: "mother" | "father" | "caregiver";
+          display_name_snapshot: string;
+          alarm_at: string | null;
+          alarm_generation: number;
+          alarm_status: "none" | "scheduled" | "sent" | "snoozed" | "dismissed" | "cancelled";
+          alarm_sent_at: string | null;
+          alarm_dismissed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          task_id: string;
+          user_id: string;
+          role_snapshot: "mother" | "father" | "caregiver";
+          display_name_snapshot: string;
+          alarm_at?: string | null;
+          alarm_generation?: number;
+          alarm_status?: "none" | "scheduled" | "sent" | "snoozed" | "dismissed" | "cancelled";
+          alarm_sent_at?: string | null;
+          alarm_dismissed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          alarm_at?: string | null;
+          alarm_generation?: number;
+          alarm_status?: "none" | "scheduled" | "sent" | "snoozed" | "dismissed" | "cancelled";
+          alarm_sent_at?: string | null;
+          alarm_dismissed_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      pregnancy_support_sessions: {
+        Row: {
+          id: string;
+          profile_id: string;
+          caregiver_id: string;
+          caregiver_name: string;
+          caregiver_role: "mother" | "father" | "caregiver";
+          started_at: string;
+          ended_at: string | null;
+          ended_reason: "handed_over" | "manual" | null;
+          device_id: string;
+          device_label: string | null;
+          client_operation_id: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          caregiver_id: string;
+          caregiver_name: string;
+          caregiver_role: "mother" | "father" | "caregiver";
+          started_at?: string;
+          ended_at?: string | null;
+          ended_reason?: "handed_over" | "manual" | null;
+          device_id: string;
+          device_label?: string | null;
+          client_operation_id: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          ended_at?: string | null;
+          ended_reason?: "handed_over" | "manual" | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      doctor_visit_items: {
+        Row: {
+          id: string;
+          profile_id: string;
+          baby_id: string | null;
+          subject: "pregnancy" | "baby" | "postpartum_mother";
+          item_type: "question" | "symptom" | "medication" | "note";
+          title: string;
+          details: string | null;
+          severity: number | null;
+          started_at: string | null;
+          resolved_at: string | null;
+          answer: string | null;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          baby_id?: string | null;
+          subject: "pregnancy" | "baby" | "postpartum_mother";
+          item_type: "question" | "symptom" | "medication" | "note";
+          title: string;
+          details?: string | null;
+          severity?: number | null;
+          started_at?: string | null;
+          resolved_at?: string | null;
+          answer?: string | null;
+          created_by?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          baby_id?: string | null;
+          subject?: "pregnancy" | "baby" | "postpartum_mother";
+          item_type?: "question" | "symptom" | "medication" | "note";
+          title?: string;
+          details?: string | null;
+          severity?: number | null;
+          started_at?: string | null;
+          resolved_at?: string | null;
+          answer?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      pregnancy_visit_measurements: {
+        Row: {
+          id: string;
+          profile_id: string;
+          measured_at: string;
+          source: "self" | "health_team";
+          systolic_bp: number | null;
+          diastolic_bp: number | null;
+          pulse_bpm: number | null;
+          fundal_height_cm: number | null;
+          fetal_heart_rate_bpm: number | null;
+          notes: string | null;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          measured_at?: string;
+          source?: "self" | "health_team";
+          systolic_bp?: number | null;
+          diastolic_bp?: number | null;
+          pulse_bpm?: number | null;
+          fundal_height_cm?: number | null;
+          fetal_heart_rate_bpm?: number | null;
+          notes?: string | null;
+          created_by?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          measured_at?: string;
+          source?: "self" | "health_team";
+          systolic_bp?: number | null;
+          diastolic_bp?: number | null;
+          pulse_bpm?: number | null;
+          fundal_height_cm?: number | null;
+          fetal_heart_rate_bpm?: number | null;
+          notes?: string | null;
+          updated_at?: string;
+        };
         Relationships: [];
       };
       mother_wellbeing_checkins: {
@@ -801,6 +1084,33 @@ export type Database = {
         Update: {
           taken_at?: string | null;
           caption?: string | null;
+        };
+        Relationships: [];
+      };
+      baby_teeth: {
+        Row: {
+          id: string;
+          baby_id: string;
+          tooth_code: string;
+          erupted_at: string;
+          recorded_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          baby_id: string;
+          tooth_code: string;
+          erupted_at?: string;
+          recorded_by?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          tooth_code?: string;
+          erupted_at?: string;
+          recorded_by?: string;
+          updated_at?: string;
         };
         Relationships: [];
       };
@@ -1303,6 +1613,12 @@ export type Database = {
         };
         Returns: boolean;
       };
+      can_coordinate_profile: {
+        Args: {
+          p_profile_id: string;
+        };
+        Returns: boolean;
+      };
       get_active_profile: {
         Args: Record<PropertyKey, never>;
         Returns: Database["public"]["Tables"]["profiles"]["Row"];
@@ -1329,6 +1645,94 @@ export type Database = {
           family_trial_started_at: string | null;
           family_trial_expires_at: string | null;
         }[];
+      };
+      get_family_feature_access: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
+      consume_family_code_login_attempt: {
+        Args: {
+          p_key_hash: string;
+          p_window_seconds?: number;
+          p_max_attempts?: number;
+          p_block_seconds?: number;
+        };
+        Returns: Json;
+      };
+      reserve_family_feature_credit: {
+        Args: {
+          p_feature_key: string;
+          p_operation_id: string;
+          p_life_stage: "pregnancy" | "postpartum";
+        };
+        Returns: Json;
+      };
+      commit_family_feature_credit: {
+        Args: { p_operation_id: string };
+        Returns: Json;
+      };
+      release_family_feature_credit: {
+        Args: { p_operation_id: string };
+        Returns: Json;
+      };
+      get_family_coordination_context: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
+      create_family_task: {
+        Args: {
+          p_operation_id: string;
+          p_title: string;
+          p_life_stage: "pregnancy" | "postpartum";
+          p_assignee_scope: "mother" | "member" | "both";
+          p_baby_id?: string | null;
+          p_due_at?: string | null;
+          p_alarm_at?: string | null;
+          p_preset_key?: string | null;
+          p_notes?: string | null;
+        };
+        Returns: Json;
+      };
+      list_family_tasks: {
+        Args: {
+          p_life_stage: "pregnancy" | "postpartum";
+          p_baby_id?: string | null;
+          p_include_completed?: boolean;
+        };
+        Returns: Json;
+      };
+      complete_family_task: {
+        Args: { p_task_id: string; p_completed?: boolean };
+        Returns: Json;
+      };
+      snooze_family_task_alarm: {
+        Args: { p_assignment_id: string; p_scheduled_for: string };
+        Returns: Json;
+      };
+      cancel_family_task_alarm: {
+        Args: { p_assignment_id: string };
+        Returns: Json;
+      };
+      take_over_pregnancy_support: {
+        Args: {
+          p_operation_id: string;
+          p_device_id: string;
+          p_device_label?: string | null;
+          p_caregiver_name?: string | null;
+        };
+        Returns: Json;
+      };
+      get_pregnancy_support_snapshot: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
+      get_doctor_visit_snapshot: {
+        Args: {
+          p_subject: "pregnancy" | "baby" | "postpartum_mother";
+          p_baby_id?: string | null;
+          p_days?: number;
+        };
+        Returns: Json;
       };
       has_effective_premium_access: {
         Args: Record<PropertyKey, never>;

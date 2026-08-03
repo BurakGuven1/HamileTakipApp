@@ -13,7 +13,6 @@ import {
   addCareJournalEntry,
   addMedicineCareEntrySafely,
   addCareReminder,
-  addCareTask,
   deleteCareJournalEntry,
   discardCareSyncConflict,
   cancelCareReminder,
@@ -23,7 +22,6 @@ import {
   getCareHandoverSnapshot,
   getRecentMedicineDose,
   getSleepPrediction,
-  listCareTasks,
   listCareJournalActivity,
   listCareJournalEntries,
   listCareJournalEntriesSince,
@@ -36,7 +34,6 @@ import {
   subscribeToCareCoordination,
   subscribeToCareJournalEntries,
   takeOverBabyCare,
-  toggleCareTask,
   undoCareJournalOperation,
   type CareActiveTimer,
   type CareEntryType,
@@ -66,6 +63,14 @@ import { useFeedback } from "@/providers/FeedbackProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
 type MilkInventoryProps = { actorName: string | null; babyId: string };
+type CareJournalSection = "record" | "plan" | "family" | "insights";
+
+const CARE_JOURNAL_SECTIONS: { label: string; section: CareJournalSection }[] = [
+  { label: "Kayıt", section: "record" },
+  { label: "Plan", section: "plan" },
+  { label: "Aile", section: "family" },
+  { label: "Özet", section: "insights" }
+];
 
 const ENTRY_TYPES: { label: string; type: CareEntryType }[] = [
   { label: "Emzirme", type: "breastfeeding" },
@@ -434,13 +439,12 @@ function CareJournalScreenContent() {
             </Card>
 
             <DoctorReportCard
-              days={reportDays}
-              disabled={entriesQuery.isLoading || entriesQuery.isError}
-              error={entriesQuery.isError}
-              loading={entriesQuery.isLoading}
-              onDaysChange={setReportDays}
-              onRetry={() => void entriesQuery.refetch()}
-              onShare={() => void shareEssentialReport()}
+              onOpen={() =>
+                router.push({
+                  pathname: "/doctor-visit",
+                  params: { babyId: selectedBaby.id, subject: "baby" }
+                })
+              }
             />
 
             <View style={{ gap: spacing.md }}>
@@ -543,8 +547,11 @@ function AdvancedCareJournalContent() {
   const queryClient = useQueryClient();
   const appTheme = useAppTheme();
   const { showError, showInfo, showSuccess } = useFeedback();
-  const params = useLocalSearchParams<{ entry?: string }>();
+  const params = useLocalSearchParams<{ entry?: string; section?: string }>();
   const { isPremium: hasRevenueCatPremium } = useSubscriptionStatus();
+  const [activeSection, setActiveSection] = useState<CareJournalSection>(() =>
+    isCareJournalSection(params.section) ? params.section : "record"
+  );
   const [selectedBabyId, setSelectedBabyId] = useState<string>();
   const [entryType, setEntryType] = useState<CareEntryType>("breastfeeding");
   const [amount, setAmount] = useState("");
@@ -568,8 +575,6 @@ function AdvancedCareJournalContent() {
   const [historyLimit, setHistoryLimit] = useState(100);
   const [pumpLeftAmount, setPumpLeftAmount] = useState("");
   const [pumpRightAmount, setPumpRightAmount] = useState("");
-  const [taskTitle, setTaskTitle] = useState("");
-  const [taskAssignee, setTaskAssignee] = useState("");
   const [mood, setMood] = useState(3);
   const [rest, setRest] = useState(3);
   const [selfCare, setSelfCare] = useState("");
@@ -610,14 +615,21 @@ function AdvancedCareJournalContent() {
   const syncStatusQuery = useCareSyncStatus(selectedBaby?.id);
 
   useEffect(() => {
+    if (isCareJournalSection(params.section)) {
+      setActiveSection(params.section);
+    }
+  }, [params.section]);
+
+  useEffect(() => {
     if (
       params.entry &&
       isCareEntryType(params.entry) &&
       (isPremium || isFreeType(params.entry))
     ) {
       setEntryType(params.entry);
+      if (!isCareJournalSection(params.section)) setActiveSection("record");
     }
-  }, [isPremium, params.entry]);
+  }, [isPremium, params.entry, params.section]);
 
   const entriesQuery = useQuery({
     queryKey: ["care-journal", selectedBaby?.id, isPremium, historyLimit],
@@ -628,7 +640,6 @@ function AdvancedCareJournalContent() {
   const reportQuery = useQuery({ queryKey: ["care-journal-report", selectedBaby?.id], queryFn: () => listCareJournalEntriesSince(selectedBaby?.id as string, 30), enabled: Boolean(selectedBaby?.id) });
   const reportEntries = normalizeCareEntries(reportQuery.data);
   const remindersQuery = useQuery({ queryKey: ["care-reminders", selectedBaby?.id], queryFn: () => listCareReminders(selectedBaby?.id as string), enabled: Boolean(selectedBaby?.id) });
-  const tasksQuery = useQuery({ queryKey: ["care-tasks", selectedBaby?.id], queryFn: () => listCareTasks(selectedBaby?.id as string), enabled: Boolean(isPremium && selectedBaby?.id) });
   const sleepPredictionQuery = useQuery({ queryKey: ["sleep-prediction", selectedBaby?.id], queryFn: () => getSleepPrediction(selectedBaby?.id as string), enabled: Boolean(isPremium && selectedBaby?.id) });
   const recentMedicineQuery = useQuery({ queryKey: ["recent-medicine-dose", selectedBaby?.id, medicineLookupName.toLocaleLowerCase("tr-TR")], queryFn: () => getRecentMedicineDose(selectedBaby?.id as string, medicineLookupName), enabled: Boolean(isPremium && selectedBaby?.id && entryType === "medicine" && medicineLookupName.length >= 2), staleTime: 15_000 });
   const handoverQuery = useQuery({ queryKey: ["care-handover", selectedBaby?.id], queryFn: () => getCareHandoverSnapshot(selectedBaby?.id as string), enabled: Boolean(selectedBaby?.id), refetchInterval: 30_000 });
@@ -809,11 +820,6 @@ function AdvancedCareJournalContent() {
     onError: (error) => showError(error, "Kayıt silinemedi")
   });
 
-  const taskMutation = useMutation({ mutationFn: async () => {
-    if (!selectedBaby || !taskTitle.trim()) throw new Error("Görev başlığı gerekli.");
-    return addCareTask({ baby_id: selectedBaby.id, title: taskTitle.trim(), assigned_to_name: taskAssignee.trim() || null });
-  }, onSuccess: async () => { setTaskTitle(""); setTaskAssignee(""); showSuccess("Aile görevi eklendi."); await queryClient.invalidateQueries({ queryKey: ["care-tasks", selectedBaby?.id] }); }, onError: (e) => showError(e, "Görev eklenemedi") });
-  const toggleTaskMutation = useMutation({ mutationFn: toggleCareTask, onSuccess: async () => queryClient.invalidateQueries({ queryKey: ["care-tasks", selectedBaby?.id] }), onError: (e) => showError(e, "Görev güncellenemedi") });
   const checkinMutation = useMutation({ mutationFn: async () => {
     if (!profileQuery.data) throw new Error("Profil bulunamadı.");
     return saveMotherWellbeingCheckin({ profile_id: profileQuery.data.id, mood, rest, self_care_note: selfCare.trim() || null, checkin_date: new Date().toISOString().slice(0, 10) });
@@ -1035,23 +1041,38 @@ function AdvancedCareJournalContent() {
               </View>
             ) : null}
 
+            <CareJournalSectionNav activeSection={activeSection} onChange={setActiveSection} />
             <CareSyncBanner onResolve={() => void openNextSyncConflict()} status={syncStatusQuery.data} />
-            <CareSectionBoundary title="Bugünkü bakım özeti">
-              <TodaySummary entries={todayEntries} babyName={selectedBaby?.name ?? "Bebek"} />
-            </CareSectionBoundary>
 
-            <DoctorReportCard
-              days={trendDays}
-              disabled={reportQuery.isLoading || reportQuery.isError || !selectedBaby}
-              error={reportQuery.isError}
-              loading={reportQuery.isLoading}
-              onDaysChange={setTrendDays}
-              onRetry={() => void reportQuery.refetch()}
-              onShare={() => void shareReport()}
-            />
+            {activeSection === "plan" ? (
+              <CareSectionBoundary title="Bakım alarmları">
+                {remindersQuery.isError ? (
+                  <QueryState
+                    compact
+                    description="Planlı bakım alarmları alınamadı."
+                    onRetry={() => void remindersQuery.refetch()}
+                    retrying={remindersQuery.isFetching}
+                  />
+                ) : <ReminderCard currentUserId={currentUserQuery.data ?? null} entryType={entryType} isPremium={isPremium} reminders={Array.isArray(remindersQuery.data) ? remindersQuery.data : []} reminderTime={reminderTime} onTimeChange={setReminderTime} scheduling={reminderMutation.isPending} cancelling={cancelReminderMutation.isPending} onSchedule={() => reminderMutation.mutate()} onCancel={(reminder) => cancelReminderMutation.mutate(reminder)} />}
+              </CareSectionBoundary>
+            ) : null}
 
-            <CareSectionBoundary title="Canlı aile bakımı">
-              <View style={{ gap: spacing.lg }}>
+            {activeSection === "insights" ? (
+              <DoctorReportCard
+                onOpen={() =>
+                  router.push({
+                    pathname: "/doctor-visit",
+                    params: {
+                      babyId: selectedBaby?.id,
+                      subject: "baby"
+                    }
+                  })
+                }
+              />
+            ) : null}
+
+            {activeSection === "family" ? (
+              <CareSectionBoundary title="Canlı aile vardiyası">
                 {handoverQuery.isError || activityQuery.isError ? (
                   <QueryState
                     compact
@@ -1069,6 +1090,12 @@ function AdvancedCareJournalContent() {
                   snapshot={handoverSnapshot}
                   takingOver={handoverMutation.isPending}
                 />}
+              </CareSectionBoundary>
+            ) : null}
+
+            {activeSection === "plan" ? (
+              <CareSectionBoundary title="Uyku ve sağım">
+                <View style={{ gap: spacing.lg }}>
                 {sleepPredictionQuery.isError ? (
                   <QueryState
                     compact
@@ -1107,10 +1134,11 @@ function AdvancedCareJournalContent() {
                     rightTimer={activePumpRight}
                   />
                 ) : null}
-              </View>
-            </CareSectionBoundary>
+                </View>
+              </CareSectionBoundary>
+            ) : null}
 
-            <Card>
+            {activeSection === "record" ? <Card>
               <View style={{ gap: spacing.lg }}>
                 <View style={{ gap: spacing.xs }}>
                   <Text style={typography.heading2}>Şimdi kaydet</Text>
@@ -1173,26 +1201,21 @@ function AdvancedCareJournalContent() {
                 <TextField label="Not (isteğe bağlı)" maxLength={500} value={notes} onChangeText={setNotes} />
                 <Button disabled={addMutation.isPending} label={addMutation.isPending ? "Kaydediliyor..." : `${entryLabel(entryType)} kaydet`} onPress={() => { setEntrySubmitAttempted(true); addMutation.mutate(false); }} />
               </View>
-            </Card>
+            </Card> : null}
 
-            <CareSectionBoundary title="Bakım alarmları">
-              {remindersQuery.isError ? (
-                <QueryState
-                  compact
-                  description="Planlı bakım alarmları alınamadı."
-                  onRetry={() => void remindersQuery.refetch()}
-                  retrying={remindersQuery.isFetching}
-                />
-              ) : <ReminderCard currentUserId={currentUserQuery.data ?? null} entryType={entryType} isPremium={isPremium} reminders={Array.isArray(remindersQuery.data) ? remindersQuery.data : []} reminderTime={reminderTime} onTimeChange={setReminderTime} scheduling={reminderMutation.isPending} cancelling={cancelReminderMutation.isPending} onSchedule={() => reminderMutation.mutate()} onCancel={(reminder) => cancelReminderMutation.mutate(reminder)} />}
-            </CareSectionBoundary>
+            {activeSection === "record" ? <CareSectionBoundary title="Bugünkü bakım özeti">
+              <TodaySummary entries={todayEntries} babyName={selectedBaby?.name ?? "Bebek"} />
+            </CareSectionBoundary> : null}
 
-            <CareSectionBoundary title="Premium bakım araçları">
+            {activeSection !== "record" ? <CareSectionBoundary
+              title={activeSection === "plan" ? "Süt ve beslenme araçları" : activeSection === "family" ? "Aile desteği" : "Bakım eğilimleri"}
+            >
               {isPremium ? (
                 <View style={{ gap: spacing.lg }}>
-                <InsightsCard entries={reportEntries} days={trendDays} onArchive={() => void exportPermanentArchive()} onDaysChange={setTrendDays} />
-                {selectedBaby && MilkInventoryComponent ? (
+                {activeSection === "insights" ? <InsightsCard entries={reportEntries} days={trendDays} onArchive={() => void exportPermanentArchive()} onDaysChange={setTrendDays} /> : null}
+                {activeSection === "plan" && selectedBaby && MilkInventoryComponent ? (
                   <MilkInventoryComponent actorName={caregiverName || null} babyId={selectedBaby.id} />
-                ) : selectedBaby ? (
+                ) : activeSection === "plan" && selectedBaby ? (
                   <Card>
                     <View style={{ gap: spacing.md }}>
                       <View style={styles.cardTitleRow}>
@@ -1207,8 +1230,22 @@ function AdvancedCareJournalContent() {
                     </View>
                   </Card>
                 ) : null}
-                <Card><View style={{ gap: spacing.md }}><Text style={typography.eyebrow}>Aile vardiyası</Text><Text style={typography.heading2}>Bakım görevleri</Text>{(Array.isArray(tasksQuery.data) ? tasksQuery.data : []).filter((t) => !t.completed_at).map((task) => <Pressable key={task.id} style={styles.taskRow} onPress={() => toggleTaskMutation.mutate(task)}><View style={styles.taskCheck}><Check color={colors.textMuted} size={16} /></View><View style={{ flex: 1 }}><Text style={typography.label}>{task.title}</Text>{task.assigned_to_name ? <Text style={styles.entryMeta}>{task.assigned_to_name}</Text> : null}</View></Pressable>)}<TextField label="Yeni görev" value={taskTitle} onChangeText={setTaskTitle} /><TextField label="Atanan kişi (isteğe bağlı)" value={taskAssignee} onChangeText={setTaskAssignee} /><Button label="Görev ekle" onPress={() => taskMutation.mutate()} /></View></Card>
-                {membershipQuery.isSuccess && !membershipQuery.data ? (
+                {activeSection === "family" ? (
+                  <Card>
+                    <View style={{ gap: spacing.md }}>
+                      <Text style={typography.eyebrow}>İki cihazda ortak</Text>
+                      <Text style={typography.heading2}>Aile görevleri ve alarmlar</Text>
+                      <Text style={typography.body}>
+                        Hazır görevlerden seç veya kendi görevini yaz; anneye, baba/bakıcıya ya da ikinize ata. Zamanlı alarm yalnız görevli kişilerin cihazlarında çalar.
+                      </Text>
+                      <Button
+                        label="Aile görevlerini aç"
+                        onPress={() => router.push("/family-planner")}
+                      />
+                    </View>
+                  </Card>
+                ) : null}
+                {activeSection === "family" && membershipQuery.isSuccess && !membershipQuery.data ? (
                   <Card>
                     <View style={{ gap: spacing.md }}>
                       <Text style={typography.eyebrow}>Anne için</Text>
@@ -1225,9 +1262,9 @@ function AdvancedCareJournalContent() {
                 ) : null}
                 </View>
               ) : <PremiumUpsellCard onPress={() => void openPremium("care_insights")} />}
-            </CareSectionBoundary>
+            </CareSectionBoundary> : null}
 
-            <View style={{ gap: spacing.md }}>
+            {activeSection === "record" ? <View style={{ gap: spacing.md }}>
               <Text style={typography.heading2}>Günlük zaman akışı</Text>
               {undoAction ? <View style={styles.undoBar}><View style={{ flex: 1 }}><Text style={typography.label}>{undoAction.label}</Text><Text style={styles.entryMeta}>15 saniye içinde geri alabilirsin.</Text></View><Button disabled={undoMutation.isPending} label="Geri al" variant="ghost" onPress={() => undoMutation.mutate()} /></View> : null}
               {entriesQuery.isLoading ? <QueryState compact loading description="Kayıtlar yükleniyor…" /> : null}
@@ -1249,7 +1286,7 @@ function AdvancedCareJournalContent() {
               {isPremium && entries.length >= historyLimit ? (
                 <Button label="Daha eski kayıtları göster" variant="secondary" onPress={() => setHistoryLimit((value) => value + 100)} />
               ) : null}
-            </View>
+            </View> : null}
           </>
         )}
       </View>
@@ -1646,31 +1683,22 @@ function ReminderCard({ cancelling, currentUserId, entryType, isPremium, onCance
   );
 }
 
-function DoctorReportCard({ days, disabled, error, loading, onDaysChange, onRetry, onShare }: { days: ReportPeriod; disabled: boolean; error: boolean; loading: boolean; onDaysChange: (days: ReportPeriod) => void; onRetry: () => void; onShare: () => void }) {
+function DoctorReportCard({ onOpen }: { onOpen: () => void }) {
   return (
     <Card>
       <View style={{ gap: spacing.md }}>
         <View style={styles.cardTitleRow}>
           <View style={{ flex: 1, gap: spacing.xs }}>
             <Text style={typography.eyebrow}>Doktor görüşmesine hazırla</Text>
-            <Text style={typography.heading2}>Bakım özetini PDF çıkar</Text>
+            <Text style={typography.heading2}>Doğru görüşme dosyasını hazırla</Text>
           </View>
           <ShieldAlert color={colors.sageGreen} size={25} />
         </View>
-        <Text style={typography.body}>Beslenme, uyku, bez, ilaç ve ateş kayıtlarını seçtiğin dönem için tek belgede paylaş.</Text>
-        <View style={styles.chips}>
-          {([1, 7, 30] as const).map((value) => (
-            <ChoiceChip key={value} active={days === value} label={value === 1 ? "24 saat" : `${value} gün`} onPress={() => onDaysChange(value)} />
-          ))}
-        </View>
-        {error ? (
-          <>
-            <Text style={styles.conflictText}>Kayıtlar şu anda alınamadı. PDF için bağlantıyı yenileyebilirsin.</Text>
-            <Button label="Kayıtları yeniden yükle" variant="secondary" onPress={onRetry} />
-          </>
-        ) : null}
-        <Button disabled={disabled} label={loading ? "Kayıtlar hazırlanıyor..." : "Doktor için PDF oluştur"} onPress={onShare} />
-        <Text style={styles.safetyNote}>PDF yalnızca senin ve ailendeki bakıcıların kaydettiği bilgileri düzenler; tıbbi değerlendirme veya öneri üretmez.</Text>
+        <Text style={typography.body}>
+          Bebek doktoru ve annenin doğum sonrası kontrolü ayrı hazırlanır. Seçtiğin gerçek kayıtların kapsamını önce görür, sonra PDF oluşturursun.
+        </Text>
+        <Button label="Doktor görüşmesine hazırlan" onPress={onOpen} />
+        <Text style={styles.safetyNote}>Özet kullanıcı kayıtlarını düzenler; tıbbi değerlendirme, tanı veya persentil yorumu üretmez.</Text>
       </View>
     </Card>
   );
@@ -1713,6 +1741,48 @@ function EntryCard({ deleting, entry, onDelete }: { deleting: boolean; entry: Ca
         <Pressable accessibilityLabel="Bakım kaydını sil" disabled={deleting} hitSlop={10} onPress={onDelete}><Trash2 color={colors.danger} size={20} /></Pressable>
       </View>
     </Card>
+  );
+}
+
+function CareJournalSectionNav({
+  activeSection,
+  onChange
+}: {
+  activeSection: CareJournalSection;
+  onChange: (section: CareJournalSection) => void;
+}) {
+  const appTheme = useAppTheme();
+
+  return (
+    <View accessibilityLabel="Bakım günlüğü bölümleri" style={styles.sectionNav}>
+      {CARE_JOURNAL_SECTIONS.map((item) => {
+        const active = item.section === activeSection;
+        const iconColor = active ? appTheme.primary : colors.textMuted;
+
+        return (
+          <Pressable
+            accessibilityLabel={`${item.label} bölümünü aç`}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            key={item.section}
+            onPress={() => onChange(item.section)}
+            style={({ pressed }) => [
+              styles.sectionTab,
+              active && styles.sectionTabActive,
+              pressed && styles.sectionTabPressed
+            ]}
+          >
+            {item.section === "record" ? <Clock3 color={iconColor} size={20} /> : null}
+            {item.section === "plan" ? <BellRing color={iconColor} size={20} /> : null}
+            {item.section === "family" ? <Users color={iconColor} size={20} /> : null}
+            {item.section === "insights" ? <Sparkles color={iconColor} size={20} /> : null}
+            <Text style={[styles.sectionTabText, active && { color: appTheme.primary }]}>
+              {item.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 
@@ -1816,6 +1886,7 @@ function sideLabel(value: CareJournalEntry["breast_side"]) { return value === "l
 function diaperLabel(value: CareJournalEntry["diaper_type"]) { return value === "wet" ? "Islak" : value === "dirty" ? "Kaka" : "Islak + kaka"; }
 function temperatureSiteLabel(value: CareJournalEntry["temperature_site"]) { return value === "armpit" ? "Koltuk altı" : value === "forehead" ? "Alın" : value === "ear" ? "Kulak" : value === "oral" ? "Ağız" : value === "rectal" ? "Rektal" : "Diğer"; }
 function isFreeType(type: CareEntryType) { return type === "breastfeeding" || type === "bottle" || type === "sleep" || type === "diaper" || type === "temperature"; }
+function isCareJournalSection(value?: string): value is CareJournalSection { return CARE_JOURNAL_SECTIONS.some((item) => item.section === value); }
 function isCareEntryType(value: string): value is CareEntryType { return ENTRY_TYPES.some((item) => item.type === value); }
 type FeedingMode = "breastfeeding" | "pumping" | "mixed" | "formula";
 function normalizeFeedingMode(value: unknown): FeedingMode {
@@ -1870,6 +1941,11 @@ const styles = StyleSheet.create({
   nightShiftText: { color: "#A7B8B1", fontSize: 13, lineHeight: 18 },
   nightShiftTitle: { color: "#EEF3F1", fontSize: 20, fontWeight: "800" },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  sectionNav: { backgroundColor: colors.surfaceMuted, borderRadius: radii.md, flexDirection: "row", gap: spacing.xs, padding: spacing.xs },
+  sectionTab: { alignItems: "center", borderRadius: radii.sm, flex: 1, gap: spacing.xs, justifyContent: "center", minHeight: 60, paddingHorizontal: spacing.xs, paddingVertical: spacing.sm },
+  sectionTabActive: { backgroundColor: colors.surface },
+  sectionTabPressed: { opacity: 0.72 },
+  sectionTabText: { ...typography.label, color: colors.textMuted, fontSize: 12, lineHeight: 16, textAlign: "center" },
   chip: { borderColor: colors.border, borderRadius: radii.pill, borderWidth: 1, justifyContent: "center", minHeight: 44, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   chipText: { ...typography.label, color: colors.text },
   chipTextActive: { color: colors.onPrimary },

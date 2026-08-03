@@ -2,12 +2,18 @@ import { supabase } from "@/lib/supabase";
 import type { Tables } from "@/types/database";
 
 export type FamilyMember = Tables<"family_members">;
-type Profile = Tables<"profiles">;
 
 type FatherCodeLoginResponse = {
   email?: string;
   password?: string;
-  profile?: Profile;
+  profile?: { id: string };
+};
+
+export type FamilyMemberRole = "father" | "caregiver";
+
+export type FamilyCodeLoginOptions = {
+  displayName: string;
+  role: FamilyMemberRole;
 };
 
 class FatherCodeFunctionError extends Error {
@@ -20,76 +26,39 @@ class FatherCodeFunctionError extends Error {
   }
 }
 
-export async function redeemFamilyReferralCode(code: string) {
-  const { data, error } = await supabase.rpc("redeem_family_referral_code", {
-    p_code: code
-  });
-
-  if (error) {
-    throw error;
-  }
-
-  return data;
-}
-
-export async function signInFatherWithFamilyCode(code: string) {
+export async function signInFatherWithFamilyCode(
+  code: string,
+  options: FamilyCodeLoginOptions = { displayName: "Baba", role: "father" }
+) {
   const cleanCode = code.replace(/\D/g, "");
+  const displayName = options.displayName.trim();
 
   if (cleanCode.length !== 7) {
-    throw new Error("Baba girişi için anneden alınan 7 haneli aile kodu gerekli.");
+    throw new Error("Aile girişi için anneden alınan 7 haneli kod gerekli.");
   }
 
-  const {
-    data: { session }
-  } = await supabase.auth.getSession();
-
-  let createdSessionForRedeem = false;
-
-  if (!session) {
-    const functionProfile = await signInFatherWithFamilyCodeFunction(cleanCode).catch(
-      (error) => {
-        if (isFatherCodeFunctionUnavailable(error)) {
-          return null;
-        }
-
-        throw error;
-      }
-    );
-
-    if (functionProfile) {
-      return functionProfile;
-    }
-
-    const { error } = await supabase.auth.signInAnonymously();
-
-    if (error) {
-      if (/anonymous/i.test(error.message)) {
-        throw new Error(
-          "Baba koduyla giriş için father-code-login Edge Function deploy edilmeli veya Supabase Auth anonim giriş etkin olmalı."
-        );
-      }
-
-      throw error;
-    }
-
-    createdSessionForRedeem = true;
+  if (displayName.length < 2 || displayName.length > 40) {
+    throw new Error("Aile üyesinin adını 2–40 karakter arasında yazmalısın.");
   }
 
-  try {
-    return await redeemFamilyReferralCode(cleanCode);
-  } catch (error) {
-    if (createdSessionForRedeem) {
-      await supabase.auth.signOut().catch(() => undefined);
-    }
-    throw error;
-  }
+  return signInFatherWithFamilyCodeFunction(cleanCode, {
+    ...options,
+    displayName
+  });
 }
 
-async function signInFatherWithFamilyCodeFunction(code: string) {
+async function signInFatherWithFamilyCodeFunction(
+  code: string,
+  options: FamilyCodeLoginOptions
+) {
   const { data, error } = await supabase.functions.invoke<FatherCodeLoginResponse>(
     "father-code-login",
     {
-      body: { code }
+      body: {
+        code,
+        displayName: options.displayName,
+        role: options.role
+      }
     }
   );
 
@@ -98,7 +67,7 @@ async function signInFatherWithFamilyCodeFunction(code: string) {
   }
 
   if (!data?.email || !data.password || !data.profile) {
-    throw new Error("Baba kodu oturumu başlatılamadı.");
+    throw new Error("Aile kodu oturumu başlatılamadı.");
   }
 
   const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -113,17 +82,13 @@ async function signInFatherWithFamilyCodeFunction(code: string) {
   return data.profile;
 }
 
-function isFatherCodeFunctionUnavailable(error: unknown) {
-  return error instanceof FatherCodeFunctionError && error.status === 404;
-}
-
 async function normalizeFatherCodeFunctionError(error: unknown) {
   const context =
     typeof error === "object" && error !== null && "context" in error
       ? (error as { context?: { clone?: () => Response; status?: number } }).context
       : undefined;
   const status = typeof context?.status === "number" ? context.status : undefined;
-  let message = error instanceof Error ? error.message : "Baba kodu oturumu başlatılamadı.";
+  let message = error instanceof Error ? error.message : "Aile kodu oturumu başlatılamadı.";
 
   if (context?.clone) {
     const body = await context

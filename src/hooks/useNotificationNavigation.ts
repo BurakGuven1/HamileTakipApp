@@ -50,6 +50,22 @@ export function useNotificationNavigation() {
           pathname: "/care-journal",
           params: typeof data.entry === "string" ? { entry: data.entry } : undefined
         });
+      } else if (data?.screen === "family-planner") {
+        router.push({
+          pathname: "/family-planner",
+          params:
+            typeof data.task_id === "string"
+              ? { taskId: data.task_id }
+              : undefined
+        });
+      } else if (data?.screen === "doctor-visit") {
+        router.push({
+          pathname: "/doctor-visit",
+          params: {
+            babyId: typeof data.baby_id === "string" ? data.baby_id : undefined,
+            subject: typeof data.subject === "string" ? data.subject : undefined
+          }
+        });
       } else if (data?.screen === "pregnancy-nutrition") {
         router.push("/pregnancy-nutrition");
       }

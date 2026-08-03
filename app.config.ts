@@ -24,11 +24,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier:
       process.env.EXPO_PUBLIC_IOS_BUNDLE_IDENTIFIER ||
       "com.burakguven.hamiletakip",
+    appStoreUrl: process.env.EXPO_PUBLIC_IOS_APP_STORE_URL,
     infoPlist: {
       NSCameraUsageDescription:
         "Bebek fotoğraflarını çekebilmek için kamera erişimi kullanılır.",
       NSPhotoLibraryUsageDescription:
-        "Bebek fotoğraflarını galeriye eklemek için fotoğraf erişimi kullanılır.",
+        "Ana sayfa görselini seçmek ve anı galerisine fotoğraf eklemek için fotoğraf erişimi kullanılır.",
       UIBackgroundModes: ["audio", "remote-notification"]
     },
     config: {
@@ -39,8 +40,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     package:
       process.env.EXPO_PUBLIC_ANDROID_PACKAGE ||
       "com.burakguven.hamiletakip",
+    playStoreUrl: `https://play.google.com/store/apps/details?id=${
+      process.env.EXPO_PUBLIC_ANDROID_PACKAGE || "com.burakguven.hamiletakip"
+    }`,
     adaptiveIcon: {
-      backgroundColor: "#FBF6EF",
+      backgroundColor: "#F9F4F0",
       foregroundImage: "./assets/branding/adaptive-icon.png"
     },
     permissions: [
@@ -70,7 +74,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-splash-screen",
       {
-        backgroundColor: "#FBF6EF",
+        backgroundColor: "#F9F4F0",
         image: "./assets/branding/splash-icon.png",
         imageWidth: 180,
         resizeMode: "contain"

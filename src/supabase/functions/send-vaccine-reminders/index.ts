@@ -25,6 +25,13 @@ type PushToken = {
   expo_push_token: string;
 };
 
+type FamilyMembershipRow = {
+  owner_id: string;
+  member_id: string;
+  display_name: string;
+  access_scope: "full_family" | "baby_care_only";
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return json({ ok: true });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
@@ -111,7 +118,7 @@ Deno.serve(async (req) => {
         .in("id", ownerIds),
       supabase
         .from("family_members")
-        .select("owner_id,member_id")
+        .select("owner_id,member_id,display_name,access_scope")
         .in("owner_id", ownerIds),
     ]);
     if (profileResult.error) throw profileResult.error;
@@ -126,7 +133,14 @@ Deno.serve(async (req) => {
         recipientsByOwner.set(ownerId, new Set([ownerId]));
       }
     }
-    for (const member of memberResult.data ?? []) {
+    const members = (memberResult.data ?? []) as FamilyMembershipRow[];
+    const memberNames = new Map(
+      members.map((member) => [member.member_id, member.display_name]),
+    );
+    const memberScopes = new Map(
+      members.map((member) => [member.member_id, member.access_scope]),
+    );
+    for (const member of members) {
       recipientsByOwner.get(member.owner_id)?.add(member.member_id);
     }
 
@@ -155,9 +169,17 @@ Deno.serve(async (req) => {
       const isToday = group.scheduledDate === today;
       const profile = profiles.get(group.ownerId);
       for (const userId of recipientsByOwner.get(group.ownerId) ?? []) {
+        // Maternal vaccination data is only shared with full-family members.
+        // Baby-care-only caregivers still receive the baby's reminders.
+        if (
+          group.source === "pregnancy" &&
+          userId !== group.ownerId &&
+          memberScopes.get(userId) !== "full_family"
+        ) continue;
+
         const recipientName = userId === group.ownerId
           ? profile?.mother_name || "Anne"
-          : profile?.father_name || "Baba";
+          : memberNames.get(userId) || profile?.father_name || "Aile üyesi";
         for (const token of tokensByUser.get(userId) ?? []) {
           const countText = group.vaccineNames.length > 1
             ? `${group.vaccineNames.length} aşı`

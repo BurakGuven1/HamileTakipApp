@@ -8,16 +8,20 @@ const ARTICLE_IMAGE_BUCKET = "article-images";
 type ArticleRow = Tables<"articles">;
 
 function toArticle(row: ArticleRow): Article {
+  const bundledArticle = fallbackArticles.find((article) => article.slug === row.slug);
+
   return {
     accent: row.accent,
     body: splitBody(row.body),
     category: row.category,
     excerpt: row.excerpt,
+    imageSource: bundledArticle?.imageSource,
     imagePath: row.image_path,
     imageUrl: getArticleImageUrl(row.image_path),
     period: row.period,
     slug: row.slug,
     sortOrder: row.sort_order,
+    sources: bundledArticle?.sources,
     timelineEndWeek: row.timeline_end_week,
     timelineStartWeek: row.timeline_start_week,
     title: row.title
@@ -54,7 +58,15 @@ export async function listArticles() {
     return fallbackArticles;
   }
 
-  return (data ?? []).map(toArticle);
+  const remoteArticles = (data ?? []).map(toArticle);
+  const remoteSlugs = new Set(remoteArticles.map((article) => article.slug));
+  const bundledPostpartumArticles = fallbackArticles.filter(
+    (article) => article.category === "bebek" && !remoteSlugs.has(article.slug)
+  );
+
+  return [...remoteArticles, ...bundledPostpartumArticles].sort(
+    (a, b) => a.sortOrder - b.sortOrder
+  );
 }
 
 export async function getArticleBySlug(slug: string) {
@@ -69,7 +81,9 @@ export async function getArticleBySlug(slug: string) {
     return fallbackArticles.find((article) => article.slug === slug) ?? null;
   }
 
-  return data ? toArticle(data) : null;
+  return data
+    ? toArticle(data)
+    : fallbackArticles.find((article) => article.slug === slug) ?? null;
 }
 
 export async function getFeaturedArticles(limit = 4) {

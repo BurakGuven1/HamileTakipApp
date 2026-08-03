@@ -808,19 +808,6 @@ export default function BabyScreen() {
                       </View>
                       <HeartPulse color={appTheme.primary} size={28} />
                     </View>
-                    <Thread
-                      accessibilityLabel={`${selectedBaby.name} için ${growthRecords.length} büyüme kaydı`}
-                      color={appTheme.primary}
-                      height={64}
-                      markers={growthRecords.slice(-6).map((_, index, records) => ({
-                        kind: "knot" as const,
-                        position: (index + 1) / (records.length + 1)
-                      }))}
-                      mutedColor={appTheme.primarySoft}
-                      progress={1}
-                      semantic="timeline"
-                      variant="chart"
-                    />
                     {latestGrowth ? (
                       <View style={styles.infoGrid}>
                         <InfoPill label="Kilo" value={formatMetric(latestGrowth.weight_kg, "kg")} />

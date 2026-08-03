@@ -26,7 +26,7 @@ export function semanticColor(
 }
 
 export const palette = {
-  creamBackground: "#FBF6EF",
+  creamBackground: "#F9F4F0",
   sageGreen: "#3F6F59",
   dustyRose: "#A94F60",
   nightPlum: "#372F3D",
@@ -35,7 +35,7 @@ export const palette = {
 } as const;
 
 const rgb = {
-  creamBackground: "251, 246, 239",
+  creamBackground: "249, 244, 240",
   sageGreen: "63, 111, 89",
   dustyRose: "169, 79, 96",
   nightPlum: "55, 47, 61",
@@ -60,13 +60,13 @@ export const accentColors = {
 
 export const colors = {
   ...palette,
-  creamBackground: semanticColor("#FBF6EF", "#171419"),
+  creamBackground: semanticColor("#F9F4F0", "#171419"),
   sageGreen: semanticColor("#3F6F59", "#9ED0B5"),
   dustyRose: semanticColor("#A94F60", "#F0A7B4"),
   nightPlum: semanticColor("#372F3D", "#F5EFF7"),
   honeyGold: semanticColor("#8A5B16", "#E9C47E"),
   mistGray: semanticColor("#655F57", "#C8C1CB"),
-  background: semanticColor("#FBF6EF", "#171419", "?android:attr/colorBackground"),
+  background: semanticColor("#F9F4F0", "#171419", "?android:attr/colorBackground"),
   surface: semanticColor("#FFFCF8", "#211D24", "?android:attr/colorBackgroundFloating"),
   surfaceStrong: semanticColor("#FFFCF8", "#29242C", "?android:attr/colorBackgroundFloating"),
   surfaceMuted: semanticColor(

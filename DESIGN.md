@@ -2,7 +2,7 @@
 name: Anne+
 description: Ailenin gebelikten bebekliğe uzanan yaşam kaydını tek bir Yaşayan İplik üzerinde tutan native takip deneyimi.
 colors:
-  cream-background: "#FBF6EF"
+  cream-background: "#F9F4F0"
   sage-green: "#3F6F59"
   dusty-rose: "#A94F60"
   night-plum: "#372F3D"

@@ -17,6 +17,25 @@ type ReminderRow = {
   title: string;
 };
 
+type FamilyTaskAssignmentRow = {
+  alarm_at: string;
+  alarm_generation: number;
+  id: string;
+  profile_id: string;
+  task_id: string;
+  user_id: string;
+};
+
+type FamilyTaskRow = {
+  baby_id: string | null;
+  completed_at: string | null;
+  id: string;
+  life_stage: "pregnancy" | "postpartum";
+  notes: string | null;
+  profile_id: string;
+  title: string;
+};
+
 type IntelligenceRow = {
   id: string;
   baby_id: string;
@@ -62,7 +81,7 @@ Deno.serve(async (req) => {
 
     const now = new Date().toISOString();
 
-    const [reminderResult, intelligenceResult] = await Promise.all([
+    const [reminderResult, intelligenceResult, taskAssignmentResult] = await Promise.all([
       supabase
         .from("care_reminders")
         .select("id,baby_id,created_by,creator_push_token,entry_type,alarm_kind,snooze_minutes,target_user_id,title,body")
@@ -77,6 +96,14 @@ Deno.serve(async (req) => {
         .lte("scheduled_for", now)
         .order("scheduled_for", { ascending: true })
         .limit(100),
+      supabase
+        .from("care_task_assignments")
+        .select("id,profile_id,task_id,user_id,alarm_at,alarm_generation")
+        .in("alarm_status", ["scheduled", "snoozed"])
+        .not("alarm_at", "is", null)
+        .lte("alarm_at", now)
+        .order("alarm_at", { ascending: true })
+        .limit(100),
     ]);
 
     if (reminderResult.error) {
@@ -85,26 +112,50 @@ Deno.serve(async (req) => {
     if (intelligenceResult.error) {
       return json({ error: intelligenceResult.error.message }, 500);
     }
+    if (taskAssignmentResult.error) {
+      return json({ error: taskAssignmentResult.error.message }, 500);
+    }
 
     const reminders = (reminderResult.data ?? []) as ReminderRow[];
     const intelligence = (intelligenceResult.data ?? []) as IntelligenceRow[];
-    if (reminders.length === 0 && intelligence.length === 0) {
+    const taskAssignments = (taskAssignmentResult.data ?? []) as FamilyTaskAssignmentRow[];
+    if (
+      reminders.length === 0 &&
+      intelligence.length === 0 &&
+      taskAssignments.length === 0
+    ) {
       return json({ success: true, sent: 0 });
     }
+
+    const taskIds = [...new Set(taskAssignments.map((item) => item.task_id))];
+    const taskResult = taskIds.length > 0
+      ? await supabase
+        .from("care_tasks")
+        .select("id,profile_id,baby_id,life_stage,title,notes,completed_at")
+        .in("id", taskIds)
+      : { data: [], error: null };
+    if (taskResult.error) return json({ error: taskResult.error.message }, 500);
+    const tasks = (taskResult.data ?? []) as FamilyTaskRow[];
+    const taskById = new Map(tasks.map((task) => [task.id, task]));
 
     const babyIds = [...new Set([
       ...reminders.map((item) => item.baby_id),
       ...intelligence.map((item) => item.baby_id),
     ])];
-    const { data: babyData, error: babyError } = await supabase
-      .from("babies")
-      .select("id,parent_id")
-      .in("id", babyIds);
-    if (babyError) return json({ error: babyError.message }, 500);
+    const babyResult = babyIds.length > 0
+      ? await supabase
+        .from("babies")
+        .select("id,parent_id")
+        .in("id", babyIds)
+      : { data: [], error: null };
+    if (babyResult.error) return json({ error: babyResult.error.message }, 500);
 
-    const babies = (babyData ?? []) as BabyRow[];
+    const babies = (babyResult.data ?? []) as BabyRow[];
     const ownerByBaby = new Map(babies.map((baby) => [baby.id, baby.parent_id]));
-    const ownerIds = [...new Set(babies.map((baby) => baby.parent_id))];
+    const ownerIds = [...new Set([
+      ...babies.map((baby) => baby.parent_id),
+      ...taskAssignments.map((assignment) => assignment.profile_id),
+    ])];
 
     const { data: preferenceData, error: preferenceError } = await supabase
       .from("profiles")
@@ -179,6 +230,7 @@ Deno.serve(async (req) => {
 
       const premiumFamily = premiumRecipientsByOwner.get(member.owner_id) ?? new Set();
       if (
+        premiumOwners.has(member.owner_id) ||
         premiumMembers.has(member.member_id) ||
         activeTrialOwners.has(member.owner_id)
       ) {
@@ -208,6 +260,7 @@ Deno.serve(async (req) => {
     }
 
     const messages: PushCandidate[] = [];
+    const dispatchedTaskAssignmentIds = new Set<string>();
     for (const reminder of reminders) {
       const ownerId = ownerByBaby.get(reminder.baby_id);
       if (ownerId && preferencesByOwner.get(ownerId)?.is_pregnant) continue;
@@ -261,6 +314,49 @@ Deno.serve(async (req) => {
             },
           });
         }
+      }
+    }
+
+    for (const assignment of taskAssignments) {
+      const task = taskById.get(assignment.task_id);
+      if (
+        !task ||
+        task.completed_at !== null ||
+        task.profile_id !== assignment.profile_id
+      ) continue;
+
+      const familyRecipients = allFamilyRecipientsByOwner.get(task.profile_id);
+      if (!familyRecipients?.has(assignment.user_id)) continue;
+
+      const recipientTokens = tokensByUser.get(assignment.user_id) ?? [];
+      if (recipientTokens.length === 0) continue;
+
+      dispatchedTaskAssignmentIds.add(assignment.id);
+      for (const token of recipientTokens) {
+        messages.push({
+          dedupeKey:
+            `family-task:${assignment.id}:g${assignment.alarm_generation}`,
+          kind: "family_task_alarm",
+          tokenId: token.id,
+          token: token.expo_push_token,
+          userId: assignment.user_id,
+          message: {
+            title: task.title,
+            body: "Atandığın aile görevinin zamanı geldi.",
+            sound: "baby_reminder.wav",
+            channelId: "family-tasks",
+            priority: "high",
+            data: {
+              screen: "family-planner",
+              type: "family_task_alarm",
+              assignment_id: assignment.id,
+              task_id: task.id,
+              baby_id: task.baby_id,
+              life_stage: task.life_stage,
+              alarm_generation: assignment.alarm_generation,
+            },
+          },
+        });
       }
     }
 
@@ -341,10 +437,22 @@ Deno.serve(async (req) => {
       }
     }
 
+    if (dispatchedTaskAssignmentIds.size > 0) {
+      const { error: taskUpdateError } = await supabase
+        .from("care_task_assignments")
+        .update({ alarm_status: "sent", alarm_sent_at: now })
+        .in("id", [...dispatchedTaskAssignmentIds])
+        .in("alarm_status", ["scheduled", "snoozed"]);
+      if (taskUpdateError) {
+        return json({ error: taskUpdateError.message }, 500);
+      }
+    }
+
     return json({
       success: true,
       reminders: reminders.length,
       intelligence: intelligence.length,
+      family_tasks: dispatchedTaskAssignmentIds.size,
       sent: delivery.ticketed,
       delivery,
     });

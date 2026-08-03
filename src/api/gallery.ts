@@ -89,6 +89,10 @@ export async function uploadBabyPhoto(input: {
 }
 
 export async function getBabyPhotoSignedUrl(path: string) {
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+
   const { data, error } = await supabase.storage
     .from(bucketName)
     .createSignedUrl(path, 60 * 60);
@@ -98,6 +102,80 @@ export async function getBabyPhotoSignedUrl(path: string) {
   }
 
   return data.signedUrl;
+}
+
+export async function uploadBabyHomePhoto(input: {
+  babyId: string;
+  uri: string;
+  previousPath?: string | null;
+}) {
+  const {
+    data: { user },
+    error: userError
+  } = await supabase.auth.getUser();
+
+  if (userError) throw userError;
+  if (!user) throw new Error("Oturum gerekli.");
+
+  const compressed = await ImageManipulator.manipulateAsync(
+    input.uri,
+    [{ resize: { width: 1600 } }],
+    { compress: 0.82, format: ImageManipulator.SaveFormat.JPEG }
+  );
+  const response = await fetch(compressed.uri);
+  const body = await response.arrayBuffer();
+  const storagePath = `${user.id}/${input.babyId}/home-cover-${Date.now()}.jpg`;
+  const { error: uploadError } = await supabase.storage
+    .from(bucketName)
+    .upload(storagePath, body, {
+      contentType: "image/jpeg",
+      upsert: false
+    });
+
+  if (uploadError) throw uploadError;
+
+  const { data, error } = await supabase
+    .from("babies")
+    .update({ photo_url: storagePath, updated_at: new Date().toISOString() })
+    .eq("id", input.babyId)
+    .select()
+    .single();
+
+  if (error) {
+    await supabase.storage.from(bucketName).remove([storagePath]).catch(() => undefined);
+    throw error;
+  }
+
+  if (input.previousPath && !/^https?:\/\//i.test(input.previousPath)) {
+    await supabase.storage.from(bucketName).remove([input.previousPath]).catch(() => undefined);
+  }
+
+  await trackEvent("home_photo_updated", { baby_id: input.babyId });
+  return data;
+}
+
+export async function removeBabyHomePhoto(input: {
+  babyId: string;
+  storagePath?: string | null;
+}) {
+  const { data, error } = await supabase
+    .from("babies")
+    .update({ photo_url: null, updated_at: new Date().toISOString() })
+    .eq("id", input.babyId)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  if (input.storagePath && !/^https?:\/\//i.test(input.storagePath)) {
+    const { error: storageError } = await supabase.storage
+      .from(bucketName)
+      .remove([input.storagePath]);
+    if (storageError) throw storageError;
+  }
+
+  await trackEvent("home_photo_removed", { baby_id: input.babyId });
+  return data;
 }
 
 export async function updateBabyPhoto(id: string, input: BabyPhotoUpdate) {

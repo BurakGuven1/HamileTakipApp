@@ -171,6 +171,22 @@ export default function TabsLayout() {
         options={{ href: null, title: "Akıllı bakım günlüğü" }}
       />
       <Tabs.Screen
+        name="family-planner"
+        options={{ href: null, title: "Aile görevleri" }}
+      />
+      <Tabs.Screen
+        name="doctor-visit"
+        options={{ href: null, title: "Doktor görüşmesine hazırlan" }}
+      />
+      <Tabs.Screen
+        name="teething"
+        options={{ href: null, title: "Diş takibi" }}
+      />
+      <Tabs.Screen
+        name="solid-food-recipes"
+        options={{ href: null, title: "Ek gıda tarifleri" }}
+      />
+      <Tabs.Screen
         name="birth-preparation"
         options={{ href: null, title: "Doğuma hazırlık" }}
       />
