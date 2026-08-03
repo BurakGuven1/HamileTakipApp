@@ -7,7 +7,10 @@ import { Card } from "@/components/Card";
 import { DatePickerField } from "@/components/DatePickerField";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
-import { signInFatherWithFamilyCode } from "@/api/familyAccess";
+import {
+  signInFatherWithFamilyCode,
+  type FamilyMemberRole
+} from "@/api/familyAccess";
 import { getEffectivePremiumAccess } from "@/api/subscriptions";
 import { openLegalPage, type LegalPage } from "@/config/legal";
 import {
@@ -24,12 +27,13 @@ import {
   type AgeAssuranceContext
 } from "@/lib/ageAssurance";
 import { parseDateOnly } from "@/lib/dates";
+import { registerAndSavePushToken } from "@/lib/notifications";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
 type AuthMode = "sign-in" | "sign-up";
-type AuthAudience = "mother" | "father";
+type AuthAudience = "mother" | "family";
 
 export default function SignInScreen() {
   const { showError, showInfo, showSuccess } = useFeedback();
@@ -38,14 +42,17 @@ export default function SignInScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [familyCode, setFamilyCode] = useState("");
+  const [familyMemberName, setFamilyMemberName] = useState("Baba");
+  const [familyMemberRole, setFamilyMemberRole] =
+    useState<FamilyMemberRole>("father");
   const [birthDate, setBirthDate] = useState("");
   const [loading, setLoading] = useState(false);
   const [confirmedAdult, setConfirmedAdult] = useState(false);
   const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
 
-  const isFather = audience === "father";
-  const isSignUp = !isFather && mode === "sign-up";
+  const isFamilyMember = audience === "family";
+  const isSignUp = !isFamilyMember && mode === "sign-up";
   const adultBirthDateCutoff = getAdultBirthDateCutoff();
   const birthDateError =
     submitAttempted && isSignUp
@@ -100,31 +107,45 @@ export default function SignInScreen() {
       return;
     }
 
-    if (isFather) {
+    if (isFamilyMember) {
       if (cleanFamilyCode.length !== 7) {
         showInfo("Anneden aldığın 7 haneli aile kodunu yaz.", "Aile kodu gerekli");
+        return;
+      }
+      if (familyMemberName.trim().length < 2) {
+        showInfo("Görevlerde görünecek adını yaz.", "Ad gerekli");
         return;
       }
 
       setLoading(true);
       try {
-        await signInFatherWithFamilyCode(cleanFamilyCode);
+        await signInFatherWithFamilyCode(cleanFamilyCode, {
+          displayName: familyMemberName,
+          role: familyMemberRole
+        });
         await recordRequiredAgeAssurance("family_code");
         await recordLegalAcceptance(APP_EULA_VERSION, "auth").catch(
           () => undefined
         );
         const premiumAccess = await getEffectivePremiumAccess().catch(() => null);
-        const successMessage =
-          premiumAccess?.accessSource === "family_trial" &&
-          premiumAccess.familyTrialExpiresAt
-            ? `Aile profiline bağlandın. Premium erişimin ${formatPremiumAccessDate(
-                premiumAccess.familyTrialExpiresAt
-              )} tarihine kadar aktif.`
-            : "Aile profiline bağlandın.";
-        showSuccess(successMessage, "Baba girişi hazır");
+        const premiumExpiry =
+          premiumAccess?.accessSource === "family"
+            ? premiumAccess.accessExpiresAt
+            : premiumAccess?.accessSource === "family_trial"
+              ? premiumAccess.familyTrialExpiresAt
+              : null;
+        const successMessage = premiumExpiry
+          ? `Aile profiline bağlandın. Premium erişimin ${formatPremiumAccessDate(
+              premiumExpiry
+            )} tarihine kadar aktif.`
+          : premiumAccess?.isPremium
+            ? "Aile profiline bağlandın. Premium erişim ve ortak görevler bu cihazda hazır."
+            : "Aile profiline bağlandın. Görevler ve vardiyalar bu cihazla eşitlenecek.";
+        registerAndSavePushToken(true).catch(() => undefined);
+        showSuccess(successMessage, "Aile girişi hazır");
         router.replace("/");
       } catch (error) {
-        showError(error, "Baba girişi yapılamadı");
+        showError(error, "Aile girişi yapılamadı");
       } finally {
         setLoading(false);
       }
@@ -276,15 +297,15 @@ export default function SignInScreen() {
         <View style={styles.hero}>
           <Text style={typography.eyebrow}>Anne+ Takip</Text>
           <Text style={typography.heading1}>
-            {isFather
-              ? "Baba girişi"
+            {isFamilyMember
+              ? "Aileye bağlan"
               : isSignUp
                 ? "Hesabını oluştur"
                 : "Tekrar hoş geldin"}
           </Text>
           <Text style={styles.heroText}>
-            {isFather
-              ? "Aile koduyla bağlandıktan sonra anneyle aynı bebek ve bakım akışını gör."
+            {isFamilyMember
+              ? "Anne tarafından paylaşılan kodla görev, alarm ve vardiya akışına güvenle katıl."
               : "Gebelik haftan, bebek gelişimi, aşı hatırlatmaları ve topluluk desteği tek yerde."}
           </Text>
         </View>
@@ -293,18 +314,18 @@ export default function SignInScreen() {
           <View style={{ gap: spacing.md }}>
             <View style={styles.modeSwitch}>
               <ModeButton
-                active={!isFather}
+                active={!isFamilyMember}
                 label="Anne"
                 onPress={() => selectAudience("mother")}
               />
               <ModeButton
-                active={isFather}
-                label="Baba"
-                onPress={() => selectAudience("father")}
+                active={isFamilyMember}
+                label="Baba / Bakıcı"
+                onPress={() => selectAudience("family")}
               />
             </View>
 
-            {!isFather ? (
+            {!isFamilyMember ? (
               <>
                 <View style={styles.modeSwitch}>
                   <ModeButton
@@ -358,8 +379,37 @@ export default function SignInScreen() {
               </>
             ) : null}
 
-            {isFather ? (
-              <View style={{ gap: spacing.xs }}>
+            {isFamilyMember ? (
+              <View style={{ gap: spacing.md }}>
+                <View style={styles.modeSwitch}>
+                  <ModeButton
+                    active={familyMemberRole === "father"}
+                    label="Baba"
+                    onPress={() => {
+                      setFamilyMemberRole("father");
+                      if (!familyMemberName.trim() || familyMemberName === "Bakıcı") {
+                        setFamilyMemberName("Baba");
+                      }
+                    }}
+                  />
+                  <ModeButton
+                    active={familyMemberRole === "caregiver"}
+                    label="Bakıcı"
+                    onPress={() => {
+                      setFamilyMemberRole("caregiver");
+                      if (!familyMemberName.trim() || familyMemberName === "Baba") {
+                        setFamilyMemberName("Bakıcı");
+                      }
+                    }}
+                  />
+                </View>
+                <TextField
+                  autoCapitalize="words"
+                  label="Görevlerde görünecek ad"
+                  maxLength={40}
+                  value={familyMemberName}
+                  onChangeText={setFamilyMemberName}
+                />
                 <TextField
                   keyboardType="number-pad"
                   label="Aile kodu"
@@ -368,8 +418,9 @@ export default function SignInScreen() {
                   onChangeText={(value) => setFamilyCode(value.replace(/\D/g, ""))}
                 />
                 <Text style={styles.helperText}>
-                  Kayıt oluşturman gerekmez. Kodla bağlandıktan sonra bu cihazda
-                  oturum kalır ve anneyle aynı aile ekranlarını görürsün.
+                  Kodla bağlandıktan sonra bu cihazda oturum kalır. Bakıcı rolü yalnız
+                  bakım, görev ve vardiya alanlarına erişir; annenin özel sağlık kayıtları
+                  paylaşılmaz.
                 </Text>
               </View>
             ) : null}
@@ -495,8 +546,8 @@ export default function SignInScreen() {
               label={
                 loading
                   ? "Bekle…"
-                  : isFather
-                    ? "Baba olarak bağlan"
+                  : isFamilyMember
+                    ? `${familyMemberRole === "father" ? "Baba" : "Bakıcı"} olarak bağlan`
                     : isSignUp
                       ? "Hesap oluştur"
                       : "Giriş yap"
@@ -508,7 +559,7 @@ export default function SignInScreen() {
               <Text style={styles.warning}>Supabase ortam değerleri eksik.</Text>
             ) : null}
 
-            {!isFather ? (
+            {!isFamilyMember ? (
               <Pressable accessibilityRole="button" onPress={resetPassword}>
                 <Text style={styles.linkText}>Şifremi unuttum</Text>
               </Pressable>

@@ -120,6 +120,7 @@ export default function ArticlesScreen() {
                   <View style={styles.articleRow}>
                     <ArticleCover
                       accent={article.accent}
+                      imageSource={article.imageSource}
                       imageUrl={article.imageUrl}
                       period={article.period}
                     />
@@ -142,19 +143,21 @@ export default function ArticlesScreen() {
 
 function ArticleCover({
   accent,
+  imageSource,
   imageUrl,
   period
 }: {
   accent: string;
+  imageSource?: number;
   imageUrl?: string;
   period: string;
 }) {
-  if (imageUrl) {
+  if (imageSource || imageUrl) {
     return (
       <Image
         accessibilityLabel={`${period} makale görseli`}
         contentFit="cover"
-        source={{ uri: imageUrl }}
+        source={imageSource ?? { uri: imageUrl }}
         style={styles.coverImage}
       />
     );

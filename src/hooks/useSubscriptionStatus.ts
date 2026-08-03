@@ -5,12 +5,13 @@ import { getEffectivePremiumAccess } from "@/api/subscriptions";
 import {
   getCustomerInfo,
   getSubscriptionStatusFromCustomerInfo,
-  SUBSCRIPTION_STATUS_QUERY_KEY
+  SUBSCRIPTION_STATUS_QUERY_KEY,
+  type PremiumSubscriptionStatus
 } from "@/lib/revenuecat";
 
 export function useSubscriptionStatus() {
   const queryClient = useQueryClient();
-  const query = useQuery({
+  const query = useQuery<PremiumSubscriptionStatus>({
     queryKey: SUBSCRIPTION_STATUS_QUERY_KEY,
     queryFn: async () => {
       const [customerInfo, effectiveAccess] = await Promise.all([
@@ -37,7 +38,10 @@ export function useSubscriptionStatus() {
   });
 
   useEffect(() => {
-    const expirationDate = query.data?.familyTrialExpirationDate;
+    const expirationDate =
+      query.data?.accessSource === "family"
+        ? query.data.expirationDate
+        : query.data?.familyTrialExpirationDate;
     if (!expirationDate) {
       return;
     }
@@ -53,7 +57,12 @@ export function useSubscriptionStatus() {
     }, Math.min(remainingMs + 250, 2_147_000_000));
 
     return () => clearTimeout(timer);
-  }, [query.data?.familyTrialExpirationDate, queryClient]);
+  }, [
+    query.data?.accessSource,
+    query.data?.expirationDate,
+    query.data?.familyTrialExpirationDate,
+    queryClient
+  ]);
 
   return {
     ...query,

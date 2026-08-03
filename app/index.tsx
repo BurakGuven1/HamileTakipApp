@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { getCurrentProfile } from "@/api/profiles";
+import { getCurrentFamilyMembership } from "@/api/familyAccess";
 import { QueryState } from "@/components/QueryState";
 import { supabase } from "@/lib/supabase";
 import { colors } from "@/theme";
@@ -35,8 +36,16 @@ export default function IndexRoute() {
         return;
       }
 
-      const profile = await getCurrentProfile();
+      const [profile, membership] = await Promise.all([
+        getCurrentProfile(),
+        getCurrentFamilyMembership()
+      ]);
       if (!mounted) return;
+
+      if (membership) {
+        setRoute("/home");
+        return;
+      }
 
       const hasParentNames =
         Boolean(profile?.mother_name?.trim()) &&

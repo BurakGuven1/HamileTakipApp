@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import type { PremiumAccessSource } from "@/lib/revenuecat";
 import type { Tables } from "@/types/database";
 
 export type Subscription = Tables<"subscriptions">;
@@ -10,7 +11,7 @@ export type SubscriptionCacheStatus =
 
 export type EffectivePremiumAccess = {
   accessExpiresAt: string | null;
-  accessSource: "family_trial" | "none" | "own";
+  accessSource: PremiumAccessSource;
   familyTrialExpiresAt: string | null;
   familyTrialStartedAt: string | null;
   isLifetime: boolean;
@@ -62,7 +63,7 @@ export async function getEffectivePremiumAccess(): Promise<EffectivePremiumAcces
 }
 
 function normalizeAccessSource(value: string): EffectivePremiumAccess["accessSource"] {
-  if (value === "own" || value === "family_trial") {
+  if (value === "own" || value === "family" || value === "family_trial") {
     return value;
   }
 

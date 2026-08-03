@@ -93,6 +93,15 @@ export async function ensureNotificationChannels() {
       vibrationPattern: [0, 250, 180, 250],
       lightColor: "#6E8F7C"
     }),
+    Notifications.setNotificationChannelAsync("family-tasks", {
+      name: "Aile görevleri",
+      description:
+        "Sana veya ailenize atanmış zamanlı görev ve vardiya alarmları.",
+      importance: Notifications.AndroidImportance.MAX,
+      sound: "baby_reminder.wav",
+      vibrationPattern: [0, 280, 160, 280, 160, 280],
+      lightColor: "#A94F60"
+    }),
     Notifications.setNotificationChannelAsync("shift-summaries", {
       name: "Gece vardiyası özetleri",
       description: "Vardiya bittiğinde diğer ebeveyne gönderilen otomatik teslim özeti.",

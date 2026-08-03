@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
-import { ArrowLeft, BookOpen } from "lucide-react-native";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { ArrowLeft, BookOpen, ExternalLink, ShieldAlert } from "lucide-react-native";
+import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { getArticleBySlug } from "@/api/articles";
 import { Button } from "@/components/Button";
@@ -95,6 +95,7 @@ export default function ArticleDetailScreen() {
         <View style={styles.hero}>
           <ArticleHeroImage
             accent={article.accent}
+            imageSource={article.imageSource}
             imageUrl={article.imageUrl}
             period={article.period}
           />
@@ -107,13 +108,53 @@ export default function ArticleDetailScreen() {
 
         <Card>
           <View style={styles.body}>
-            {article.body.map((paragraph) => (
-              <Text key={paragraph} style={styles.paragraph}>
-                {paragraph}
-              </Text>
-            ))}
+            {article.body.map((paragraph, index) => {
+              if (paragraph.startsWith("## ")) {
+                return (
+                  <Text key={`${index}-${paragraph}`} style={styles.bodyHeading}>
+                    {paragraph.slice(3)}
+                  </Text>
+                );
+              }
+
+              if (paragraph.startsWith("! ")) {
+                return (
+                  <View key={`${index}-${paragraph}`} style={styles.safetyCallout}>
+                    <ShieldAlert color={colors.danger} size={22} />
+                    <Text style={styles.safetyText}>{paragraph.slice(2)}</Text>
+                  </View>
+                );
+              }
+
+              return (
+                <Text key={`${index}-${paragraph}`} style={styles.paragraph}>
+                  {paragraph}
+                </Text>
+              );
+            })}
           </View>
         </Card>
+
+        {article.sources?.length ? (
+          <View style={styles.sources}>
+            <Text style={typography.heading3}>Hazırlanırken yararlanılan rehberler</Text>
+            <Text style={styles.sourcesIntro}>
+              Sağlık kararların için kendi doktorunun ve takip ekibinin önerileri önceliklidir.
+            </Text>
+            {article.sources.map((source) => (
+              <Pressable
+                accessibilityHint="Resmî kaynağı tarayıcıda açar"
+                accessibilityRole="link"
+                key={source.url}
+                onPress={() => void Linking.openURL(source.url)}
+                style={({ pressed }) => [styles.sourceLink, pressed && styles.sourceLinkPressed]}
+              >
+                <Text style={styles.sourceLinkText}>{source.title}</Text>
+                <ExternalLink color={colors.primary} size={18} />
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
       </View>
     </Screen>
   );
@@ -121,19 +162,21 @@ export default function ArticleDetailScreen() {
 
 function ArticleHeroImage({
   accent,
+  imageSource,
   imageUrl,
   period
 }: {
   accent: string;
+  imageSource?: number;
   imageUrl?: string;
   period: string;
 }) {
-  if (imageUrl) {
+  if (imageSource || imageUrl) {
     return (
       <Image
         accessibilityLabel={`${period} makale görseli`}
         contentFit="cover"
-        source={{ uri: imageUrl }}
+        source={imageSource ?? { uri: imageUrl }}
         style={styles.heroImage}
       />
     );
@@ -212,10 +255,60 @@ const styles = StyleSheet.create({
   body: {
     gap: spacing.md
   },
+  bodyHeading: {
+    ...typography.heading2,
+    color: colors.text,
+    marginTop: spacing.sm
+  },
   paragraph: {
     ...typography.body,
     color: colors.text,
     fontSize: 16,
     lineHeight: 25
+  },
+  safetyCallout: {
+    alignItems: "flex-start",
+    backgroundColor: colors.accentSoft,
+    borderRadius: radii.md,
+    flexDirection: "row",
+    gap: spacing.md,
+    padding: spacing.md
+  },
+  safetyText: {
+    ...typography.body,
+    color: colors.text,
+    flex: 1,
+    fontSize: 15,
+    lineHeight: 23
+  },
+  sources: {
+    gap: spacing.sm,
+    paddingBottom: spacing.md
+  },
+  sourcesIntro: {
+    ...typography.body,
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 21
+  },
+  sourceLink: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    gap: spacing.md,
+    minHeight: 52,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm
+  },
+  sourceLinkPressed: {
+    opacity: 0.72
+  },
+  sourceLinkText: {
+    ...typography.label,
+    color: colors.primary,
+    flex: 1
   }
 });

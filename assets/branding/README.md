@@ -9,7 +9,7 @@ Build almadan önce bu klasöre aşağıdaki PNG dosyalarını koy.
 - Format: PNG
 - Arka plan: opak olmalı, transparan olmasın
 - Köşe: yuvarlatma ekleme; iOS ve Android kendisi maskeler
-- Öneri: krem zemin `#FBF6EF`, logo merkezde, güvenli boşluk en az 120 px
+- Öneri: krem zemin `#F9F4F0`, logo merkezde, güvenli boşluk en az 120 px
 
 ### `adaptive-icon.png`
 - Boyut: `1024x1024 px`
@@ -22,7 +22,7 @@ Build almadan önce bu klasöre aşağıdaki PNG dosyalarını koy.
 - Boyut: `1024x1024 px`
 - Format: PNG
 - Arka plan: transparan olmalı
-- Kullanım: splash ekranında krem `#FBF6EF` zemin üstünde gösterilir
+- Kullanım: splash ekranında krem `#F9F4F0` zemin üstünde gösterilir
 - Öneri: logo ortada, çok büyük olmadan temiz görünmeli
 
 ## Not

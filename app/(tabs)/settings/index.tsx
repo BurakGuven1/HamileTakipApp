@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Clipboard from "expo-clipboard";
 import * as Linking from "expo-linking";
+import * as StoreReview from "expo-store-review";
 import { Link, router } from "expo-router";
-import { ChevronDown, Copy, UserRound } from "lucide-react-native";
-import { useEffect, useRef, useState } from "react";
+import { ChevronDown, ChevronRight, Copy, Mail, Star, UserRound } from "lucide-react-native";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Alert,
+  Platform,
   Pressable,
   StyleSheet,
   Switch,
@@ -22,6 +24,7 @@ import {
   type ProfileUpdate
 } from "@/api/profiles";
 import { listBabies } from "@/api/babies";
+import { getCurrentFamilyMembership } from "@/api/familyAccess";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Screen } from "@/components/Screen";
@@ -100,8 +103,13 @@ export default function SettingsScreen() {
     queryKey: ["babies"],
     queryFn: listBabies
   });
+  const familyMembershipQuery = useQuery({
+    queryKey: ["current-family-membership"],
+    queryFn: getCurrentFamilyMembership
+  });
 
   const profile = profileQuery.data;
+  const familyMembership = familyMembershipQuery.data;
   const hasBaby = Boolean(babiesQuery.data?.length);
   const experienceStage = getExperienceStage(profile, hasBaby);
   const appTheme = accentColor.theme;
@@ -336,6 +344,44 @@ export default function SettingsScreen() {
     }
   }
 
+  async function openStoreReview() {
+    try {
+      const configuredStoreUrl = StoreReview.storeUrl();
+      if (configuredStoreUrl) {
+        const separator = configuredStoreUrl.includes("?") ? "&" : "?";
+        const reviewUrl =
+          Platform.OS === "ios"
+            ? `${configuredStoreUrl}${separator}action=write-review`
+            : `${configuredStoreUrl}${separator}showAllReviews=true`;
+        await Linking.openURL(reviewUrl);
+        return;
+      }
+
+      if (await StoreReview.isAvailableAsync()) {
+        await StoreReview.requestReview();
+        return;
+      }
+
+      showInfo(
+        "Mağaza değerlendirme ekranı bu cihazda kullanılamıyor.",
+        "Değerlendirme açılamadı"
+      );
+    } catch (error) {
+      showError(error, "Mağaza değerlendirmesi açılamadı");
+    }
+  }
+
+  async function openSupportEmail() {
+    try {
+      const url =
+        "mailto:anneplusapp@gmail.com?subject=" +
+        encodeURIComponent("Anne+ destek ve geri bildirim");
+      await Linking.openURL(url);
+    } catch (error) {
+      showError(error, "E-posta uygulaması açılamadı");
+    }
+  }
+
   function openProfileEditor() {
     setForumNickname(profile?.forum_nickname ?? "");
     setMotherName(profile?.mother_name ?? profile?.display_name ?? "");
@@ -384,61 +430,133 @@ export default function SettingsScreen() {
 
         <Card style={[styles.profileCard, { backgroundColor: appTheme.primarySoft }]}>
           <View style={{ gap: spacing.md }}>
-            <View style={{ gap: spacing.xs }}>
-              <View style={styles.profileHeader}>
-                <Text style={typography.heading2}>Forum kimliğin</Text>
-                <UserRound color={appTheme.primary} size={26} />
+            {familyMembershipQuery.isPending || familyMembershipQuery.isError ? (
+              <View style={{ gap: spacing.sm }}>
+                <Text style={typography.heading2}>
+                  {familyMembershipQuery.isError
+                    ? "Aile hesabı doğrulanamadı"
+                    : "Hesap bilgileri hazırlanıyor…"}
+                </Text>
+                <Text style={typography.body}>
+                  {familyMembershipQuery.isError
+                    ? "Profil kapsamını güvenle belirlemek için bağlantını kontrol edip yeniden dene."
+                    : "Rolün ve erişim kapsamın kontrol ediliyor."}
+                </Text>
+                {familyMembershipQuery.isError ? (
+                  <Button
+                    label="Yeniden dene"
+                    variant="ghost"
+                    onPress={() => void familyMembershipQuery.refetch()}
+                  />
+                ) : null}
               </View>
-              <Text style={[styles.profileName, { color: appTheme.primary }]}>
-                {profile?.forum_nickname ?? "Forum takma adı bekleniyor"}
-              </Text>
-              <Text style={typography.body}>
-                Forumda gerçek profilin değil, sadece bu takma ad ve anonim rozetin
-                görünür.
-              </Text>
-            </View>
-            <View style={styles.parentRow}>
-              <ParentNamePill label="Anne" value={profile?.mother_name || "Anne"} />
-              <ParentNamePill label="Baba" value={profile?.father_name || "Baba"} />
-            </View>
-            <View style={styles.statusGrid}>
-              <StatusPill
-                label="Premium"
-                value={
-                  isLoading
-                    ? "Kontrol"
-                    : accessSource === "family_trial"
-                      ? "Aile hakkı"
-                      : isPremium
-                        ? "Aktif"
-                        : "Pasif"
-                }
-              />
-              <StatusPill
-                label="Durum"
-                value={
-                  babiesQuery.isLoading
-                    ? "Kontrol ediliyor"
-                    : babiesQuery.isError
-                      ? "Kontrol edilemedi"
-                      : experienceStageLabels[experienceStage]
-                }
-              />
-              <StatusPill label="Tema" value={appTheme.label} />
-            </View>
-            {accessSource === "family_trial" && familyTrialExpirationDate ? (
-              <Text style={styles.familyPremiumNote}>
-                Aile Premium erişimin {formatPremiumAccessDate(familyTrialExpirationDate)}{" "}
-                tarihine kadar aktif. Sonrasında Premium özelliklere devam etmek için
-                kendi aboneliğini başlatman gerekir.
-              </Text>
-            ) : null}
-            <Button
-              label="Profil bilgilerini düzenle"
-              variant="ghost"
-              disabled={!profile}
-              onPress={openProfileEditor}
-            />
+            ) : familyMembership ? (
+              <>
+                <View style={{ gap: spacing.xs }}>
+                  <View style={styles.profileHeader}>
+                    <Text style={typography.heading2}>Aile hesabın</Text>
+                    <UserRound color={appTheme.primary} size={26} />
+                  </View>
+                  <Text style={[styles.profileName, { color: appTheme.primary }]}>
+                    {familyMembership.display_name}
+                  </Text>
+                  <Text style={typography.body}>
+                    {familyMembership.role === "caregiver"
+                      ? "Bakıcı olarak ortak bebek bakımı, görev ve vardiya alanlarına bağlısın. Annenin özel sağlık kayıtları paylaşılmaz."
+                      : "Baba olarak aile akışına bağlısın. Ortak görevler, alarmlar ve vardiyalar iki cihazda eşitlenir."}
+                  </Text>
+                </View>
+                <View style={styles.statusGrid}>
+                  <StatusPill
+                    label="Rol"
+                    value={familyMembership.role === "caregiver" ? "Bakıcı" : "Baba"}
+                  />
+                  <StatusPill
+                    label="Erişim"
+                    value={
+                      familyMembership.access_scope === "baby_care_only"
+                        ? "Paylaşılan bakım"
+                        : "Aile"
+                    }
+                  />
+                  <StatusPill
+                    label="Premium"
+                    value={
+                      isLoading
+                        ? "Kontrol"
+                        : accessSource === "family"
+                          ? "Aile Premium"
+                          : accessSource === "family_trial"
+                            ? "Aile denemesi"
+                            : isPremium
+                              ? "Aktif"
+                              : "Pasif"
+                    }
+                  />
+                </View>
+                {accessSource === "family" ? (
+                  <Text style={styles.familyPremiumNote}>
+                    Aile sahibinin aktif Premium aboneliği bu hesapla paylaşılıyor.
+                    Abonelik aktif kaldığı sürece Premium özellikleri birlikte
+                    kullanabilirsiniz.
+                  </Text>
+                ) : null}
+                {accessSource === "family_trial" && familyTrialExpirationDate ? (
+                  <Text style={styles.familyPremiumNote}>
+                    Geçici aile Premium erişimin{" "}
+                    {formatPremiumAccessDate(familyTrialExpirationDate)} tarihine kadar
+                    aktif.
+                  </Text>
+                ) : null}
+                <Button
+                  label="Aile görevlerini aç"
+                  onPress={() => router.push("/family-planner")}
+                />
+              </>
+            ) : (
+              <>
+                <View style={{ gap: spacing.xs }}>
+                  <View style={styles.profileHeader}>
+                    <Text style={typography.heading2}>Forum kimliğin</Text>
+                    <UserRound color={appTheme.primary} size={26} />
+                  </View>
+                  <Text style={[styles.profileName, { color: appTheme.primary }]}>
+                    {profile?.forum_nickname ?? "Forum takma adı bekleniyor"}
+                  </Text>
+                  <Text style={typography.body}>
+                    Forumda gerçek profilin değil, sadece bu takma ad ve anonim rozetin
+                    görünür.
+                  </Text>
+                </View>
+                <View style={styles.parentRow}>
+                  <ParentNamePill label="Anne" value={profile?.mother_name || "Anne"} />
+                  <ParentNamePill label="Baba" value={profile?.father_name || "Baba"} />
+                </View>
+                <View style={styles.statusGrid}>
+                  <StatusPill
+                    label="Premium"
+                    value={isLoading ? "Kontrol" : isPremium ? "Aktif" : "Pasif"}
+                  />
+                  <StatusPill
+                    label="Durum"
+                    value={
+                      babiesQuery.isLoading
+                        ? "Kontrol ediliyor"
+                        : babiesQuery.isError
+                          ? "Kontrol edilemedi"
+                          : experienceStageLabels[experienceStage]
+                    }
+                  />
+                  <StatusPill label="Tema" value={appTheme.label} />
+                </View>
+                <Button
+                  label="Profil bilgilerini düzenle"
+                  variant="ghost"
+                  disabled={!profile}
+                  onPress={openProfileEditor}
+                />
+              </>
+            )}
             <Button
               label={signOutMutation.isPending ? "Çıkış yapılıyor..." : "Çıkış yap"}
               variant="secondary"
@@ -467,14 +585,14 @@ export default function SettingsScreen() {
             ]}
           >
             <View style={{ flex: 1, gap: spacing.xs }}>
-              <Text style={typography.heading2}>Baba giriş kodu</Text>
+              <Text style={typography.heading2}>Aile bağlantı kodu</Text>
               <Text style={[styles.familyCode, { color: appTheme.primary }]}>
                 {profile.family_referral_code}
               </Text>
               <Text style={typography.body}>
-                Bu kod yalnızca bir baba hesabına bir kez bağlanabilir. Baba kodla
-                giriş yaptıktan sonra oturumu bu cihazda kalıcı tutulur; kod başka
-                bir hesapta yeniden kullanılamaz.
+                Kodu babayla veya güvendiğin bir bakıcıyla paylaşabilirsin. Kod tek
+                aile üyesine bağlanır; aynı kişi cihazını değiştirdiğinde yeniden
+                giriş yapabilir. Bakıcı annenin özel sağlık kayıtlarını göremez.
               </Text>
             </View>
             <View style={styles.copyBadge}>
@@ -518,6 +636,29 @@ export default function SettingsScreen() {
             }
           />
         </Pressable>
+
+        <Card>
+          <View style={styles.contactSection}>
+            <View style={{ gap: spacing.xs }}>
+              <Text style={typography.heading2}>Anne+ ile paylaş</Text>
+              <Text style={typography.body}>
+                Deneyimini mağazada değerlendirebilir veya bize doğrudan yazabilirsin.
+              </Text>
+            </View>
+            <ProfileActionRow
+              description="App Store veya Play Store’da yıldız ver ve yorumunu paylaş"
+              icon={<Star color={colors.honeyGold} size={23} />}
+              label="Bizi değerlendirin"
+              onPress={() => void openStoreReview()}
+            />
+            <ProfileActionRow
+              description="anneplusapp@gmail.com"
+              icon={<Mail color={appTheme.primary} size={23} />}
+              label="Bize ulaşın"
+              onPress={() => void openSupportEmail()}
+            />
+          </View>
+        </Card>
 
         {showMoreProfileSettings ? (
           <>
@@ -826,27 +967,6 @@ export default function SettingsScreen() {
           </View>
         </Card>
 
-        <Card>
-          <View style={{ gap: spacing.md }}>
-            <Text style={typography.heading2}>Destek ve güvenlik</Text>
-            <Text style={typography.body}>
-              Uygulama, üyelik veya topluluk güvenliğiyle ilgili bir sorunu doğrudan
-              destek ekibine iletebilirsin.
-            </Text>
-            <Button
-              label="Destek ekibine e-posta gönder"
-              variant="secondary"
-              onPress={() => {
-                const url =
-                  "mailto:anneplusapp@gmail.com?subject=" +
-                  encodeURIComponent("Anne+ destek talebi");
-                Linking.openURL(url).catch((error) =>
-                  showError(error, "E-posta uygulaması açılamadı")
-                );
-              }}
-            />
-          </View>
-        </Card>
           </>
         ) : null}
       </View>
@@ -984,6 +1104,34 @@ function ParentNamePill({ label, value }: { label: string; value: string }) {
   );
 }
 
+function ProfileActionRow({
+  description,
+  icon,
+  label,
+  onPress
+}: {
+  description: string;
+  icon: ReactNode;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityHint={description}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [styles.profileActionRow, pressed && styles.profileActionRowPressed]}
+    >
+      <View style={styles.profileActionIcon}>{icon}</View>
+      <View style={styles.profileActionCopy}>
+        <Text style={styles.profileActionLabel}>{label}</Text>
+        <Text style={styles.profileActionDescription}>{description}</Text>
+      </View>
+      <ChevronRight color={colors.textMuted} size={21} />
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     gap: spacing.lg
@@ -997,6 +1145,43 @@ const styles = StyleSheet.create({
   },
   profileCard: {
     backgroundColor: colors.primarySoft
+  },
+  contactSection: {
+    gap: spacing.md
+  },
+  profileActionRow: {
+    alignItems: "center",
+    borderTopColor: colors.border,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    gap: spacing.md,
+    minHeight: 68,
+    paddingTop: spacing.md
+  },
+  profileActionRowPressed: {
+    opacity: 0.72
+  },
+  profileActionIcon: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.md,
+    height: 46,
+    justifyContent: "center",
+    width: 46
+  },
+  profileActionCopy: {
+    flex: 1,
+    gap: 2
+  },
+  profileActionLabel: {
+    ...typography.label,
+    color: colors.text
+  },
+  profileActionDescription: {
+    ...typography.body,
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18
   },
   profileHeader: {
     alignItems: "center",

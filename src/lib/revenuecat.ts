@@ -18,6 +18,12 @@ export type RevenueCatConfigurationIssue =
   | "unsupported_platform"
   | "wrong_platform_api_key";
 
+export type PremiumAccessSource =
+  | "family"
+  | "family_trial"
+  | "none"
+  | "own";
+
 export class RevenueCatConfigurationError extends Error {
   readonly code = "REVENUECAT_CONFIGURATION";
 
@@ -31,7 +37,7 @@ export class RevenueCatConfigurationError extends Error {
 }
 
 export type PremiumSubscriptionStatus = {
-  accessSource: "family_trial" | "none" | "own";
+  accessSource: PremiumAccessSource;
   customerInfo: CustomerInfo | null;
   expirationDate: string | null;
   familyTrialExpirationDate: string | null;

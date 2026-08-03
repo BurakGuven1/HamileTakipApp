@@ -1,12 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
-import { Link, router } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
+import { Link, router, type Href } from "expo-router";
 import {
   Activity,
   Baby,
+  BellRing,
   BookOpen,
   BookOpenCheck,
   CalendarHeart,
+  Camera,
   ChevronRight,
   Clock3,
   Droplets,
@@ -18,13 +21,17 @@ import {
   Milk,
   Moon,
   Salad,
+  Smile,
   Ruler,
   Sparkles,
+  Stethoscope,
   Syringe,
+  Users,
   Wrench
 } from "lucide-react-native";
 import { useEffect, type ReactNode } from "react";
 import {
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -33,11 +40,16 @@ import {
 } from "react-native";
 import { useReducedMotion } from "react-native-reanimated";
 
-import { listBabies } from "@/api/babies";
+import { listBabies, type Baby as BabyRecord } from "@/api/babies";
 import { getCareHandoverSnapshot, getCurrentCareUserId, listCareJournalEntries, subscribeToCareCoordination, takeOverBabyCare, type CareJournalEntry } from "@/api/careJournal";
 import { getCurrentFamilyMembership } from "@/api/familyAccess";
 import { getFeaturedArticlesForExperience } from "@/api/articles";
 import { getCurrentProfile } from "@/api/profiles";
+import {
+  getBabyPhotoSignedUrl,
+  removeBabyHomePhoto,
+  uploadBabyHomePhoto
+} from "@/api/gallery";
 import {
   getNextUpcomingVaccination,
   listVaccinationsForBaby,
@@ -87,6 +99,11 @@ export default function HomeScreen() {
 
   const babies = babiesQuery.data ?? [];
   const firstBaby = babies[0];
+  const homePhotoQuery = useQuery({
+    queryKey: ["baby-home-photo", firstBaby?.id, firstBaby?.photo_url],
+    queryFn: () => getBabyPhotoSignedUrl(firstBaby?.photo_url as string),
+    enabled: Boolean(firstBaby?.id && firstBaby.photo_url)
+  });
   const profile = profileQuery.data;
   const experienceStage = getExperienceStage(profile, Boolean(firstBaby));
   const isMotherhoodMode = experienceStage === "postpartum";
@@ -157,6 +174,76 @@ export default function HomeScreen() {
     },
     onError: (error) => showError(error, "Bakım devralınamadı")
   });
+  const homePhotoMutation = useMutation({
+    mutationFn: (input: { kind: "upload"; uri: string } | { kind: "remove" }) => {
+      if (!firstBaby) throw new Error("Önce bebek profili eklemelisin.");
+      return input.kind === "upload"
+        ? uploadBabyHomePhoto({
+            babyId: firstBaby.id,
+            uri: input.uri,
+            previousPath: firstBaby.photo_url
+          })
+        : removeBabyHomePhoto({
+            babyId: firstBaby.id,
+            storagePath: firstBaby.photo_url
+          });
+    },
+    onSuccess: async (updatedBaby, input) => {
+      queryClient.setQueryData<BabyRecord[]>(["babies"], (current) =>
+        (current ?? []).map((baby) => (baby.id === updatedBaby.id ? updatedBaby : baby))
+      );
+      showInfo(
+        input.kind === "upload"
+          ? "Seçtiğin fotoğraf artık ana sayfanda."
+          : "Ana sayfa görseli varsayılana döndü.",
+        "Fotoğraf güncellendi"
+      );
+      await queryClient.invalidateQueries({ queryKey: ["babies"] });
+    },
+    onError: (error) => showError(error, "Ana sayfa fotoğrafı güncellenemedi")
+  });
+
+  async function chooseHomePhoto() {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      showInfo(
+        "Telefon ayarlarından fotoğraf erişimi verirsen ana sayfana kendi görselini ekleyebilirsin.",
+        "Fotoğraf izni gerekli"
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      aspect: [4, 3],
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.9
+    });
+    if (!result.canceled && result.assets[0]) {
+      homePhotoMutation.mutate({ kind: "upload", uri: result.assets[0].uri });
+    }
+  }
+
+  function openHomePhotoMenu() {
+    if (homePhotoMutation.isPending) return;
+    Alert.alert(
+      "Ana sayfa fotoğrafı",
+      "Bebeğinin fotoğrafını, bir aile anını veya sana iyi gelen başka bir görseli seçebilirsin.",
+      [
+        { text: "Galeriden seç", onPress: () => void chooseHomePhoto() },
+        ...(firstBaby?.photo_url
+          ? [
+              {
+                text: "Varsayılan görsele dön",
+                style: "destructive" as const,
+                onPress: () => homePhotoMutation.mutate({ kind: "remove" as const })
+              }
+            ]
+          : []),
+        { text: "Vazgeç", style: "cancel" }
+      ]
+    );
+  }
   useEffect(() => {
     if (!firstBaby?.id || !isMotherhoodMode) return;
     return subscribeToCareCoordination(firstBaby.id, () => {
@@ -264,14 +351,34 @@ export default function HomeScreen() {
                 {firstBaby ? (
                   <View style={styles.familyVisual}>
                     <Image
-                      accessibilityLabel="Bebeğini sevgiyle kucağında tutan anne illüstrasyonu"
+                      accessibilityLabel={
+                        homePhotoQuery.data
+                          ? "Ana sayfada seçtiğin kişisel fotoğraf"
+                          : "Bebeğini sevgiyle kucağında tutan anne illüstrasyonu"
+                      }
                       accessibilityRole="image"
                       accessible
                       contentFit="cover"
-                      source={motherBabyIllustration}
+                      source={homePhotoQuery.data ? { uri: homePhotoQuery.data } : motherBabyIllustration}
                       style={styles.familyHeroImage}
                       transition={reducedMotion ? 0 : 220}
                     />
+                    <Pressable
+                      accessibilityHint="Galeriden yeni bir fotoğraf seçmeyi veya varsayılan görsele dönmeyi sağlar"
+                      accessibilityLabel="Ana sayfa fotoğrafını değiştir"
+                      accessibilityRole="button"
+                      disabled={homePhotoMutation.isPending}
+                      onPress={openHomePhotoMenu}
+                      style={({ pressed }) => [
+                        styles.photoEditButton,
+                        pressed && styles.photoEditButtonPressed
+                      ]}
+                    >
+                      <Camera color={colors.text} size={17} />
+                      <Text style={styles.photoEditText}>
+                        {homePhotoMutation.isPending ? "Yükleniyor…" : "Fotoğrafı değiştir"}
+                      </Text>
+                    </Pressable>
                     <View style={styles.familyStoryBadge}>
                       <HandHeart color={appTheme.primary} size={17} strokeWidth={2.3} />
                       <Text style={styles.familyStoryBadgeText}>Birlikte büyüyen anlar</Text>
@@ -464,6 +571,20 @@ export default function HomeScreen() {
                       tint={appTheme.primarySoft}
                     />
                     <ShortcutCard
+                      href={{ pathname: "/doctor-visit", params: { subject: "pregnancy" } }}
+                      icon={<Stethoscope color={colors.dustyRose} size={23} />}
+                      subtitle="Soruların, ölçümlerin ve gerçek kayıtların tek özette"
+                      title="Doktora hazırlan"
+                      tint={colors.accentSoft}
+                    />
+                    <ShortcutCard
+                      href="/family-planner"
+                      icon={<Users color={colors.sageGreen} size={23} />}
+                      subtitle="Ortak görev, alarm ve gebelik desteği"
+                      title="Aile görevleri"
+                      tint={colors.primarySoft}
+                    />
+                    <ShortcutCard
                       href="/pregnancy-nutrition"
                       icon={<Salad color={colors.sageGreen} size={23} />}
                       subtitle="Güvenli öneriler ve su takibi"
@@ -496,17 +617,59 @@ export default function HomeScreen() {
                   <>
                     <ShortcutCard
                       featured
-                      href="/care-journal"
+                      href={{ pathname: "/care-journal", params: { section: "record" } }}
                       icon={<CalendarHeart color={appTheme.primary} size={25} />}
-                      subtitle="Uyku, beslenme ve bez takibi"
-                      title="Bakım günlüğü"
+                      subtitle="Beslenme, uyku veya bez kaydını hemen ekle"
+                      title="Şimdi bakım kaydet"
                       tint={appTheme.primarySoft}
+                    />
+                    <ShortcutCard
+                      href={{ pathname: "/care-journal", params: { section: "plan" } }}
+                      icon={<BellRing color={colors.honeyGold} size={23} />}
+                      subtitle="Alarm, uyku tahmini, sağım ve süt stoğu"
+                      title="Bakım planı"
+                      tint={colors.highlightSoft}
+                    />
+                    <ShortcutCard
+                      href={{ pathname: "/care-journal", params: { section: "family" } }}
+                      icon={<Users color={colors.dustyRose} size={23} />}
+                      subtitle="Canlı vardiya, görevler ve anne desteği"
+                      title="Aile vardiyası"
+                      tint={colors.accentSoft}
+                    />
+                    <ShortcutCard
+                      href="/family-planner"
+                      icon={<Users color={colors.sageGreen} size={23} />}
+                      subtitle="Kime, ne zaman: ortak görev ve alarmlar"
+                      title="Aile görevleri"
+                      tint={colors.primarySoft}
+                    />
+                    <ShortcutCard
+                      href={{ pathname: "/doctor-visit", params: { subject: "baby" } }}
+                      icon={<Stethoscope color={colors.dustyRose} size={23} />}
+                      subtitle="Bebek veya anne için ayrı, gerçek veri özeti"
+                      title="Doktora hazırlan"
+                      tint={colors.accentSoft}
                     />
                     <ShortcutCard
                       href="/baby"
                       icon={<Ruler color={colors.sageGreen} size={23} />}
                       subtitle="Ölçümler ve yaklaşan aşılar"
                       title="Büyüme & aşı"
+                      tint={colors.primarySoft}
+                    />
+                    <ShortcutCard
+                      href="/teething"
+                      icon={<Smile color={colors.dustyRose} size={23} />}
+                      subtitle="20 süt dişini ailece işaretle"
+                      title="Diş takibi"
+                      tint={colors.accentSoft}
+                    />
+                    <ShortcutCard
+                      href="/solid-food-recipes"
+                      icon={<Salad color={colors.sageGreen} size={23} />}
+                      subtitle="Yaşa ve dokuya uygun güvenli tarifler"
+                      title="Ek gıda tarifleri"
                       tint={colors.primarySoft}
                     />
                     <ShortcutCard
@@ -519,8 +682,18 @@ export default function HomeScreen() {
                   </>
                 ) : (
                   <>
+                    {membershipQuery.data ? (
+                      <ShortcutCard
+                        featured
+                        href="/family-planner"
+                        icon={<Users color={appTheme.primary} size={25} />}
+                        subtitle="Sana atanan görev, alarm ve vardiya burada"
+                        title="Aile görevleri"
+                        tint={appTheme.primarySoft}
+                      />
+                    ) : null}
                     <ShortcutCard
-                      featured
+                      featured={!membershipQuery.data}
                       href="/settings"
                       icon={<CalendarHeart color={appTheme.primary} size={25} />}
                       subtitle="Hafta ve gününü girerek takibe başla"
@@ -797,11 +970,11 @@ function ArticlePreview({ article }: { article: Article }) {
     <Link href={`/articles/${article.slug}`} asChild>
       <Pressable accessibilityRole="button" style={styles.articlePressable}>
         <View style={styles.articleCard}>
-          {article.imageUrl ? (
+          {article.imageSource || article.imageUrl ? (
             <Image
               accessibilityLabel={`${article.period} makale görseli`}
               contentFit="cover"
-              source={{ uri: article.imageUrl }}
+              source={article.imageSource ?? { uri: article.imageUrl }}
               style={styles.articleImage}
             />
           ) : (
@@ -830,7 +1003,7 @@ function ShortcutCard({
   tint
 }: {
   featured?: boolean;
-  href: "/baby" | "/baby-names" | "/birth-preparation" | "/care-journal" | "/document-insight" | "/forum" | "/gallery" | "/lullaby" | "/pregnancy-exercise" | "/pregnancy-nutrition" | "/pregnancy-tools" | "/settings";
+  href: Href;
   icon: ReactNode;
   premium?: boolean;
   subtitle: string;
@@ -968,7 +1141,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.xs,
     left: spacing.sm,
-    minHeight: 40,
+    minHeight: 48,
     paddingHorizontal: spacing.md,
     position: "absolute"
   },
@@ -977,6 +1150,27 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 13,
     lineHeight: 18
+  },
+  photoEditButton: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceStrong,
+    borderRadius: radii.pill,
+    flexDirection: "row",
+    gap: spacing.xs,
+    minHeight: 40,
+    paddingHorizontal: spacing.md,
+    position: "absolute",
+    right: spacing.sm,
+    top: spacing.sm
+  },
+  photoEditButtonPressed: {
+    opacity: 0.72
+  },
+  photoEditText: {
+    ...typography.label,
+    color: colors.text,
+    fontSize: 12,
+    lineHeight: 17
   },
   sizeVisual: {
     alignItems: "center",

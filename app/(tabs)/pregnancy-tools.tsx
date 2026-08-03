@@ -11,7 +11,9 @@ import {
   Minus,
   Plus,
   Sparkles,
+  Stethoscope,
   Trash2,
+  Users,
   Weight
 } from "lucide-react-native";
 import { useMemo, useState } from "react";
@@ -215,6 +217,40 @@ export default function PregnancyToolsScreen() {
                 contentContainerStyle={styles.featureRail}
                 showsHorizontalScrollIndicator={false}
               >
+            <Card style={[styles.featureCardWide, { backgroundColor: appTheme.accentSoft }]}>
+              <View style={{ gap: spacing.md }}>
+                <View style={styles.cardHeader}>
+                  <View style={{ flex: 1, gap: spacing.xs }}>
+                    <Text style={typography.heading2}>Doktor görüşmesine hazırlan</Text>
+                    <Text numberOfLines={3} style={typography.body}>
+                      Sorularını yaz; kilo, sayaç, aşı ve sağlık ekibinden aldığın ölçümleri gerçek kayıtlarınla özetle.
+                    </Text>
+                  </View>
+                  <Stethoscope color={appTheme.primary} size={30} />
+                </View>
+                <Link href={{ pathname: "/doctor-visit", params: { subject: "pregnancy" } }} asChild>
+                  <Button label="Görüşme dosyasını hazırla" />
+                </Link>
+              </View>
+            </Card>
+
+            <Card style={[styles.featureCard, { backgroundColor: colors.primarySoft }]}>
+              <View style={{ gap: spacing.md }}>
+                <View style={styles.cardHeader}>
+                  <View style={{ flex: 1, gap: spacing.xs }}>
+                    <Text style={typography.heading2}>Aile desteği</Text>
+                    <Text numberOfLines={3} style={typography.body}>
+                      Hazırlık görevini anneye, babaya/bakıcıya ya da ikinize ata; zamanlı alarmı doğru cihaza gönder.
+                    </Text>
+                  </View>
+                  <Users color={appTheme.primary} size={30} />
+                </View>
+                <Link href="/family-planner" asChild>
+                  <Button label="Ortak görevleri aç" variant="secondary" />
+                </Link>
+              </View>
+            </Card>
+
             <Card style={[styles.preparationCard, styles.featureCardWide, { backgroundColor: appTheme.primarySoft }]}>
               <View style={styles.cardHeader}>
                 <View style={{ flex: 1, gap: spacing.xs }}>
