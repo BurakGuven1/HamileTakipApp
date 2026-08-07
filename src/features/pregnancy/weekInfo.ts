@@ -15,7 +15,7 @@ type PregnancyWeekGrowth = Pick<
 
 type PregnancyWeekMilestone = Omit<PregnancyWeekInfo, "emoji">;
 
-const weeklyGrowth: PregnancyWeekGrowth[] = [
+export const PREGNANCY_WEEK_GROWTH: readonly PregnancyWeekGrowth[] = [
   {
     week: 1,
     emoji: "🌙",
@@ -412,8 +412,8 @@ export function getPregnancyWeekInfo(
 
   const clampedWeek = Math.max(1, Math.min(40, Math.round(week)));
   const growth =
-    weeklyGrowth.find((item) => item.week === clampedWeek) ??
-    weeklyGrowth[weeklyGrowth.length - 1]!;
+    PREGNANCY_WEEK_GROWTH.find((item) => item.week === clampedWeek) ??
+    PREGNANCY_WEEK_GROWTH[PREGNANCY_WEEK_GROWTH.length - 1]!;
   const milestone = weekMilestones.reduce((nearest, item) =>
     Math.abs(item.week - clampedWeek) < Math.abs(nearest.week - clampedWeek)
       ? item

@@ -29,7 +29,7 @@ import {
   Users,
   Wrench
 } from "lucide-react-native";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   Alert,
   Pressable,
@@ -59,11 +59,11 @@ import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { MetricCard } from "@/components/MetricCard";
-import { PregnancyJourneyArtwork } from "@/components/PregnancyJourneyArtwork";
 import { QueryState } from "@/components/QueryState";
 import { Reveal } from "@/components/Reveal";
 import { Screen } from "@/components/Screen";
 import { Thread } from "@/components/Thread";
+import { WeeklyBabyDevelopmentCard } from "@/components/WeeklyBabyDevelopmentCard";
 import { syncCareQuickWidget } from "@/features/care-journal/widgetSync";
 import type { Article } from "@/features/articles/articles";
 import { getExperienceStage } from "@/features/life-stage/lifeStage";
@@ -135,6 +135,13 @@ export default function HomeScreen() {
     ? Math.min(1, pregnancyProgress.day / pregnancyProgress.totalDays)
     : 0;
   const weekInfo = getPregnancyWeekInfo(week);
+  const [browsedWeek, setBrowsedWeek] = useState<number | null>(null);
+  const displayedWeek = browsedWeek ?? week ?? 2;
+  const displayedWeekInfo = getPregnancyWeekInfo(displayedWeek);
+
+  useEffect(() => {
+    if (week) setBrowsedWeek(week);
+  }, [week]);
   const featuredArticlesQuery = useQuery({
     queryKey: ["articles", "featured", experienceStage, week],
     queryFn: () =>
@@ -435,18 +442,16 @@ export default function HomeScreen() {
           <Reveal>
             <Card style={[styles.weekCard, { borderColor: appTheme.primary }]}>
               <View style={{ gap: spacing.lg }}>
-                <View style={styles.weekTopRow}>
-                  <View style={styles.weekTopCopy}>
+                <View style={styles.weekTopCopy}>
                   <Text style={[styles.weekNavigatorGreeting, { color: appTheme.primary }]}>
                     İyi günler, {displayName}
                   </Text>
-                    <Text style={styles.weekNavigatorTitle}>{week}. hafta</Text>
-                  </View>
-                  <View style={[styles.weekBadge, { backgroundColor: appTheme.primarySoft }]}>
-                    <Text style={[styles.weekBadgeValue, { color: appTheme.primary }]}>{week}</Text>
-                    <Text style={styles.weekBadgeLabel}>/ 40</Text>
-                  </View>
                 </View>
+
+                <WeeklyBabyDevelopmentCard
+                  initialWeek={week}
+                  onWeekChange={setBrowsedWeek}
+                />
 
                 {pregnancyProgress ? (
                   <View
@@ -487,50 +492,41 @@ export default function HomeScreen() {
                   </View>
                 ) : null}
 
-                <PregnancyJourneyArtwork week={week} />
-
-                <View style={styles.cardHeader}>
-                  <View style={{ flex: 1, gap: spacing.xs }}>
-                    <Text style={typography.eyebrow}>Bu hafta</Text>
-                    <View style={styles.sizeTitleRow}>
-                      <Text style={[typography.heading2, styles.sizeTitle]}>
-                        Bebeğin yaklaşık {weekInfo.size}
-                      </Text>
+                {displayedWeekInfo ? (
+                  <>
+                    <View style={styles.weekStats}>
+                      <MiniStat
+                        backgroundColor={colors.lengthTint}
+                        label="Boy"
+                        value={displayedWeekInfo.lengthCm}
+                      />
+                      <MiniStat
+                        backgroundColor={colors.weightTint}
+                        label="Kilo"
+                        value={displayedWeekInfo.weightG}
+                      />
+                      <MiniStat
+                        backgroundColor={accentColor.tint}
+                        label="Hafta"
+                        value={`${displayedWeek}.`}
+                      />
                     </View>
-                  </View>
-                  <Sparkles color={appTheme.primary} size={28} />
-                </View>
-                <View style={styles.weekStats}>
-                  <MiniStat
-                    backgroundColor={colors.lengthTint}
-                    label="Boy"
-                    value={weekInfo.lengthCm}
-                  />
-                  <MiniStat
-                    backgroundColor={colors.weightTint}
-                    label="Kilo"
-                    value={weekInfo.weightG}
-                  />
-                  <MiniStat
-                    backgroundColor={accentColor.tint}
-                    label="Hafta"
-                    value={`${week}.`}
-                  />
-                </View>
-                <View style={[styles.developmentBox, { backgroundColor: appTheme.primarySoft }]}>
-                  <View style={styles.developmentHeading}>
-                    <View style={[styles.developmentIcon, { backgroundColor: colors.surfaceStrong }]}>
-                      <BookOpen color={appTheme.primary} size={18} strokeWidth={2.2} />
+                    <View style={[styles.developmentBox, { backgroundColor: appTheme.primarySoft }]}>
+                      <View style={styles.developmentHeading}>
+                        <View style={[styles.developmentIcon, { backgroundColor: colors.surfaceStrong }]}>
+                          <BookOpen color={appTheme.primary} size={18} strokeWidth={2.2} />
+                        </View>
+                        <View style={styles.developmentHeadingCopy}>
+                          <Text style={[styles.developmentEyebrow, { color: appTheme.primary }]}>
+                            {displayedWeek}. haftanın notu
+                          </Text>
+                          <Text style={styles.developmentTitle}>{displayedWeekInfo.milestone}</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.developmentText}>{displayedWeekInfo.note}</Text>
                     </View>
-                    <View style={styles.developmentHeadingCopy}>
-                      <Text style={[styles.developmentEyebrow, { color: appTheme.primary }]}>
-                        Haftanın notu
-                      </Text>
-                      <Text style={styles.developmentTitle}>{weekInfo.milestone}</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.developmentText}>{weekInfo.note}</Text>
-                </View>
+                  </>
+                ) : null}
                 <Link href="/pregnancy-timeline" asChild>
                   <Button label="Hafta hafta yol haritasını aç" variant="secondary" />
                 </Link>
@@ -1288,34 +1284,9 @@ const styles = StyleSheet.create({
   weekCard: {
     borderWidth: 1
   },
-  weekTopRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: spacing.md,
-    justifyContent: "space-between"
-  },
   weekTopCopy: {
     flex: 1,
     gap: spacing.xs
-  },
-  weekBadge: {
-    alignItems: "baseline",
-    borderRadius: radii.pill,
-    flexDirection: "row",
-    minWidth: 78,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm
-  },
-  weekBadgeValue: {
-    ...typography.dataStrong,
-    fontSize: 22,
-    lineHeight: 28
-  },
-  weekBadgeLabel: {
-    ...typography.label,
-    color: colors.textMuted,
-    fontSize: 13,
-    lineHeight: 18
   },
   primaryCard: {
     backgroundColor: colors.surface
@@ -1336,54 +1307,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     justifyContent: "space-between"
   },
-  weekNavigator: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: spacing.md
-  },
-  weekNavButton: {
-    alignItems: "center",
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    height: 44,
-    justifyContent: "center",
-    width: 44
-  },
-  weekNavButtonDisabled: {
-    opacity: 0.42
-  },
-  weekNavigatorCopy: {
-    alignItems: "center",
-    flex: 1,
-    gap: spacing.xs
-  },
   weekNavigatorGreeting: {
     ...typography.label,
     textAlign: "center"
-  },
-  weekNavigatorTitle: {
-    ...typography.heading2,
-    color: colors.text,
-    textAlign: "center"
-  },
-  weekNavigatorText: {
-    ...typography.label,
-    color: colors.textMuted,
-    textAlign: "center"
-  },
-  sizeTitleRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: spacing.sm
-  },
-  sizeEmoji: {
-    fontSize: 34,
-    lineHeight: 40
-  },
-  sizeTitle: {
-    flex: 1
   },
   weekStats: {
     flexDirection: "row",

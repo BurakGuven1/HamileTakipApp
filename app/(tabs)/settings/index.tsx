@@ -466,33 +466,35 @@ export default function SettingsScreen() {
                       : "Baba olarak aile akışına bağlısın. Ortak görevler, alarmlar ve vardiyalar iki cihazda eşitlenir."}
                   </Text>
                 </View>
-                <View style={styles.statusGrid}>
-                  <StatusPill
-                    label="Rol"
-                    value={familyMembership.role === "caregiver" ? "Bakıcı" : "Baba"}
-                  />
-                  <StatusPill
-                    label="Erişim"
-                    value={
-                      familyMembership.access_scope === "baby_care_only"
-                        ? "Paylaşılan bakım"
-                        : "Aile"
-                    }
-                  />
-                  <StatusPill
-                    label="Premium"
-                    value={
-                      isLoading
-                        ? "Kontrol"
-                        : accessSource === "family"
-                          ? "Aile Premium"
-                          : accessSource === "family_trial"
-                            ? "Aile denemesi"
-                            : isPremium
-                              ? "Aktif"
-                              : "Pasif"
-                    }
-                  />
+                <View style={[styles.identityDetails, styles.identityDetailsCompact]}>
+                  <View style={styles.statusGrid}>
+                    <ProfileDetail
+                      label="Rol"
+                      value={familyMembership.role === "caregiver" ? "Bakıcı" : "Baba"}
+                    />
+                    <ProfileDetail
+                      label="Erişim"
+                      value={
+                        familyMembership.access_scope === "baby_care_only"
+                          ? "Paylaşılan bakım"
+                          : "Aile"
+                      }
+                    />
+                    <ProfileDetail
+                      label="Premium"
+                      value={
+                        isLoading
+                          ? "Kontrol"
+                          : accessSource === "family"
+                            ? "Aile Premium"
+                            : accessSource === "family_trial"
+                              ? "Aile denemesi"
+                              : isPremium
+                                ? "Aktif"
+                                : "Pasif"
+                      }
+                    />
+                  </View>
                 </View>
                 {accessSource === "family" ? (
                   <Text style={styles.familyPremiumNote}>
@@ -528,26 +530,37 @@ export default function SettingsScreen() {
                     görünür.
                   </Text>
                 </View>
-                <View style={styles.parentRow}>
-                  <ParentNamePill label="Anne" value={profile?.mother_name || "Anne"} />
-                  <ParentNamePill label="Baba" value={profile?.father_name || "Baba"} />
-                </View>
-                <View style={styles.statusGrid}>
-                  <StatusPill
-                    label="Premium"
-                    value={isLoading ? "Kontrol" : isPremium ? "Aktif" : "Pasif"}
-                  />
-                  <StatusPill
-                    label="Durum"
-                    value={
-                      babiesQuery.isLoading
-                        ? "Kontrol ediliyor"
-                        : babiesQuery.isError
-                          ? "Kontrol edilemedi"
-                          : experienceStageLabels[experienceStage]
-                    }
-                  />
-                  <StatusPill label="Tema" value={appTheme.label} />
+                <View style={styles.identityDetails}>
+                  <View style={styles.parentRow}>
+                    <ProfileDetail
+                      prominent
+                      label="Anne"
+                      value={profile?.mother_name || "Anne"}
+                    />
+                    <ProfileDetail
+                      prominent
+                      label="Baba"
+                      value={profile?.father_name || "Baba"}
+                    />
+                  </View>
+                  <View style={styles.identityRule} />
+                  <View style={styles.statusGrid}>
+                    <ProfileDetail
+                      label="Premium"
+                      value={isLoading ? "Kontrol" : isPremium ? "Aktif" : "Pasif"}
+                    />
+                    <ProfileDetail
+                      label="Durum"
+                      value={
+                        babiesQuery.isLoading
+                          ? "Kontrol ediliyor"
+                          : babiesQuery.isError
+                            ? "Kontrol edilemedi"
+                            : experienceStageLabels[experienceStage]
+                      }
+                    />
+                    <ProfileDetail label="Tema" value={appTheme.label} />
+                  </View>
                 </View>
                 <Button
                   label="Profil bilgilerini düzenle"
@@ -1086,20 +1099,19 @@ function PreferenceRow({
   );
 }
 
-function StatusPill({ label, value }: { label: string; value: string }) {
+function ProfileDetail({
+  label,
+  prominent = false,
+  value
+}: {
+  label: string;
+  prominent?: boolean;
+  value: string;
+}) {
   return (
-    <View style={styles.statusPill}>
+    <View style={styles.profileDetail}>
       <Text style={styles.statusLabel}>{label}</Text>
-      <Text style={styles.statusValue}>{value}</Text>
-    </View>
-  );
-}
-
-function ParentNamePill({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.parentNamePill}>
-      <Text style={styles.statusLabel}>{label}</Text>
-      <Text style={styles.parentName}>{value}</Text>
+      <Text style={prominent ? styles.parentName : styles.statusValue}>{value}</Text>
     </View>
   );
 }
@@ -1219,8 +1231,22 @@ const styles = StyleSheet.create({
   },
   statusGrid: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm
+    gap: spacing.lg
+  },
+  identityDetails: {
+    borderBottomColor: colors.border,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: spacing.md,
+    paddingVertical: spacing.md
+  },
+  identityDetailsCompact: {
+    gap: 0
+  },
+  identityRule: {
+    backgroundColor: colors.border,
+    height: StyleSheet.hairlineWidth
   },
   familyPremiumNote: {
     ...typography.body,
@@ -1262,26 +1288,18 @@ const styles = StyleSheet.create({
   },
   parentRow: {
     flexDirection: "row",
-    gap: spacing.sm
-  },
-  parentNamePill: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.pill,
-    flex: 1,
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm
+    gap: spacing.xl
   },
   parentName: {
-    ...typography.label,
-    color: colors.text
+    ...typography.heading3,
+    color: colors.text,
+    fontSize: 18,
+    lineHeight: 24
   },
-  statusPill: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.pill,
+  profileDetail: {
+    flex: 1,
     gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm
+    minWidth: 0
   },
   statusLabel: {
     ...typography.label,
