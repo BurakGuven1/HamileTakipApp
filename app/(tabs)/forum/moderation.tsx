@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { router } from "expo-router";
+import { Redirect, router } from "expo-router";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -49,12 +49,12 @@ export default function ForumModerationScreen() {
   const queueQuery = useQuery({
     queryKey: ["forum-moderation-queue", status],
     queryFn: () => listForumModerationQueue(status),
-    enabled: moderatorQuery.data === true
+    enabled: moderatorQuery.data === true && !moderatorQuery.isFetching
   });
   const suspensionsQuery = useQuery({
     queryKey: ["forum-suspensions"],
     queryFn: listForumSuspensions,
-    enabled: moderatorQuery.data === true
+    enabled: moderatorQuery.data === true && !moderatorQuery.isFetching
   });
 
   const resolveMutation = useMutation({
@@ -87,7 +87,7 @@ export default function ForumModerationScreen() {
     onError: (error) => showError(error, "Forum erişimi açılamadı")
   });
 
-  if (moderatorQuery.isPending) {
+  if (moderatorQuery.isPending || moderatorQuery.isFetching) {
     return (
       <Screen scroll={false}>
         <QueryState loading description="Moderatör yetkisi doğrulanıyor…" shape="forum" />
@@ -95,17 +95,21 @@ export default function ForumModerationScreen() {
     );
   }
 
-  if (moderatorQuery.isError || !moderatorQuery.data) {
+  if (moderatorQuery.isError) {
     return (
       <Screen scroll={false}>
         <QueryState
-          description="Bu alan yalnızca yetkili forum moderatörlerine açıktır."
+          description="Yönetici yetkisi şu anda doğrulanamadı. Bağlantını kontrol edip yeniden dene."
           onRetry={() => void moderatorQuery.refetch()}
           retrying={moderatorQuery.isFetching}
-          title="Moderatör yetkisi gerekli"
+          title="Yetki doğrulanamadı"
         />
       </Screen>
     );
+  }
+
+  if (!moderatorQuery.data) {
+    return <Redirect href="/forum" />;
   }
 
   const queue = queueQuery.data ?? [];
