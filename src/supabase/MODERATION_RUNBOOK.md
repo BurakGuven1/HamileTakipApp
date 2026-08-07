@@ -56,14 +56,13 @@ sonuçlandırılır.
    ```
 
 `remove_and_eject` içeriği kaldırır, hesabın tüm forum içeriklerini gizler ve
-hesabın forum erişimini keser. İşlem yalnızca `forum_moderators` tablosundaki
-yetkili kullanıcı veya `service_role` tarafından çalıştırılabilir.
+hesabın forum erişimini keser. İnsan moderasyonu yalnızca
+`burakguven351999@gmail.com` e-posta adresine sahip doğrulanmış oturum tarafından
+çalıştırılabilir; otomatik içerik tarayıcısı ayrı olarak `service_role` kullanır.
 
-Mevcut `article_admins` kayıtları migration sırasında otomatik olarak forum
-moderatörlüğüne alınır. Yeni bir moderatör eklemek için:
-
-```sql
-insert into public.forum_moderators (user_id) values ('<AUTH_USER_ID>');
-```
+`forum_moderators` tablosu yalnızca audit/provisioning kaydıdır. Bu tabloya başka
+bir kullanıcı eklemek tek başına yetki vermez; rapor kararları, hesap işlemleri ve
+konu sabitleme/kilitleme RPC'leri her çağrıda `auth.users.email` değerini yeniden
+doğrular.
 
 Hiçbir `pending` kayıt `review_due_at` zamanını geçmemelidir.

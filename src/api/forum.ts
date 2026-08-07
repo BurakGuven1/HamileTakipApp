@@ -12,6 +12,7 @@ export type ForumReportAction =
   | "dismiss"
   | "remove_content"
   | "remove_and_eject";
+const FORUM_OWNER_EMAIL = "burakguven351999@gmail.com";
 export type BlockedForumUser = {
   blocked_at: string;
   blocked_user_id: string;
@@ -233,6 +234,19 @@ export async function reportForumContent(report: TablesInsert<"forum_reports">) 
 }
 
 export async function isForumModerator() {
+  const {
+    data: { user },
+    error: userError
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    throw userError;
+  }
+
+  if (user?.email?.trim().toLocaleLowerCase("tr-TR") !== FORUM_OWNER_EMAIL) {
+    return false;
+  }
+
   const { data, error } = await supabase.rpc("is_forum_moderator");
 
   if (error) {

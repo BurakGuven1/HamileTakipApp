@@ -254,6 +254,7 @@ function ForumContent() {
     queryKey: ["forum-moderator"],
     queryFn: isForumModerator
   });
+  const canModerate = moderatorQuery.data === true && !moderatorQuery.isFetching;
 
   const postsQuery = useQuery({
     queryKey: ["forum-posts", surfaceMode, selectedCategoryId, postLimit],
@@ -632,7 +633,7 @@ function ForumContent() {
           </Pressable>
         </View>
 
-        {moderatorQuery.data ? (
+        {canModerate ? (
           <Pressable
             accessibilityHint="Bekleyen raporları ve kullanıcı işlemlerini açar"
             accessibilityRole="button"
@@ -849,7 +850,7 @@ function ForumContent() {
                     ) : null}
                   </View>
 
-                  {moderatorQuery.data && activePost.post_kind === "topic" ? (
+                  {canModerate && activePost.post_kind === "topic" ? (
                     <View style={styles.topicModeratorBar}>
                       <Text style={styles.topicModeratorLabel}>Moderatör konu ayarları</Text>
                       <View style={styles.actionRow}>
@@ -884,7 +885,7 @@ function ForumContent() {
                   <Text style={typography.heading2}>
                     {surfaceMode === "topic" ? "Konuya yanıt ver" : "Sohbete katıl"}
                   </Text>
-                  {activePost.is_locked && !moderatorQuery.data ? (
+                  {activePost.is_locked && !canModerate ? (
                     <View style={styles.lockedNotice}>
                       <LockKeyhole color={colors.textMuted} size={20} />
                       <Text style={styles.lockedNoticeText}>
