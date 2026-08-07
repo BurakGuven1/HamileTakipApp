@@ -5,6 +5,13 @@ import type { Tables, TablesInsert, Views } from "@/types/database";
 export type ForumCategory = Tables<"forum_categories">;
 export type PublicForumPost = Views<"forum_posts_public">;
 export type PublicForumComment = Views<"forum_comments_public">;
+export type ForumModerationQueueItem = Views<"forum_moderation_queue">;
+export type ForumSuspension = Views<"forum_suspensions_admin">;
+export type ForumPostKind = "feed" | "topic";
+export type ForumReportAction =
+  | "dismiss"
+  | "remove_content"
+  | "remove_and_eject";
 export type BlockedForumUser = {
   blocked_at: string;
   blocked_user_id: string;
@@ -39,12 +46,22 @@ export async function listForumCategories() {
   });
 }
 
-export async function listPublicForumPosts(categoryId?: string, limit = 20) {
+export async function listPublicForumPosts(
+  categoryId?: string,
+  limit = 20,
+  postKind: ForumPostKind = "feed"
+) {
   let query = supabase
     .from("forum_posts_public")
     .select("*")
-    .order("created_at", { ascending: false })
+    .eq("post_kind", postKind)
     .limit(limit + 1);
+
+  query = postKind === "topic"
+    ? query
+        .order("is_pinned", { ascending: false })
+        .order("last_activity_at", { ascending: false })
+    : query.order("created_at", { ascending: false });
 
   if (categoryId) {
     query = query.eq("category_id", categoryId);
@@ -201,18 +218,137 @@ export async function reportForumContent(report: TablesInsert<"forum_reports">) 
   if (error) {
     if (error.code === "23505") {
       throw new Error(
-        "Bu içeriği daha önce raporladın. İlk raporun 24 saat içinde incelenecek."
+        "Bu içeriği daha önce raporladın. Mevcut rapor moderasyon kuyruğunda."
       );
     }
     throw error;
   }
 
-  await trackEvent("forum_post_reported", {
+  await trackEvent("forum_content_reported", {
     target_type: report.target_type,
     target_id: report.target_id
   });
 
   return data;
+}
+
+export async function isForumModerator() {
+  const { data, error } = await supabase.rpc("is_forum_moderator");
+
+  if (error) {
+    throw error;
+  }
+
+  return Boolean(data);
+}
+
+export async function listForumModerationQueue(
+  status: ForumModerationQueueItem["status"] = "pending",
+  limit = 50
+) {
+  const { data, error } = await supabase
+    .from("forum_moderation_queue")
+    .select("*")
+    .eq("status", status)
+    .order("review_due_at", { ascending: true })
+    .limit(limit);
+
+  if (error) {
+    throw error;
+  }
+
+  const seenTargets = new Set<string>();
+  return data.filter((report) => {
+    const targetKey = `${report.target_type}:${report.target_id}`;
+    if (seenTargets.has(targetKey)) return false;
+    seenTargets.add(targetKey);
+    return true;
+  });
+}
+
+export async function resolveForumReport(
+  reportId: string,
+  action: ForumReportAction,
+  note?: string
+) {
+  const { error } = await supabase.rpc("resolve_forum_report", {
+    p_action: action,
+    p_note: note?.trim() || null,
+    p_report_id: reportId
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  await trackEvent("forum_report_resolved", {
+    action,
+    report_id: reportId
+  });
+}
+
+export async function moderateForumTopic(
+  postId: string,
+  isPinned: boolean,
+  isLocked: boolean
+) {
+  const { error } = await supabase.rpc("moderate_forum_topic", {
+    p_is_locked: isLocked,
+    p_is_pinned: isPinned,
+    p_post_id: postId
+  });
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function listForumSuspensions() {
+  const { data, error } = await supabase
+    .from("forum_suspensions_admin")
+    .select("*")
+    .order("suspended_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+export async function reinstateForumUser(userId: string) {
+  const { data, error } = await supabase.rpc("reinstate_forum_user", {
+    p_user_id: userId
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return Boolean(data);
+}
+
+export function subscribeToForumConversation(
+  postId: string,
+  onChange: () => void
+) {
+  const channel = supabase
+    .channel(`forum-conversation:${postId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        filter: `post_id=eq.${postId}`,
+        schema: "public",
+        table: "forum_comments"
+      },
+      onChange
+    )
+    .subscribe();
+
+  return () => {
+    void supabase.removeChannel(channel);
+  };
 }
 
 export async function listBlockedForumUsers() {

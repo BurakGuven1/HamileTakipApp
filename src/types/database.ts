@@ -1179,6 +1179,10 @@ export type Database = {
           is_flagged: boolean;
           flagged_reason: string | null;
           is_hidden: boolean;
+          post_kind: "feed" | "topic";
+          is_pinned: boolean;
+          is_locked: boolean;
+          last_activity_at: string;
           created_at: string;
           updated_at: string;
         };
@@ -1192,6 +1196,10 @@ export type Database = {
           is_flagged?: boolean;
           flagged_reason?: string | null;
           is_hidden?: boolean;
+          post_kind?: "feed" | "topic";
+          is_pinned?: boolean;
+          is_locked?: boolean;
+          last_activity_at?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -1202,6 +1210,10 @@ export type Database = {
           is_flagged?: boolean;
           flagged_reason?: string | null;
           is_hidden?: boolean;
+          post_kind?: "feed" | "topic";
+          is_pinned?: boolean;
+          is_locked?: boolean;
+          last_activity_at?: string;
           updated_at?: string;
         };
         Relationships: [];
@@ -1216,7 +1228,9 @@ export type Database = {
           is_flagged: boolean;
           flagged_reason: string | null;
           is_hidden: boolean;
+          parent_comment_id: string | null;
           created_at: string;
+          updated_at: string;
         };
         Insert: {
           id?: string;
@@ -1227,13 +1241,31 @@ export type Database = {
           is_flagged?: boolean;
           flagged_reason?: string | null;
           is_hidden?: boolean;
+          parent_comment_id?: string | null;
           created_at?: string;
+          updated_at?: string;
         };
         Update: {
           content?: string;
           is_flagged?: boolean;
           flagged_reason?: string | null;
           is_hidden?: boolean;
+          parent_comment_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      forum_moderators: {
+        Row: {
+          user_id: string;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          created_at?: string;
+        };
+        Update: {
+          created_at?: string;
         };
         Relationships: [];
       };
@@ -1502,6 +1534,12 @@ export type Database = {
           comment_count: number;
           like_count: number;
           liked_by_current_user: boolean;
+          post_kind: "feed" | "topic";
+          is_pinned: boolean;
+          is_locked: boolean;
+          last_activity_at: string;
+          last_reply_nickname: string | null;
+          authored_by_current_user: boolean;
         };
         Relationships: [];
       };
@@ -1515,6 +1553,43 @@ export type Database = {
           created_at: string;
           like_count: number;
           liked_by_current_user: boolean;
+          parent_comment_id: string | null;
+          updated_at: string;
+          authored_by_current_user: boolean;
+        };
+        Relationships: [];
+      };
+      forum_moderation_queue: {
+        Row: {
+          id: string;
+          target_type: "post" | "comment";
+          target_id: string;
+          reason: string;
+          status: "pending" | "reviewed" | "dismissed";
+          created_at: string;
+          review_due_at: string;
+          reviewed_at: string | null;
+          moderation_action: string | null;
+          reported_author_id: string | null;
+          reporter_nickname: string | null;
+          target_title: string;
+          target_content: string;
+          target_nickname: string;
+          post_kind: "feed" | "topic";
+          target_is_hidden: boolean;
+          pending_report_count: number;
+          reporter_total_reports: number;
+          reporter_dismissed_reports: number;
+        };
+        Relationships: [];
+      };
+      forum_suspensions_admin: {
+        Row: {
+          user_id: string;
+          forum_nickname: string;
+          reason: string;
+          suspended_at: string;
+          suspended_until: string | null;
         };
         Relationships: [];
       };
@@ -1571,6 +1646,32 @@ export type Database = {
           forum_nickname: string;
           blocked_at: string;
         }[];
+      };
+      is_forum_moderator: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
+      resolve_forum_report: {
+        Args: {
+          p_action: "dismiss" | "remove_content" | "remove_and_eject";
+          p_note?: string | null;
+          p_report_id: string;
+        };
+        Returns: undefined;
+      };
+      moderate_forum_topic: {
+        Args: {
+          p_is_locked: boolean;
+          p_is_pinned: boolean;
+          p_post_id: string;
+        };
+        Returns: undefined;
+      };
+      reinstate_forum_user: {
+        Args: {
+          p_user_id: string;
+        };
+        Returns: boolean;
       };
       get_active_vaccine_reminders: {
         Args: {

@@ -3,15 +3,21 @@ import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import {
   ArrowLeft,
+  AtSign,
   Baby,
   CalendarHeart,
+  ChevronRight,
   Flag,
   Heart,
   HeartPulse,
   MessageCircle,
   MessageCircleHeart,
   MessagesSquare,
+  LockKeyhole,
+  Pin,
   Plus,
+  Reply,
+  Settings2,
   ShieldCheck,
   Sparkles,
   UserRound,
@@ -35,11 +41,15 @@ import {
   listForumCategories,
   listPublicForumComments,
   listPublicForumPosts,
+  isForumModerator,
+  moderateForumTopic,
   reportForumContent,
+  subscribeToForumConversation,
   toggleForumCommentLike,
   toggleForumPostLike,
   unblockForumAuthor,
   type BlockedForumUser,
+  type ForumPostKind,
   type PublicForumComment,
   type PublicForumPost
 } from "@/api/forum";
@@ -53,6 +63,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
+import { ForumReportDialog } from "@/features/forum/ForumReportDialog";
 import { openLegalPage } from "@/config/legal";
 import {
   acceptForumAgreement,
@@ -208,14 +219,19 @@ function ForumContent() {
   const { showError, showSuccess } = useFeedback();
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>();
   const [activePostId, setActivePostId] = useState<string>();
+  const [surfaceMode, setSurfaceMode] = useState<ForumPostKind>("feed");
   const [feedMode, setFeedMode] = useState<"feed" | "mine">("feed");
   const [composerOpen, setComposerOpen] = useState(false);
   const [commentComposerOpen, setCommentComposerOpen] = useState(false);
   const [blockedUsers, setBlockedUsers] = useState<BlockedForumUser[]>([]);
   const [optimisticallyBlockedNicknames, setOptimisticallyBlockedNicknames] =
     useState<string[]>([]);
-  const [hiddenPostIds, setHiddenPostIds] = useState<string[]>([]);
-  const [hiddenCommentIds, setHiddenCommentIds] = useState<string[]>([]);
+  const [replyingTo, setReplyingTo] = useState<PublicForumComment>();
+  const [reportTarget, setReportTarget] = useState<{
+    id: string;
+    label: string;
+    type: "post" | "comment";
+  }>();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [commentText, setCommentText] = useState("");
@@ -234,9 +250,15 @@ function ForumContent() {
     queryFn: listForumCategories
   });
 
+  const moderatorQuery = useQuery({
+    queryKey: ["forum-moderator"],
+    queryFn: isForumModerator
+  });
+
   const postsQuery = useQuery({
-    queryKey: ["forum-posts", selectedCategoryId, postLimit],
-    queryFn: () => listPublicForumPosts(selectedCategoryId, postLimit)
+    queryKey: ["forum-posts", surfaceMode, selectedCategoryId, postLimit],
+    queryFn: () =>
+      listPublicForumPosts(selectedCategoryId, postLimit, surfaceMode)
   });
 
   const activePost = useMemo(
@@ -247,11 +269,13 @@ function ForumContent() {
   useEffect(() => {
     setCommentComposerOpen(Boolean(activePostId));
     setCommentText("");
+    setReplyingTo(undefined);
   }, [activePostId]);
 
   useEffect(() => {
     setPostLimit(20);
-  }, [selectedCategoryId]);
+    setActivePostId(undefined);
+  }, [selectedCategoryId, surfaceMode]);
 
   useEffect(() => {
     listBlockedForumUsers().then(setBlockedUsers).catch(() => undefined);
@@ -266,6 +290,16 @@ function ForumContent() {
     queryFn: () => listPublicForumComments(activePostId as string, commentLimit),
     enabled: Boolean(activePostId)
   });
+
+  useEffect(() => {
+    if (!activePostId) return;
+    return subscribeToForumConversation(activePostId, () => {
+      void Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["forum-comments", activePostId] }),
+        queryClient.invalidateQueries({ queryKey: ["forum-posts"] })
+      ]);
+    });
+  }, [activePostId, queryClient]);
 
   useEffect(() => {
     setCommentLimit(30);
@@ -296,7 +330,8 @@ function ForumContent() {
         author_id: profile.id,
         forum_nickname: profile.forum_nickname ?? "Anne",
         title: cleanTitle,
-        content: cleanContent
+        content: cleanContent,
+        post_kind: surfaceMode
       });
     },
     onSuccess: async (post) => {
@@ -309,7 +344,12 @@ function ForumContent() {
         () => undefined
       );
       await queryClient.invalidateQueries({ queryKey: ["forum-posts"] });
-      showSuccess("Paylaşımın topluluk ipliğine eklendi.", "Paylaşıldı");
+      showSuccess(
+        surfaceMode === "topic"
+          ? "Başlığın konu listesine eklendi."
+          : "Paylaşımın topluluk ipliğine eklendi.",
+        surfaceMode === "topic" ? "Başlık açıldı" : "Paylaşıldı"
+      );
     },
     onError: (error) => showError(error, "Gönderi oluşturulamadı")
   });
@@ -331,18 +371,22 @@ function ForumContent() {
         post_id: activePost.id,
         author_id: profile.id,
         forum_nickname: profile.forum_nickname ?? "Anne",
-        content: cleanComment
+        content: cleanComment,
+        parent_comment_id: replyingTo?.id ?? null
       });
     },
     onSuccess: async () => {
       setCommentText("");
-      setCommentComposerOpen(false);
+      setReplyingTo(undefined);
       setCommentSubmitAttempted(false);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["forum-comments", activePostId] }),
         queryClient.invalidateQueries({ queryKey: ["forum-posts"] })
       ]);
-      showSuccess("Yorumun konuşmaya eklendi.", "Paylaşıldı");
+      showSuccess(
+        surfaceMode === "topic" ? "Yanıtın konuya eklendi." : "Yorumun konuşmaya eklendi.",
+        "Paylaşıldı"
+      );
     },
     onError: (error) => showError(error, "Yorum eklenemedi")
   });
@@ -385,44 +429,35 @@ function ForumContent() {
         reason
       });
     },
-    onMutate: (variables) => {
-      if (variables.targetType === "post") {
-        setActivePostId(undefined);
-        setHiddenPostIds((current) =>
-          current.includes(variables.targetId)
-            ? current
-            : [...current, variables.targetId]
-        );
-      } else {
-        setHiddenCommentIds((current) =>
-          current.includes(variables.targetId)
-            ? current
-            : [...current, variables.targetId]
-        );
-      }
-    },
     onSuccess: async () => {
+      setReportTarget(undefined);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["forum-posts"] }),
         queryClient.invalidateQueries({ queryKey: ["forum-comments"] })
       ]);
       showSuccess(
-        "İçerik inceleme süresince akıştan kaldırıldı. Rapor en geç 24 saat içinde incelenecek.",
-        "Raporlandı"
+        "Rapor moderasyon kuyruğuna eklendi. Tek bir rapor içeriği silmez veya otomatik kaldırmaz.",
+        "Rapor alındı"
       );
     },
-    onError: (error, variables) => {
-      if (variables.targetType === "post") {
-        setHiddenPostIds((current) =>
-          current.filter((id) => id !== variables.targetId)
-        );
-      } else {
-        setHiddenCommentIds((current) =>
-          current.filter((id) => id !== variables.targetId)
-        );
-      }
-      showError(error, "Rapor gönderilemedi");
-    }
+    onError: (error) => showError(error, "Rapor gönderilemedi")
+  });
+
+  const topicModerationMutation = useMutation({
+    mutationFn: ({
+      isLocked,
+      isPinned,
+      postId
+    }: {
+      isLocked: boolean;
+      isPinned: boolean;
+      postId: string;
+    }) => moderateForumTopic(postId, isPinned, isLocked),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["forum-posts"] });
+      showSuccess("Konu ayarları güncellendi.");
+    },
+    onError: (error) => showError(error, "Konu ayarları güncellenemedi")
   });
 
   async function blockAuthor(
@@ -479,21 +514,18 @@ function ForumContent() {
   const rawPosts = postsQuery.data ?? [];
   const hasMorePosts = rawPosts.length > postLimit;
   const posts = rawPosts.slice(0, postLimit).filter(
-    (post) =>
-      !blockedNicknames.includes(post.forum_nickname) &&
-      !hiddenPostIds.includes(post.id)
+    (post) => !blockedNicknames.includes(post.forum_nickname)
   );
   const visiblePosts = feedMode === "mine"
-    ? posts.filter((post) => post.forum_nickname === profileQuery.data?.forum_nickname)
+    ? posts.filter((post) => post.authored_by_current_user)
     : posts;
   const categories = categoriesQuery.data ?? [];
   const rawComments = commentsQuery.data ?? [];
   const hasMoreComments = rawComments.length > commentLimit;
   const comments = rawComments.slice(0, commentLimit).filter(
-    (comment) =>
-      !blockedNicknames.includes(comment.forum_nickname) &&
-      !hiddenCommentIds.includes(comment.id)
+    (comment) => !blockedNicknames.includes(comment.forum_nickname)
   );
+  const conversationRows = buildConversationRows(comments);
 
   return (
     <Screen>
@@ -542,7 +574,11 @@ function ForumContent() {
             <View style={[styles.avatar, { backgroundColor: appTheme.theme.primarySoft }]}>
               <UserRound color={appTheme.primary} size={21} />
             </View>
-            <Text style={styles.sharePromptText}>{composerOpen ? "Paylaşmaktan vazgeç" : "Bugün ne paylaşmak istersin?"}</Text>
+            <Text style={styles.sharePromptText}>
+              {composerOpen
+                ? surfaceMode === "topic" ? "Başlık açmaktan vazgeç" : "Paylaşmaktan vazgeç"
+                : surfaceMode === "topic" ? "Yeni bir tartışma başlat" : "Bugün ne paylaşmak istersin?"}
+            </Text>
             <View style={[styles.promptAction, { backgroundColor: appTheme.primary }]}>
               <Plus color={colors.onPrimary} size={20} />
             </View>
@@ -550,9 +586,67 @@ function ForumContent() {
         </View>
 
         <View style={styles.feedTabs} accessibilityRole="tablist">
-          <FeedTab active={feedMode === "feed"} label="Akış" onPress={() => { setFeedMode("feed"); setActivePostId(undefined); }} />
-          <FeedTab active={feedMode === "mine"} label="Paylaşımlarım" onPress={() => { setFeedMode("mine"); setActivePostId(undefined); }} />
+          <FeedTab
+            active={surfaceMode === "feed"}
+            label="Akış"
+            onPress={() => {
+              setSurfaceMode("feed");
+              setComposerOpen(false);
+            }}
+          />
+          <FeedTab
+            active={surfaceMode === "topic"}
+            label="Konular"
+            onPress={() => {
+              setSurfaceMode("topic");
+              setComposerOpen(false);
+            }}
+          />
         </View>
+
+        <View style={styles.filterRow}>
+          <View style={styles.filterCopy}>
+            <Text style={styles.filterTitle}>
+              {surfaceMode === "topic" ? "Başlıklar altında derinleş" : "Gündelik akışta yanında ol"}
+            </Text>
+            <Text style={styles.filterHint}>
+              {surfaceMode === "topic"
+                ? "Son yanıt alan konular üste gelir"
+                : "En yeni paylaşımlar önce görünür"}
+            </Text>
+          </View>
+          <Pressable
+            accessibilityLabel={feedMode === "mine" ? "Tüm içerikleri göster" : "Yalnız paylaşımlarımı göster"}
+            accessibilityRole="button"
+            accessibilityState={{ selected: feedMode === "mine" }}
+            onPress={() => setFeedMode((current) => current === "mine" ? "feed" : "mine")}
+            style={[
+              styles.mineFilter,
+              feedMode === "mine" && { backgroundColor: appTheme.primary }
+            ]}
+          >
+            <UserRound color={feedMode === "mine" ? colors.onPrimary : appTheme.primary} size={16} />
+            <Text style={[styles.mineFilterText, feedMode === "mine" && { color: colors.onPrimary }]}>
+              Benimkiler
+            </Text>
+          </Pressable>
+        </View>
+
+        {moderatorQuery.data ? (
+          <Pressable
+            accessibilityHint="Bekleyen raporları ve kullanıcı işlemlerini açar"
+            accessibilityRole="button"
+            onPress={() => router.push("/forum/moderation")}
+            style={({ pressed }) => [styles.moderationLink, pressed && styles.pressed]}
+          >
+            <Settings2 color={appTheme.primary} size={20} />
+            <View style={styles.moderationLinkCopy}>
+              <Text style={styles.moderationLinkTitle}>Moderasyon merkezi</Text>
+              <Text style={styles.moderationLinkText}>Rapor kuyruğu ve hesap işlemleri</Text>
+            </View>
+            <ChevronRight color={colors.textMuted} size={20} />
+          </Pressable>
+        ) : null}
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
           <Chip
@@ -592,7 +686,14 @@ function ForumContent() {
         {composerOpen ? (
           <Card style={styles.composer}>
             <View style={{ gap: spacing.md }}>
-              <Text style={typography.heading2}>Deneyimini paylaş</Text>
+              <Text style={typography.heading2}>
+                {surfaceMode === "topic" ? "Yeni bir başlık aç" : "Deneyimini paylaş"}
+              </Text>
+              <Text style={styles.composerHint}>
+                {surfaceMode === "topic"
+                  ? "Başlığı tek bir soruya veya tartışmaya odakla; yanıtlar aynı konuşma altında toplansın."
+                  : "Kısa bir soru, deneyim veya destek notu paylaş."}
+              </Text>
               <TextField
                 error={
                   postSubmitAttempted && title.trim().length < 4
@@ -602,7 +703,12 @@ function ForumContent() {
                 label="Başlık"
                 value={title}
                 onChangeText={setTitle}
-                placeholder="Örn. 12. haftada mide bulantısı"
+                maxLength={120}
+                placeholder={
+                  surfaceMode === "topic"
+                    ? "Örn. Hastane çantasında gerçekten neler gerekli?"
+                    : "Örn. 12. haftada mide bulantısı"
+                }
               />
               <TextField
                 error={
@@ -614,12 +720,21 @@ function ForumContent() {
                 value={content}
                 onChangeText={setContent}
                 multiline
+                maxLength={4000}
                 numberOfLines={5}
-                placeholder="Sorunu, deneyimini veya destek istediğin konuyu yaz."
+                placeholder={
+                  surfaceMode === "topic"
+                    ? "Konuyu açan soruyu ve yararlı bağlamı yaz."
+                    : "Sorunu, deneyimini veya destek istediğin konuyu yaz."
+                }
                 style={styles.multiline}
               />
               <Button
-                label={createPostMutation.isPending ? "Paylaşılıyor…" : "Paylaş"}
+                label={
+                  createPostMutation.isPending
+                    ? surfaceMode === "topic" ? "Başlık açılıyor…" : "Paylaşılıyor…"
+                    : surfaceMode === "topic" ? "Başlığı aç" : "Paylaş"
+                }
                 disabled={createPostMutation.isPending}
                 onPress={() => {
                   setPostSubmitAttempted(true);
@@ -643,9 +758,17 @@ function ForumContent() {
           />
         ) : visiblePosts.length === 0 ? (
           <EmptyState
-            actionLabel="Paylaşım yaz"
-            title={feedMode === "mine" ? "İlk paylaşımını ipliğe ekle" : "Bu başlığı sen aç"}
-            description={feedMode === "mine" ? "Sorunu, deneyimini veya küçük bir zaferini toplulukla paylaş." : "İlk notun, bu kategoride başlayacak konuşmanın düğümü olsun."}
+            actionLabel={surfaceMode === "topic" ? "Başlık aç" : "Paylaşım yaz"}
+            title={
+              feedMode === "mine"
+                ? surfaceMode === "topic" ? "Henüz bir başlık açmadın" : "İlk paylaşımını ipliğe ekle"
+                : surfaceMode === "topic" ? "İlk tartışmayı sen başlat" : "İlk notu sen paylaş"
+            }
+            description={
+              surfaceMode === "topic"
+                ? "Net bir başlık aç; yanıtlar aynı konuşma altında düzenli biçimde biriksin."
+                : "Sorunu, deneyimini veya küçük bir zaferini toplulukla paylaş."
+            }
             onActionPress={() => setComposerOpen(true)}
           />
         ) : (
@@ -655,9 +778,27 @@ function ForumContent() {
                 <View style={{ gap: spacing.md }}>
                   <Pressable accessibilityRole="button" onPress={() => setActivePostId(undefined)} style={({ pressed }) => [styles.backToFeed, pressed && styles.pressed]}>
                     <ArrowLeft color={appTheme.primary} size={20} />
-                    <Text style={[styles.backToFeedText, { color: appTheme.primary }]}>Akışa dön</Text>
+                    <Text style={[styles.backToFeedText, { color: appTheme.primary }]}>
+                      {surfaceMode === "topic" ? "Konulara dön" : "Akışa dön"}
+                    </Text>
                   </Pressable>
                   <View style={{ gap: spacing.xs }}>
+                    {activePost.post_kind === "topic" ? (
+                      <View style={styles.topicStateRow}>
+                        {activePost.is_pinned ? (
+                          <View style={[styles.topicStateBadge, { backgroundColor: appTheme.accentSoft }]}>
+                            <Pin color={appTheme.accent} size={14} />
+                            <Text style={[styles.topicStateText, { color: appTheme.accent }]}>Sabit konu</Text>
+                          </View>
+                        ) : null}
+                        {activePost.is_locked ? (
+                          <View style={styles.topicStateBadge}>
+                            <LockKeyhole color={colors.textMuted} size={14} />
+                            <Text style={styles.topicStateText}>Yanıtlara kapalı</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                    ) : null}
                     <AuthorLine
                       nickname={activePost.forum_nickname}
                       badge={activePost.author_badge}
@@ -678,39 +819,96 @@ function ForumContent() {
                       <MessageCircle color={colors.textMuted} size={17} />
                       <Text style={styles.metaText}>{activePost.comment_count} yorum</Text>
                     </View>
-                    <ActionButton
-                      active={false}
-                      disabled={reportMutation.isPending}
-                      icon={<Flag color={colors.textMuted} size={16} />}
-                      label="Raporla"
-                      onPress={() =>
-                        reportMutation.mutate({
-                          reason: "Kullanıcı tarafından uygunsuz gönderi olarak raporlandı.",
-                          targetId: activePost.id,
-                          targetType: "post"
-                        })
-                      }
-                    />
-                    <ActionButton
-                      active={false}
-                      disabled={blockedNicknames.includes(activePost.forum_nickname)}
-                      icon={<UserX color={colors.textMuted} size={16} />}
-                      label="Engelle"
-                      onPress={() =>
-                        blockAuthor(
-                          activePost.forum_nickname,
-                          "post",
-                          activePost.id
-                        )
-                      }
-                    />
+                    {!activePost.authored_by_current_user ? (
+                      <>
+                        <ActionButton
+                          active={false}
+                          disabled={reportMutation.isPending}
+                          icon={<Flag color={colors.textMuted} size={16} />}
+                          label="Raporla"
+                          onPress={() => setReportTarget({
+                            id: activePost.id,
+                            label: activePost.title,
+                            type: "post"
+                          })}
+                        />
+                        <ActionButton
+                          active={false}
+                          disabled={blockedNicknames.includes(activePost.forum_nickname)}
+                          icon={<UserX color={colors.textMuted} size={16} />}
+                          label="Engelle"
+                          onPress={() =>
+                            blockAuthor(
+                              activePost.forum_nickname,
+                              "post",
+                              activePost.id
+                            )
+                          }
+                        />
+                      </>
+                    ) : null}
                   </View>
+
+                  {moderatorQuery.data && activePost.post_kind === "topic" ? (
+                    <View style={styles.topicModeratorBar}>
+                      <Text style={styles.topicModeratorLabel}>Moderatör konu ayarları</Text>
+                      <View style={styles.actionRow}>
+                        <ActionButton
+                          active={activePost.is_pinned}
+                          disabled={topicModerationMutation.isPending}
+                          icon={<Pin color={activePost.is_pinned ? appTheme.accent : colors.textMuted} size={16} />}
+                          label={activePost.is_pinned ? "Sabitlemeyi kaldır" : "Sabitle"}
+                          onPress={() => topicModerationMutation.mutate({
+                            isLocked: activePost.is_locked,
+                            isPinned: !activePost.is_pinned,
+                            postId: activePost.id
+                          })}
+                        />
+                        <ActionButton
+                          active={activePost.is_locked}
+                          disabled={topicModerationMutation.isPending}
+                          icon={<LockKeyhole color={activePost.is_locked ? appTheme.accent : colors.textMuted} size={16} />}
+                          label={activePost.is_locked ? "Yanıtları aç" : "Yanıtları kapat"}
+                          onPress={() => topicModerationMutation.mutate({
+                            isLocked: !activePost.is_locked,
+                            isPinned: activePost.is_pinned,
+                            postId: activePost.id
+                          })}
+                        />
+                      </View>
+                    </View>
+                  ) : null}
 
                   <View style={styles.divider} />
 
-                  <Text style={typography.heading2}>Sohbete katıl</Text>
-                  {commentComposerOpen ? (
+                  <Text style={typography.heading2}>
+                    {surfaceMode === "topic" ? "Konuya yanıt ver" : "Sohbete katıl"}
+                  </Text>
+                  {activePost.is_locked && !moderatorQuery.data ? (
+                    <View style={styles.lockedNotice}>
+                      <LockKeyhole color={colors.textMuted} size={20} />
+                      <Text style={styles.lockedNoticeText}>
+                        Bu konu moderatör tarafından yeni yanıtlara kapatıldı. Mevcut konuşmayı okumaya devam edebilirsin.
+                      </Text>
+                    </View>
+                  ) : commentComposerOpen ? (
                     <View style={styles.commentComposer}>
+                      {replyingTo ? (
+                        <View style={styles.replyContext}>
+                          <Reply color={appTheme.primary} size={17} />
+                          <Text numberOfLines={1} style={styles.replyContextText}>
+                            {replyingTo.forum_nickname} adlı kullanıcıya yanıt veriyorsun
+                          </Text>
+                          <Pressable
+                            accessibilityLabel="Yanıttan vazgeç"
+                            accessibilityRole="button"
+                            onPress={() => setReplyingTo(undefined)}
+                            style={styles.replyCancel}
+                          >
+                            <Text style={[styles.replyCancelText, { color: appTheme.primary }]}>Vazgeç</Text>
+                          </Pressable>
+                        </View>
+                      ) : null}
                       <TextField
                         error={
                           commentSubmitAttempted && commentText.trim().length < 2
@@ -720,7 +918,12 @@ function ForumContent() {
                         label="Yorumun"
                         value={commentText}
                         onChangeText={setCommentText}
-                        placeholder="Destekleyici ve nazik bir yorum yaz."
+                        maxLength={2000}
+                        placeholder={
+                          surfaceMode === "topic"
+                            ? "Konuyu ilerleten açık ve nazik bir yanıt yaz."
+                            : "Destekleyici ve nazik bir yorum yaz."
+                        }
                         multiline
                         style={styles.commentInput}
                       />
@@ -729,7 +932,7 @@ function ForumContent() {
                           label={
                             createCommentMutation.isPending
                               ? "Gönderiliyor…"
-                              : "Yorum gönder"
+                              : replyingTo ? "Yanıtı gönder" : surfaceMode === "topic" ? "Konuya yanıt ver" : "Yorum gönder"
                           }
                           disabled={createCommentMutation.isPending}
                           style={styles.sendCommentButton}
@@ -758,19 +961,22 @@ function ForumContent() {
                   ) : (
                     <>
                       <View style={{ gap: spacing.sm }}>
-                        {comments.map((comment) => (
+                        {conversationRows.map(({ comment, depth, parentNickname }) => (
                         <CommentRow
                           key={comment.id}
                           comment={comment}
+                          depth={surfaceMode === "topic" ? depth : 0}
+                          parentNickname={surfaceMode === "topic" ? parentNickname : undefined}
                           onLike={() => commentLikeMutation.mutate(comment)}
-                          onReport={() =>
-                            reportMutation.mutate({
-                              reason:
-                                "Kullanıcı tarafından uygunsuz yorum olarak raporlandı.",
-                              targetId: comment.id,
-                              targetType: "comment"
-                            })
-                          }
+                          onReply={surfaceMode === "topic" ? () => {
+                            setReplyingTo(comment);
+                            setCommentComposerOpen(true);
+                          } : undefined}
+                          onReport={() => setReportTarget({
+                            id: comment.id,
+                            label: `${comment.forum_nickname} kullanıcısının yanıtı`,
+                            type: "comment"
+                          })}
                           onBlock={() =>
                             blockAuthor(
                               comment.forum_nickname,
@@ -797,36 +1003,52 @@ function ForumContent() {
               <>
                 <View style={styles.feedHeading}>
                   <View>
-                    <Text style={typography.heading2}>{feedMode === "mine" ? "Paylaşımların" : "Topluluk akışı"}</Text>
-                    <Text style={styles.feedHint}>{visiblePosts.length} paylaşım gösteriliyor</Text>
+                    <Text style={typography.heading2}>
+                      {feedMode === "mine"
+                        ? surfaceMode === "topic" ? "Açtığın başlıklar" : "Paylaşımların"
+                        : surfaceMode === "topic" ? "Tüm tartışmalar" : "Topluluk akışı"}
+                    </Text>
+                    <Text style={styles.feedHint}>
+                      {visiblePosts.length} {surfaceMode === "topic" ? "konu" : "paylaşım"} gösteriliyor
+                    </Text>
                   </View>
                   <MessagesSquare color={appTheme.primary} size={24} />
                 </View>
                 <View style={styles.postList}>
-                  {visiblePosts.map((post) => (
-                    <PostCard
-                      key={post.id}
-                      post={post}
-                      onPress={() => setActivePostId(post.id)}
-                      onComment={() => setActivePostId(post.id)}
-                      onLike={() => postLikeMutation.mutate(post)}
-                      onReport={() =>
-                        reportMutation.mutate({
-                          reason:
-                            "Kullanıcı tarafından uygunsuz gönderi olarak raporlandı.",
-                          targetId: post.id,
-                          targetType: "post"
-                        })
-                      }
-                      onBlock={() =>
-                        blockAuthor(post.forum_nickname, "post", post.id)
-                      }
-                      disabled={postLikeMutation.isPending}
-                    />
-                  ))}
+                  {visiblePosts.map((post) =>
+                    surfaceMode === "topic" ? (
+                      <TopicCard
+                        categoryLabel={categories.find((category) => category.id === post.category_id)?.name}
+                        key={post.id}
+                        post={post}
+                        onPress={() => setActivePostId(post.id)}
+                      />
+                    ) : (
+                      <PostCard
+                        key={post.id}
+                        post={post}
+                        onPress={() => setActivePostId(post.id)}
+                        onComment={() => setActivePostId(post.id)}
+                        onLike={() => postLikeMutation.mutate(post)}
+                        onReport={() => setReportTarget({
+                          id: post.id,
+                          label: post.title,
+                          type: "post"
+                        })}
+                        onBlock={() =>
+                          blockAuthor(post.forum_nickname, "post", post.id)
+                        }
+                        disabled={postLikeMutation.isPending}
+                      />
+                    )
+                  )}
                 </View>
                 {hasMorePosts ? (
-                  <Button label="Daha eski paylaşımları göster" variant="secondary" onPress={() => setPostLimit((value) => value + 20)} />
+                  <Button
+                    label={surfaceMode === "topic" ? "Daha fazla konu göster" : "Daha eski paylaşımları göster"}
+                    variant="secondary"
+                    onPress={() => setPostLimit((value) => value + 20)}
+                  />
                 ) : null}
               </>
             )}
@@ -851,6 +1073,22 @@ function ForumContent() {
             </View>
           </Card>
         ) : null}
+        <ForumReportDialog
+          busy={reportMutation.isPending}
+          onClose={() => {
+            if (!reportMutation.isPending) setReportTarget(undefined);
+          }}
+          onSubmit={(reason) => {
+            if (!reportTarget) return;
+            reportMutation.mutate({
+              reason,
+              targetId: reportTarget.id,
+              targetType: reportTarget.type
+            });
+          }}
+          targetLabel={reportTarget?.label}
+          visible={Boolean(reportTarget)}
+        />
       </View>
     </Screen>
   );
@@ -913,6 +1151,69 @@ type PostCardProps = {
   onReport: () => void;
 };
 
+function TopicCard({
+  categoryLabel,
+  onPress,
+  post
+}: {
+  categoryLabel?: string;
+  onPress: () => void;
+  post: PublicForumPost;
+}) {
+  const appTheme = useAppTheme();
+
+  return (
+    <Pressable
+      accessibilityHint="Başlığı ve tüm yanıtları açar"
+      accessibilityLabel={`${post.title}, ${post.comment_count} yanıt`}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [styles.topicRow, pressed && styles.pressed]}
+    >
+      <View style={styles.topicRail} pointerEvents="none">
+        <View style={[styles.topicRailLine, { backgroundColor: appTheme.primary }]} />
+        <View style={[styles.topicRailKnot, { borderColor: appTheme.primary }]} />
+      </View>
+      <View style={styles.topicBody}>
+        <View style={styles.topicMetaRow}>
+          <View style={styles.topicLabels}>
+            {post.is_pinned ? (
+              <View style={[styles.topicStateBadge, { backgroundColor: appTheme.accentSoft }]}>
+                <Pin color={appTheme.accent} size={13} />
+                <Text style={[styles.topicStateText, { color: appTheme.accent }]}>Sabit</Text>
+              </View>
+            ) : null}
+            {categoryLabel ? (
+              <Text style={[styles.topicCategory, { color: appTheme.primary }]}>{categoryLabel}</Text>
+            ) : null}
+          </View>
+          {post.is_locked ? <LockKeyhole color={colors.textMuted} size={17} /> : null}
+        </View>
+
+        <Text numberOfLines={3} style={styles.topicTitle}>{post.title}</Text>
+        <Text numberOfLines={2} style={styles.topicPreview}>{post.content}</Text>
+
+        <View style={styles.topicFooter}>
+          <View style={styles.topicAuthorGroup}>
+            <Text numberOfLines={1} style={styles.topicAuthor}>{post.forum_nickname}</Text>
+            <Text style={styles.topicTime}>{formatForumTime(post.last_activity_at)}</Text>
+          </View>
+          <View style={[styles.replyCount, { backgroundColor: appTheme.theme.primarySoft }]}>
+            <MessageCircle color={appTheme.primary} size={16} />
+            <Text style={[styles.replyCountText, { color: appTheme.primary }]}>{post.comment_count}</Text>
+          </View>
+        </View>
+        {post.last_reply_nickname ? (
+          <Text numberOfLines={1} style={styles.lastReplyText}>
+            Son yanıt: {post.last_reply_nickname}
+          </Text>
+        ) : null}
+      </View>
+      <ChevronRight color={colors.textMuted} size={20} />
+    </Pressable>
+  );
+}
+
 function PostCard({
   disabled,
   onBlock,
@@ -961,20 +1262,24 @@ function PostCard({
               label={`${post.comment_count} yorum`}
               onPress={onComment}
             />
-            <ActionButton
-              active={false}
-              disabled={disabled}
-              icon={<Flag color={colors.textMuted} size={16} />}
-              label="Raporla"
-              onPress={onReport}
-            />
-            <ActionButton
-              active={false}
-              disabled={disabled}
-              icon={<UserX color={colors.textMuted} size={16} />}
-              label="Engelle"
-              onPress={onBlock}
-            />
+            {!post.authored_by_current_user ? (
+              <>
+                <ActionButton
+                  active={false}
+                  disabled={disabled}
+                  icon={<Flag color={colors.textMuted} size={16} />}
+                  label="Raporla"
+                  onPress={onReport}
+                />
+                <ActionButton
+                  active={false}
+                  disabled={disabled}
+                  icon={<UserX color={colors.textMuted} size={16} />}
+                  label="Engelle"
+                  onPress={onBlock}
+                />
+              </>
+            ) : null}
           </View>
         </View>
       </View>
@@ -984,29 +1289,43 @@ function PostCard({
 
 type CommentRowProps = {
   comment: PublicForumComment;
+  depth: number;
+  parentNickname?: string;
   onLike: () => void;
   onBlock: () => void;
+  onReply?: () => void;
   onReport: () => void;
   disabled: boolean;
 };
 
 function CommentRow({
   comment,
+  depth,
   disabled,
   onBlock,
   onLike,
-  onReport
+  onReply,
+  onReport,
+  parentNickname
 }: CommentRowProps) {
   const appTheme = useAppTheme();
 
   return (
-    <View style={styles.commentRow}>
+    <View style={[styles.commentRow, depth > 0 && { marginLeft: Math.min(depth, 2) * 22 }]}>
       <View style={styles.commentThread} pointerEvents="none">
         <View style={[styles.commentRail, { backgroundColor: appTheme.primary }]} />
         <View style={[styles.commentKnot, { borderColor: appTheme.primary }]} />
       </View>
       <View style={styles.commentContent}>
         <AuthorLine nickname={comment.forum_nickname} badge={comment.author_badge} createdAt={comment.created_at} />
+        {parentNickname ? (
+          <View style={styles.replyingLabel}>
+            <AtSign color={appTheme.primary} size={14} />
+            <Text style={[styles.replyingLabelText, { color: appTheme.primary }]}>
+              {parentNickname} kullanıcısına yanıt
+            </Text>
+          </View>
+        ) : null}
         <Text style={styles.commentText}>{comment.content}</Text>
         <LikeButton
           active={comment.liked_by_current_user}
@@ -1015,20 +1334,33 @@ function CommentRow({
           onPress={onLike}
         />
         <View style={styles.actionRow}>
-          <ActionButton
-            active={false}
-            disabled={disabled}
-            icon={<Flag color={colors.textMuted} size={16} />}
-            label="Raporla"
-            onPress={onReport}
-          />
-          <ActionButton
-            active={false}
-            disabled={disabled}
-            icon={<UserX color={colors.textMuted} size={16} />}
-            label="Engelle"
-            onPress={onBlock}
-          />
+          {onReply ? (
+            <ActionButton
+              active={false}
+              disabled={disabled}
+              icon={<Reply color={colors.textMuted} size={16} />}
+              label="Yanıtla"
+              onPress={onReply}
+            />
+          ) : null}
+          {!comment.authored_by_current_user ? (
+            <>
+              <ActionButton
+                active={false}
+                disabled={disabled}
+                icon={<Flag color={colors.textMuted} size={16} />}
+                label="Raporla"
+                onPress={onReport}
+              />
+              <ActionButton
+                active={false}
+                disabled={disabled}
+                icon={<UserX color={colors.textMuted} size={16} />}
+                label="Engelle"
+                onPress={onBlock}
+              />
+            </>
+          ) : null}
         </View>
       </View>
     </View>
@@ -1069,6 +1401,42 @@ function FeedTab({ active, label, onPress }: { active: boolean; label: string; o
       <Text style={[styles.feedTabText, active && styles.feedTabTextActive]}>{label}</Text>
     </Pressable>
   );
+}
+
+function buildConversationRows(comments: PublicForumComment[]) {
+  const byId = new Map(comments.map((comment) => [comment.id, comment]));
+  const children = new Map<string, PublicForumComment[]>();
+  const roots: PublicForumComment[] = [];
+
+  for (const comment of comments) {
+    if (comment.parent_comment_id && byId.has(comment.parent_comment_id)) {
+      const siblings = children.get(comment.parent_comment_id) ?? [];
+      siblings.push(comment);
+      children.set(comment.parent_comment_id, siblings);
+    } else {
+      roots.push(comment);
+    }
+  }
+
+  const rows: Array<{
+    comment: PublicForumComment;
+    depth: number;
+    parentNickname?: string;
+  }> = [];
+  const visited = new Set<string>();
+
+  function append(comment: PublicForumComment, depth: number, parentNickname?: string) {
+    if (visited.has(comment.id)) return;
+    visited.add(comment.id);
+    rows.push({ comment, depth: Math.min(depth, 2), parentNickname });
+    for (const child of children.get(comment.id) ?? []) {
+      append(child, depth + 1, comment.forum_nickname);
+    }
+  }
+
+  for (const root of roots) append(root, 0);
+  for (const comment of comments) append(comment, 0);
+  return rows;
 }
 
 function formatForumTime(value: string) {
@@ -1444,6 +1812,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing.sm,
     paddingTop: spacing.sm
   },
@@ -1560,5 +1929,208 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.sm,
     justifyContent: "space-between"
+  },
+  composerHint: {
+    ...typography.body,
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 20
+  },
+  filterCopy: { flex: 1, gap: 2 },
+  filterHint: {
+    ...typography.body,
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18
+  },
+  filterRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md
+  },
+  filterTitle: {
+    ...typography.label,
+    color: colors.text
+  },
+  lastReplyText: {
+    ...typography.body,
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 17
+  },
+  lockedNotice: {
+    alignItems: "flex-start",
+    backgroundColor: colors.surfaceMuted,
+    ...radii.card,
+    flexDirection: "row",
+    gap: spacing.sm,
+    padding: spacing.md
+  },
+  lockedNoticeText: {
+    ...typography.body,
+    color: colors.textMuted,
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20
+  },
+  mineFilter: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    gap: spacing.xs,
+    minHeight: 44,
+    paddingHorizontal: spacing.md
+  },
+  mineFilterText: {
+    ...typography.label,
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18
+  },
+  moderationLink: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    ...radii.card,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    gap: spacing.md,
+    minHeight: 68,
+    padding: spacing.md
+  },
+  moderationLinkCopy: { flex: 1, gap: 2 },
+  moderationLinkText: {
+    ...typography.body,
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18
+  },
+  moderationLinkTitle: { ...typography.label, color: colors.text },
+  replyCancel: { minHeight: 44, justifyContent: "center", paddingLeft: spacing.sm },
+  replyCancelText: { ...typography.label, fontSize: 13, lineHeight: 18 },
+  replyContext: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.xs
+  },
+  replyContextText: {
+    ...typography.label,
+    color: colors.text,
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18
+  },
+  replyCount: {
+    alignItems: "center",
+    borderRadius: radii.pill,
+    flexDirection: "row",
+    gap: spacing.xs,
+    minHeight: 34,
+    paddingHorizontal: spacing.md
+  },
+  replyCountText: { ...typography.label, fontSize: 13, lineHeight: 18 },
+  replyingLabel: { alignItems: "center", flexDirection: "row", gap: 2 },
+  replyingLabelText: { ...typography.label, fontSize: 12, lineHeight: 17 },
+  topicAuthor: {
+    ...typography.label,
+    color: colors.text,
+    flexShrink: 1,
+    fontSize: 13,
+    lineHeight: 18
+  },
+  topicAuthorGroup: { flex: 1, gap: 2, minWidth: 0 },
+  topicBody: { flex: 1, gap: spacing.xs, minWidth: 0 },
+  topicCategory: {
+    ...typography.label,
+    fontSize: 12,
+    lineHeight: 17
+  },
+  topicFooter: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+    justifyContent: "space-between",
+    marginTop: spacing.xs
+  },
+  topicLabels: { alignItems: "center", flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
+  topicMetaRow: { alignItems: "center", flexDirection: "row", gap: spacing.sm, justifyContent: "space-between" },
+  topicModeratorBar: {
+    backgroundColor: colors.highlightSoft,
+    ...radii.card,
+    gap: spacing.sm,
+    padding: spacing.md
+  },
+  topicModeratorLabel: {
+    ...typography.label,
+    color: colors.text,
+    fontSize: 13,
+    lineHeight: 18
+  },
+  topicPreview: {
+    ...typography.body,
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 20
+  },
+  topicRail: { alignSelf: "stretch", position: "relative", width: 20 },
+  topicRailKnot: {
+    backgroundColor: colors.surfaceStrong,
+    borderRadius: radii.pill,
+    borderWidth: 2,
+    height: 14,
+    left: 3,
+    position: "absolute",
+    top: 26,
+    width: 14
+  },
+  topicRailLine: {
+    bottom: -spacing.md,
+    left: 9,
+    opacity: 0.3,
+    position: "absolute",
+    top: -spacing.md,
+    width: 2
+  },
+  topicRow: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderBottomColor: colors.border,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    gap: spacing.sm,
+    minHeight: 150,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.lg
+  },
+  topicStateBadge: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.pill,
+    flexDirection: "row",
+    gap: 3,
+    minHeight: 28,
+    paddingHorizontal: spacing.sm
+  },
+  topicStateRow: { alignItems: "center", flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
+  topicStateText: {
+    ...typography.label,
+    color: colors.textMuted,
+    fontSize: 11,
+    lineHeight: 16
+  },
+  topicTime: {
+    ...typography.body,
+    color: colors.textMuted,
+    fontSize: 12,
+    lineHeight: 17
+  },
+  topicTitle: {
+    ...typography.heading3,
+    color: colors.text,
+    fontSize: 19,
+    lineHeight: 25
   }
 });
