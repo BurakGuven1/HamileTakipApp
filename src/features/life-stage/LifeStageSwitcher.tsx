@@ -29,6 +29,7 @@ import Animated, {
 
 import {
   completePregnancyWithBirth,
+  type Baby as BabyRecord,
   type BabyGender,
   type FeedingMode
 } from "@/api/babies";
@@ -58,11 +59,16 @@ import {
 type TransitionPhase = "confirm" | "running" | "success" | "error";
 
 type LifeStageSwitcherProps = {
+  existingBaby: BabyRecord | null;
   hasBaby: boolean;
   profile: Profile;
 };
 
-export function LifeStageSwitcher({ hasBaby, profile }: LifeStageSwitcherProps) {
+export function LifeStageSwitcher({
+  existingBaby,
+  hasBaby,
+  profile
+}: LifeStageSwitcherProps) {
   const appTheme = useAppTheme().theme;
   const { showInfo } = useFeedback();
   const queryClient = useQueryClient();
@@ -83,9 +89,13 @@ export function LifeStageSwitcher({ hasBaby, profile }: LifeStageSwitcherProps) 
   const [pregnancyDay, setPregnancyDay] = useState(
     initialPregnancyAge ? String(initialPregnancyAge.day) : "0"
   );
-  const [babyName, setBabyName] = useState("");
-  const [birthDate, setBirthDate] = useState(toDateOnly(new Date()));
-  const [babyGender, setBabyGender] = useState<BabyGender>("belirtilmemis");
+  const [babyName, setBabyName] = useState(existingBaby?.name ?? "");
+  const [birthDate, setBirthDate] = useState(
+    existingBaby?.birth_date ?? toDateOnly(new Date())
+  );
+  const [babyGender, setBabyGender] = useState<BabyGender>(
+    existingBaby?.gender ?? "belirtilmemis"
+  );
   const [feedingMode, setFeedingMode] = useState<FeedingMode>(
     profile.feeding_mode ?? "mixed"
   );
@@ -99,6 +109,13 @@ export function LifeStageSwitcher({ hasBaby, profile }: LifeStageSwitcherProps) 
     setPregnancyWeek(pregnancyAge ? String(pregnancyAge.week) : "");
     setPregnancyDay(pregnancyAge ? String(pregnancyAge.day) : "0");
   }, [profile.due_date]);
+
+  useEffect(() => {
+    if (!existingBaby) return;
+    setBabyName(existingBaby.name);
+    setBirthDate(existingBaby.birth_date);
+    setBabyGender(existingBaby.gender ?? "belirtilmemis");
+  }, [existingBaby]);
 
   const progressStyle = useAnimatedStyle(() => ({
     transform: [{ scaleX: animatedProgress.value }]
@@ -175,7 +192,9 @@ export function LifeStageSwitcher({ hasBaby, profile }: LifeStageSwitcherProps) 
     setTransitionProgress(
       0.12,
       requiresBirthDetails
-        ? "Bebek profili ve doğum kaydı oluşturuluyor"
+        ? existingBaby
+          ? "Mevcut çocuk profili doğum bilgileriyle güncelleniyor"
+          : "Bebek profili ve doğum kaydı oluşturuluyor"
         : "Yaşam evren kaydediliyor"
     );
 
@@ -183,6 +202,7 @@ export function LifeStageSwitcher({ hasBaby, profile }: LifeStageSwitcherProps) 
       let updatedProfile: Profile;
       if (requiresBirthDetails) {
         const result = await completePregnancyWithBirth({
+          babyId: existingBaby?.id ?? null,
           babyName,
           birthDate,
           gender: babyGender,
@@ -191,8 +211,14 @@ export function LifeStageSwitcher({ hasBaby, profile }: LifeStageSwitcherProps) 
         updatedProfile = result.profile;
         queryClient.setQueryData(
           ["babies"],
-          (current: unknown) =>
-            Array.isArray(current) ? [...current, result.baby] : [result.baby]
+          (current: unknown) => {
+            if (!Array.isArray(current)) return [result.baby];
+            return current.some((baby) => baby?.id === result.baby.id)
+              ? current.map((baby) =>
+                  baby?.id === result.baby.id ? result.baby : baby
+                )
+              : [...current, result.baby];
+          }
         );
       } else {
         updatedProfile = await updateCurrentProfile({
@@ -303,7 +329,7 @@ export function LifeStageSwitcher({ hasBaby, profile }: LifeStageSwitcherProps) 
         <View style={[styles.preservationNote, { backgroundColor: appTheme.primarySoft }]}>
           <Text style={[styles.preservationTitle, { color: appTheme.primary }]}>Ortak alanların hep açık kalır</Text>
           <Text style={styles.preservationBody}>
-            Forum, rehberler ve geçmiş kayıtların korunur. Doğum sonrası geçişte bebeğinin profili ve aşı takvimi birlikte hazırlanır.
+            Geçişlerde mevcut çocuk profilin ve tüm geçmiş kayıtları korunur. Yalnızca henüz çocuk profili yoksa ilk doğum kaydı oluşturulur.
           </Text>
         </View>
       </View>
@@ -345,12 +371,16 @@ export function LifeStageSwitcher({ hasBaby, profile }: LifeStageSwitcherProps) 
               <View style={styles.confirmationCopy}>
                 <Text style={typography.heading1}>
                   {targetStage === "motherhood" && experienceStage !== "postpartum"
-                    ? "Doğum gerçekleşti mi?"
+                    ? existingBaby
+                      ? "Doğum sonrasına geç"
+                      : "Doğum gerçekleşti mi?"
                     : `${lifeStageContent[targetStage].label} moduna geç`}
                 </Text>
                 <Text style={styles.sectionDescription}>
                   {targetStage === "motherhood" && experienceStage !== "postpartum"
-                    ? "Doğum bilgilerini bir kez gir; bebek profili, aşı takvimi, bakım araçları ve bildirimler birlikte hazırlansın."
+                    ? existingBaby
+                      ? `${existingBaby.name} profili korunacak; doğum bilgileri aynı kayıt üzerinde güncellenecek.`
+                      : "Doğum bilgilerini bir kez gir; bebek profili, aşı takvimi, bakım araçları ve bildirimler birlikte hazırlansın."
                     : "Ana ekranın, menün, bildirimlerin ve kısayolların bu evre için yeniden düzenlenecek."}
                 </Text>
               </View>
@@ -434,7 +464,9 @@ export function LifeStageSwitcher({ hasBaby, profile }: LifeStageSwitcherProps) 
                 <Button
                   label={
                     targetStage === "motherhood" && experienceStage !== "postpartum"
-                      ? "Doğum sonrası akışı başlat"
+                      ? existingBaby
+                        ? "Aynı profille doğum sonrasına geç"
+                        : "Doğum sonrası akışı başlat"
                       : `${lifeStageContent[targetStage].label} moduna geç`
                   }
                   onPress={() => void switchStage()}

@@ -581,7 +581,11 @@ export default function SettingsScreen() {
 
         {profile && profile.id === ownUserId && babiesQuery.isSuccess ? (
           <Card>
-            <LifeStageSwitcher hasBaby={hasBaby} profile={profile} />
+            <LifeStageSwitcher
+              existingBaby={babiesQuery.data?.[0] ?? null}
+              hasBaby={hasBaby}
+              profile={profile}
+            />
           </Card>
         ) : null}
 

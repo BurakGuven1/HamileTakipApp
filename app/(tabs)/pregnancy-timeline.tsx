@@ -1,39 +1,69 @@
 import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import { Link, router } from "expo-router";
-import { ArrowLeft, CalendarDays, CheckCircle2, Info } from "lucide-react-native";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Activity,
+  ArrowLeft,
+  Baby,
+  CalendarCheck2,
+  CheckCircle2,
+  ChevronRight,
+  Clock3,
+  Dumbbell,
+  HeartPulse,
+  Info,
+  NotebookPen,
+  Ruler,
+  Salad,
+  Scale,
+  Sparkles,
+  Stethoscope
+} from "lucide-react-native";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ComponentProps,
+  type ReactNode
+} from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useReducedMotion } from "react-native-reanimated";
 
 import { listArticles } from "@/api/articles";
+import {
+  listPregnancyDailyCounters,
+  listPregnancyWeightRecords
+} from "@/api/pregnancyTools";
 import { getCurrentProfile } from "@/api/profiles";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
-import { ExpandableText } from "@/components/ExpandableText";
-import { PregnancyJourneyArtwork } from "@/components/PregnancyJourneyArtwork";
 import { QueryState } from "@/components/QueryState";
 import { Reveal } from "@/components/Reveal";
 import { Screen } from "@/components/Screen";
+import { VibrantBackdrop } from "@/components/VibrantBackdrop";
+import { WeeklyBabyDevelopmentCard } from "@/components/WeeklyBabyDevelopmentCard";
+import {
+  getActiveTimelineBands,
+  getPrenatalVisitGuidance,
+  getTimelineMilestonesForWeek
+} from "@/features/pregnancy/timeline";
 import { getPregnancyWeekInfo } from "@/features/pregnancy/weekInfo";
 import {
-  TIMELINE_TOTAL_WEEKS,
-  getActiveTimelineBands,
-  getTimelineMilestonesForWeek,
-  pregnancyTimelineBands,
-  pregnancyTimelineMilestones
-} from "@/features/pregnancy/timeline";
-import { getPregnancyWeek } from "@/lib/dates";
-import { useAppTheme } from "@/providers/AppThemeProvider";
-import { colors, radii, spacing, typography } from "@/theme";
-
-const WEEK_CELL_WIDTH = 68;
-const TIMELINE_WIDTH = TIMELINE_TOTAL_WEEKS * WEEK_CELL_WIDTH;
+  formatDate,
+  getPregnancyProgress,
+  getPregnancyWeek,
+  toDateOnly
+} from "@/lib/dates";
+import {
+  colors,
+  radii,
+  spacing,
+  typography,
+  vibrantColors,
+  vibrantGradients
+} from "@/theme";
 
 export default function PregnancyTimelineScreen() {
-  const accentColor = useAppTheme();
-  const reducedMotion = useReducedMotion();
-  const weekScroller = useRef<ScrollView>(null);
   const profileQuery = useQuery({
     queryKey: ["current-profile"],
     queryFn: getCurrentProfile
@@ -44,34 +74,55 @@ export default function PregnancyTimelineScreen() {
   });
 
   const profile = profileQuery.data;
-  const currentWeek = getPregnancyWeek(profile?.due_date) ?? 1;
-  const appTheme = accentColor.theme;
+  const currentWeek = Math.max(2, Math.min(40, getPregnancyWeek(profile?.due_date) ?? 2));
   const [selectedWeek, setSelectedWeek] = useState(currentWeek);
+  const isPregnant = Boolean(profile?.is_pregnant);
 
-  const weekInfo = getPregnancyWeekInfo(selectedWeek);
-  const activeBands = getActiveTimelineBands(selectedWeek);
-  const selectedMilestones = getTimelineMilestonesForWeek(selectedWeek);
-  const articles = articlesQuery.data ?? [];
-  const selectedArticles = articles.filter((article) =>
-    isArticleVisibleForWeek(article.timelineStartWeek, article.timelineEndWeek, selectedWeek)
-  );
-  const weeks = useMemo(
-    () => Array.from({ length: TIMELINE_TOTAL_WEEKS }, (_, index) => index + 1),
-    []
-  );
+  const weightQuery = useQuery({
+    enabled: isPregnant,
+    queryKey: ["pregnancy-weight-records"],
+    queryFn: listPregnancyWeightRecords
+  });
+  const countersQuery = useQuery({
+    enabled: isPregnant,
+    queryKey: ["pregnancy-daily-counters", "timeline"],
+    queryFn: () => listPregnancyDailyCounters(1)
+  });
 
   useEffect(() => {
     setSelectedWeek(currentWeek);
-    const x = Math.max(0, (currentWeek - 2) * WEEK_CELL_WIDTH);
-    const timeout = setTimeout(
-      () => weekScroller.current?.scrollTo({ x, animated: !reducedMotion }),
-      reducedMotion ? 0 : 250
-    );
-    return () => clearTimeout(timeout);
-  }, [currentWeek, reducedMotion]);
+  }, [currentWeek]);
+
+  const weekInfo = getPregnancyWeekInfo(selectedWeek);
+  const pregnancyProgress = getPregnancyProgress(profile?.due_date);
+  const selectedMilestones = getTimelineMilestonesForWeek(selectedWeek);
+  const visitGuidance = getPrenatalVisitGuidance(selectedWeek);
+  const activeBands = getActiveTimelineBands(selectedWeek);
+  const motherFocus = getMotherFocus(selectedWeek, selectedMilestones);
+  const selectedArticles = useMemo(
+    () =>
+      (articlesQuery.data ?? []).filter((article) =>
+        isArticleVisibleForWeek(
+          article.timelineStartWeek,
+          article.timelineEndWeek,
+          selectedWeek
+        )
+      ),
+    [articlesQuery.data, selectedWeek]
+  );
+  const latestWeight = weightQuery.data?.[0];
+  const todayCounter = countersQuery.data?.find(
+    (item) => item.counter_date === toDateOnly(new Date())
+  );
+  const weekProgress = Math.min(100, Math.max(0, (selectedWeek / 40) * 100));
+  const isCurrentWeek = selectedWeek === currentWeek;
 
   if (profileQuery.isLoading) {
-    return <Screen scroll={false}><QueryState loading description="Hamilelik çizelgesi hazırlanıyor…" /></Screen>;
+    return (
+      <Screen scroll={false}>
+        <QueryState loading description="Haftalık yol haritan hazırlanıyor…" />
+      </Screen>
+    );
   }
 
   if (profileQuery.isError) {
@@ -92,8 +143,8 @@ export default function PregnancyTimelineScreen() {
         <View style={styles.container}>
           <BackButton />
           <EmptyState
-            title="Çizelge hamilelik profiline özel"
-            description="Profilinde Hamileyim seçili olduğunda haftalık gelişim ve takip çizelgesi burada görünür."
+            title="Yol haritası hamilelik profiline özel"
+            description="Profilinde Hamileyim seçili olduğunda haftalık gelişim ve takip planın burada görünür."
           />
         </View>
       </Screen>
@@ -103,318 +154,476 @@ export default function PregnancyTimelineScreen() {
   return (
     <Screen>
       <View style={styles.container}>
-        <BackButton />
+        <VibrantBackdrop />
+
+        <View style={styles.topBar}>
+          <BackButton />
+          <View style={styles.screenTitleGroup}>
+            <Text style={styles.screenEyebrow}>HAMİLELİK YOL HARİTAM</Text>
+            <Text style={styles.screenTitle}>Bu hafta ne önemli?</Text>
+          </View>
+        </View>
 
         <Reveal>
-          <View style={[styles.hero, { backgroundColor: appTheme.primarySoft }]}>
-            <View style={[styles.heroIcon, { backgroundColor: appTheme.accentSoft }]}>
-              <CalendarDays color={appTheme.primary} size={28} />
-            </View>
-            <Text style={typography.eyebrow}>Hamilelik çizelgesi</Text>
-            <Text style={typography.heading1}>Hafta hafta yol haritası</Text>
-            <Text numberOfLines={3} style={styles.heroText}>
-              Güncel haftana odaklanan, soldan sağa ilerleyen gelişim ve takip
-              çizelgesi. Bilgiler genel rehberdir; kişisel takip planın doktorunla
-              netleşmelidir.
-            </Text>
-          </View>
+          <WeeklyBabyDevelopmentCard
+            initialWeek={selectedWeek}
+            onWeekChange={setSelectedWeek}
+          />
         </Reveal>
 
-        <Card>
-          <View style={{ gap: spacing.lg }}>
-            <View style={styles.cardHeader}>
-              <View style={{ flex: 1, gap: spacing.xs }}>
-                <Text style={typography.heading2}>Hafta seç</Text>
-                <Text style={typography.body}>
-                  Şu an hesaplanan hafta: {currentWeek}. hafta
-                </Text>
+        <Reveal delay={50}>
+          <Card style={styles.progressCard}>
+            <View style={styles.progressHeader}>
+              <View style={styles.progressIcon}>
+                <Sparkles
+                  color={vibrantColors.primary}
+                  fill={vibrantColors.primaryLight}
+                  size={22}
+                  strokeWidth={2.4}
+                />
               </View>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setSelectedWeek(currentWeek)}
-                style={[styles.currentWeekButton, { borderColor: appTheme.primary }]}
-              >
-                <Text style={[styles.currentWeekText, { color: appTheme.primary }]}>
-                  Bugünkü hafta
+              <View style={styles.flexCopy}>
+                <Text style={styles.cardEyebrow}>
+                  {isCurrentWeek ? "BUGÜNÜN NOKTASI" : "GÖRÜNTÜLENEN HAFTA"}
                 </Text>
-              </Pressable>
+                <Text style={styles.cardTitle}>{selectedWeek}. hafta</Text>
+              </View>
+              {!isCurrentWeek ? (
+                <Pressable
+                  accessibilityLabel={`${currentWeek}. hafta olan bugüne dön`}
+                  accessibilityRole="button"
+                  onPress={() => setSelectedWeek(currentWeek)}
+                  style={styles.todayButton}
+                >
+                  <Text style={styles.todayButtonText}>Bugüne dön</Text>
+                </Pressable>
+              ) : null}
             </View>
 
-            <ScrollView
-              ref={weekScroller}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.weekRail}
+            <View
+              accessibilityLabel={`Gebeliğin yüzde ${Math.round(weekProgress)} ilerledi`}
+              accessibilityRole="progressbar"
+              accessibilityValue={{ max: 100, min: 0, now: Math.round(weekProgress) }}
+              style={styles.progressTrack}
             >
-              {weeks.map((week) => {
-                const selected = week === selectedWeek;
-                const current = week === currentWeek;
-                const hasMilestone = pregnancyTimelineMilestones.some(
-                  (item) => item.week === week
-                );
-                const hasArticle = articles.some((article) =>
-                  isArticleVisibleForWeek(
-                    article.timelineStartWeek,
-                    article.timelineEndWeek,
-                    week
-                  )
-                );
-
-                return (
-                  <Pressable
-                    key={week}
-                    accessibilityRole="button"
-                    onPress={() => setSelectedWeek(week)}
-                    style={[
-                      styles.weekNode,
-                      selected && {
-                        backgroundColor: appTheme.primary,
-                        borderColor: appTheme.primary
-                      },
-                      current && !selected && { borderColor: appTheme.accent }
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.weekNumber,
-                        selected && styles.weekNumberSelected
-                      ]}
-                    >
-                      {week}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.weekLabel,
-                        selected && styles.weekNumberSelected
-                      ]}
-                    >
-                      hafta
-                    </Text>
-                    {hasMilestone || hasArticle ? (
-                      <View
-                        style={[
-                          styles.milestoneDot,
-                          {
-                            backgroundColor: selected
-                              ? colors.onPrimary
-                              : hasArticle
-                                ? appTheme.primary
-                                : appTheme.accent
-                          }
-                        ]}
-                      />
-                    ) : null}
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
-        </Card>
-
-        <Card style={[styles.selectedCard, { borderColor: appTheme.primary }]}>
-          <View style={{ gap: spacing.md }}>
-            <View style={styles.cardHeader}>
-              <View style={{ flex: 1, gap: spacing.xs }}>
-                <Text style={typography.eyebrow}>{selectedWeek}. hafta</Text>
-                <Text style={typography.heading2}>
-                  {weekInfo
-                    ? `Bebek yaklaşık ${weekInfo.size}`
-                    : "Bu hafta için genel takip"}
-                </Text>
-              </View>
-              <Info color={appTheme.primary} size={28} />
+              <LinearGradient
+                colors={vibrantGradients.primary}
+                end={{ x: 1, y: 0 }}
+                start={{ x: 0, y: 0 }}
+                style={[styles.progressFill, { width: `${weekProgress}%` }]}
+              />
             </View>
 
-            <PregnancyJourneyArtwork height={196} week={selectedWeek} />
+            <View style={styles.progressMetaRow}>
+              <Text style={styles.progressMeta}>{getTrimesterLabel(selectedWeek)}</Text>
+              {isCurrentWeek && pregnancyProgress ? (
+                <Text style={styles.progressMeta}>
+                  Doğuma yaklaşık {pregnancyProgress.daysUntilDue} gün
+                </Text>
+              ) : (
+                <Text style={styles.progressMeta}>40 haftalık yolculuk</Text>
+              )}
+            </View>
 
             {weekInfo ? (
               <View style={styles.statRow}>
-                <MiniStat label="Boy" value={weekInfo.lengthCm} />
-                <MiniStat label="Kilo" value={weekInfo.weightG} />
+                <MiniStat
+                  backgroundColor={vibrantColors.blueSoft}
+                  icon={<Ruler color={vibrantColors.blue} size={19} strokeWidth={2.6} />}
+                  label="Boy"
+                  value={weekInfo.lengthCm}
+                />
+                <MiniStat
+                  backgroundColor={vibrantColors.peachSoft}
+                  icon={<Scale color={vibrantColors.peach} size={19} strokeWidth={2.6} />}
+                  label="Kilo"
+                  value={weekInfo.weightG}
+                />
+                <MiniStat
+                  backgroundColor={vibrantColors.mintSoft}
+                  icon={<Baby color={vibrantColors.mint} size={19} strokeWidth={2.6} />}
+                  label="Tahmini doğum"
+                  value={profile?.due_date ? formatDate(profile.due_date) : "Belirtilmedi"}
+                />
               </View>
             ) : null}
+          </Card>
+        </Reveal>
 
-            {selectedMilestones.map((item) => (
-              <View key={`${item.week}-${item.title}`} style={styles.milestoneCard}>
-                <Text style={styles.milestoneType}>{typeLabel(item.type)}</Text>
-                <Text style={styles.milestoneTitle}>{item.title}</Text>
-                <ExpandableText
-                  collapsedLines={2}
-                  lessLabel="Gelişim notunu kapat"
-                  moreLabel="Gelişim notunu aç"
-                  style={styles.milestoneBody}
-                  text={item.body}
-                />
-                <Text style={styles.sourceText}>Kaynak: {item.source}</Text>
+        <SectionHeading
+          eyebrow="HAFTANIN ÖZETİ"
+          title="Bebeğinde ve sende"
+          description="Uzun metinler yerine bu haftanın iki temel odağı."
+        />
+
+        <View style={styles.focusGrid}>
+          <FocusCard
+            backgroundColor={vibrantColors.secondarySoft}
+            icon={<Baby color={vibrantColors.secondary} fill={vibrantColors.secondarySoft} size={25} />}
+            label="BEBEĞİNDE"
+            title={weekInfo?.milestone ?? selectedMilestones[0]?.title ?? "Gelişim sürüyor"}
+            body={weekInfo?.note ?? selectedMilestones[0]?.body ?? "Her hafta kendine özgü bir gelişim ritmi taşır."}
+          />
+          <FocusCard
+            backgroundColor={vibrantColors.mintSoft}
+            icon={<HeartPulse color={vibrantColors.mint} fill={vibrantColors.mintSoft} size={25} />}
+            label="SENDE"
+            title={motherFocus.title}
+            body={motherFocus.body}
+          />
+        </View>
+
+        <Link href={{ pathname: "/doctor-visit", params: { subject: "pregnancy" } }} asChild>
+          <Pressable accessibilityRole="button" style={styles.visitCard}>
+            <View style={styles.visitIcon}>
+              <CalendarCheck2
+                color={vibrantColors.primary}
+                fill={vibrantColors.primaryLight}
+                size={28}
+                strokeWidth={2.4}
+              />
+            </View>
+            <View style={styles.flexCopy}>
+              <View style={styles.visitTopLine}>
+                <Text style={styles.visitPeriod}>{visitGuidance.period}</Text>
+                <View
+                  style={[
+                    styles.visitStatus,
+                    visitGuidance.status === "current" && styles.visitStatusCurrent
+                  ]}
+                >
+                  <Text style={styles.visitStatusText}>
+                    {visitGuidance.status === "current" ? "Şimdi" : "Planla"}
+                  </Text>
+                </View>
               </View>
-            ))}
+              <Text style={styles.visitTitle}>{visitGuidance.title}</Text>
+              <Text numberOfLines={2} style={styles.visitBody}>
+                {visitGuidance.body}
+              </Text>
+              <Text numberOfLines={1} style={styles.sourceText}>{visitGuidance.source}</Text>
+            </View>
+            <ChevronRight color={vibrantColors.primary} size={22} />
+          </Pressable>
+        </Link>
+
+        <SectionHeading
+          eyebrow="TEK DOKUNUŞLA"
+          title="Bugün ne lazım?"
+          description="Kayıt, hazırlık ve günlük destek araçların burada."
+        />
+
+        <View style={styles.actionGrid}>
+          <QuickAction
+            backgroundColor={vibrantColors.secondarySoft}
+            color={vibrantColors.secondary}
+            href="/pregnancy-tools"
+            icon={<Scale color={vibrantColors.secondary} size={24} strokeWidth={2.6} />}
+            label="Kilo ve hareket"
+          />
+          <QuickAction
+            backgroundColor={vibrantColors.primaryLight}
+            color={vibrantColors.primary}
+            href={{ pathname: "/doctor-visit", params: { subject: "pregnancy" } }}
+            icon={<Stethoscope color={vibrantColors.primary} size={24} strokeWidth={2.6} />}
+            label="Doktora hazırlan"
+          />
+          <QuickAction
+            backgroundColor={vibrantColors.blueSoft}
+            color={vibrantColors.blue}
+            href="/pregnancy-nutrition"
+            icon={<Salad color={vibrantColors.blue} size={24} strokeWidth={2.6} />}
+            label="Beslenme"
+          />
+          <QuickAction
+            backgroundColor={vibrantColors.mintSoft}
+            color={vibrantColors.mint}
+            href="/pregnancy-exercise"
+            icon={<Dumbbell color={vibrantColors.mint} size={24} strokeWidth={2.6} />}
+            label="Güvenli hareket"
+          />
+          <QuickAction
+            backgroundColor={vibrantColors.peachSoft}
+            color={vibrantColors.peach}
+            href="/birth-preparation"
+            icon={<NotebookPen color={vibrantColors.peach} size={24} strokeWidth={2.6} />}
+            label="Doğuma hazırlık"
+          />
+          <QuickAction
+            backgroundColor={vibrantColors.yellowSoft}
+            color={colors.highlight}
+            href="/pregnancy-tools"
+            icon={<Activity color={colors.highlight} size={24} strokeWidth={2.6} />}
+            label="Kasılma sayacı"
+          />
+        </View>
+
+        <Card style={styles.todayRecordsCard}>
+          <View style={styles.cardHeader}>
+            <View style={styles.flexCopy}>
+              <Text style={styles.cardEyebrow}>BUGÜNKÜ RİTMİN</Text>
+              <Text style={styles.cardTitle}>Kayıtların bir bakışta</Text>
+            </View>
+            <Clock3 color={vibrantColors.secondary} size={25} strokeWidth={2.5} />
           </View>
+          <View style={styles.recordRow}>
+            <RecordItem
+              label="Son kilo"
+              value={latestWeight ? `${latestWeight.weight_kg} kg` : "Kayıt yok"}
+            />
+            <RecordItem
+              label="Bugün hareket"
+              value={todayCounter ? String(todayCounter.kick_count) : "—"}
+            />
+            <RecordItem
+              label="Kasılma"
+              value={todayCounter ? String(todayCounter.contraction_count) : "—"}
+            />
+          </View>
+          <Link href="/pregnancy-tools" asChild>
+            <Pressable accessibilityRole="button" style={styles.inlineLink}>
+              <Text style={styles.inlineLinkText}>Kayıtları aç veya yeni kayıt ekle</Text>
+              <ChevronRight color={vibrantColors.primary} size={18} />
+            </Pressable>
+          </Link>
         </Card>
 
-        <Card>
-          <View style={{ gap: spacing.md }}>
-            <View style={styles.cardHeader}>
-              <View style={{ flex: 1, gap: spacing.xs }}>
-                <Text style={typography.heading2}>Bu haftaya uygun makaleler</Text>
-                <Text style={typography.body}>
-                  Panelde seçtiğin hafta veya hafta aralığına göre burada görünür.
-                </Text>
-              </View>
-              <Info color={appTheme.primary} size={26} />
-            </View>
+        <SectionHeading
+          eyebrow="AKTİF TAKİPLER"
+          title="Bu haftanın hatırlatmaları"
+          description="Yalnızca seçtiğin haftada geçerli olan takip başlıkları."
+        />
 
-            {articlesQuery.isLoading ? (
-              <QueryState compact loading description="Makaleler yükleniyor…" />
-            ) : articlesQuery.isError ? (
-              <QueryState
-                compact
-                description="Bu haftaya ait makaleler alınamadı."
-                onRetry={() => void articlesQuery.refetch()}
-                retrying={articlesQuery.isFetching}
-              />
-            ) : selectedArticles.length === 0 ? (
-              <Text style={typography.body}>
-                Bu hafta için zamanlanmış makale yok.
+        <View style={styles.bandList}>
+          {activeBands.length > 0 ? (
+            activeBands.map((band) => (
+              <View key={band.id} style={styles.bandCard}>
+                <View style={[styles.bandIcon, { backgroundColor: band.tint }]}>
+                  <CheckCircle2 color={band.color} size={23} strokeWidth={2.6} />
+                </View>
+                <View style={styles.flexCopy}>
+                  <Text style={styles.bandTitle}>{band.title}</Text>
+                  <Text numberOfLines={2} style={styles.bandBody}>{band.note}</Text>
+                  <Text numberOfLines={1} style={styles.sourceText}>Kaynak: {band.source}</Text>
+                </View>
+              </View>
+            ))
+          ) : (
+            <View style={styles.calmCard}>
+              <CheckCircle2 color={vibrantColors.mint} size={24} strokeWidth={2.5} />
+              <Text style={styles.calmText}>
+                Bu hafta için ek bir dönemsel hatırlatma yok. Kişisel planını doktorunla sürdür.
               </Text>
-            ) : (
-              selectedArticles.map((article) => (
+            </View>
+          )}
+        </View>
+
+        <SectionHeading
+          eyebrow="DAHA FAZLASINI KEŞFET"
+          title={`${selectedWeek}. haftaya uygun okumalar`}
+          description="İhtiyacın olduğunda açabileceğin kısa rehberler."
+        />
+
+        {articlesQuery.isLoading ? (
+          <QueryState compact loading description="Haftanın içerikleri yükleniyor…" />
+        ) : articlesQuery.isError ? (
+          <QueryState
+            compact
+            description="Bu haftaya ait içerikler alınamadı."
+            onRetry={() => void articlesQuery.refetch()}
+            retrying={articlesQuery.isFetching}
+          />
+        ) : selectedArticles.length === 0 ? (
+          <View style={styles.calmCard}>
+            <Info color={vibrantColors.blue} size={24} />
+            <Text style={styles.calmText}>Bu hafta için ayrıca zamanlanmış bir okuma yok.</Text>
+          </View>
+        ) : (
+          <ScrollView
+            contentContainerStyle={styles.articleRail}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+          >
+            {selectedArticles.map((article) => {
+              const imageSource = article.imageSource ??
+                (article.imageUrl ? { uri: article.imageUrl } : null);
+
+              return (
                 <Link key={article.slug} href={`/articles/${article.slug}`} asChild>
-                  <Pressable accessibilityRole="button" style={styles.articleRow}>
-                    {article.imageUrl ? (
+                  <Pressable accessibilityRole="button" style={styles.articleCard}>
+                    {imageSource ? (
                       <Image
-                        accessibilityLabel={`${article.period} makale görseli`}
+                        accessibilityLabel={`${article.title} görseli`}
                         contentFit="cover"
-                        source={{ uri: article.imageUrl }}
+                        source={imageSource}
                         style={styles.articleImage}
                       />
                     ) : (
-                      <View
-                        style={[
-                          styles.articleFallback,
-                          { backgroundColor: article.accent }
-                        ]}
-                      >
-                        <Text style={styles.articleFallbackText}>{article.period}</Text>
-                      </View>
+                      <LinearGradient colors={vibrantGradients.hero} style={styles.articleImageFallback}>
+                        <NotebookPen color={vibrantColors.primary} size={34} strokeWidth={2.3} />
+                      </LinearGradient>
                     )}
-                    <View style={{ flex: 1, gap: spacing.xs }}>
-                      <Text style={styles.milestoneType}>
-                        {article.timelineStartWeek === article.timelineEndWeek
-                          ? `${article.timelineStartWeek}. hafta`
-                          : `${article.timelineStartWeek ?? "?"}-${article.timelineEndWeek ?? "?"}. hafta`}
-                      </Text>
-                      <Text style={styles.milestoneTitle}>{article.title}</Text>
-                      <Text numberOfLines={2} style={typography.body}>{article.excerpt}</Text>
-                    </View>
+                    <Text style={styles.articlePeriod}>{article.period}</Text>
+                    <Text numberOfLines={2} style={styles.articleTitle}>{article.title}</Text>
+                    <Text numberOfLines={2} style={styles.articleExcerpt}>{article.excerpt}</Text>
                   </Pressable>
                 </Link>
-              ))
-            )}
+              );
+            })}
+          </ScrollView>
+        )}
+
+        <View style={styles.disclaimerCard}>
+          <View style={styles.disclaimerIcon}>
+            <Info color={vibrantColors.primary} size={21} strokeWidth={2.5} />
           </View>
-        </Card>
-
-        <Card>
-          <View style={{ gap: spacing.lg }}>
-            <View style={styles.cardHeader}>
-              <View style={{ flex: 1, gap: spacing.xs }}>
-                <Text style={typography.heading2}>Takviye ve takip bantları</Text>
-                <Text style={typography.body}>
-                  Dönemsel öneriler yatay çizelgede kapsadığı haftalara yayılır.
-                </Text>
-              </View>
-              <CheckCircle2 color={appTheme.accent} size={28} />
-            </View>
-
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={styles.bandCanvas}>
-                <View style={styles.bandWeekHeader}>
-                  {weeks.map((week) => (
-                    <Text key={week} style={styles.bandWeekLabel}>
-                      {week}
-                    </Text>
-                  ))}
-                </View>
-                {pregnancyTimelineBands.map((band) => (
-                  <View key={band.id} style={styles.bandRow}>
-                    <View
-                      style={[
-                        styles.bandBar,
-                        {
-                          backgroundColor: band.color,
-                          left: (band.startWeek - 1) * WEEK_CELL_WIDTH,
-                          width: (band.endWeek - band.startWeek + 1) * WEEK_CELL_WIDTH
-                        }
-                      ]}
-                    >
-                      <Text style={styles.bandText}>{band.title}</Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            </ScrollView>
-
-            <View style={{ gap: spacing.sm }}>
-              {activeBands.length === 0 ? (
-                <Text style={typography.body}>
-                  Bu haftaya özel aktif dönemsel bant yok.
-                </Text>
-              ) : (
-                activeBands.map((band) => (
-                  <View key={band.id} style={styles.activeBandCard}>
-                    <View style={[styles.bandColorDot, { backgroundColor: band.color }]} />
-                    <View style={{ flex: 1, gap: spacing.xs }}>
-                      <Text style={styles.activeBandTitle}>{band.title}</Text>
-                      <ExpandableText
-                        collapsedLines={2}
-                        lessLabel="Takip notunu kapat"
-                        moreLabel="Takip notunu aç"
-                        style={typography.body}
-                        text={band.note}
-                      />
-                      <Text style={styles.sourceText}>Kaynak: {band.source}</Text>
-                    </View>
-                  </View>
-                ))
-              )}
-            </View>
-          </View>
-        </Card>
+          <Text style={styles.disclaimerText}>
+            Bu yol haritası genel bilgilendirme içindir; kişisel doktor planının ve tıbbi değerlendirmenin yerini tutmaz.
+          </Text>
+        </View>
       </View>
     </Screen>
   );
 }
 
-function MiniStat({ label, value }: { label: string; value: string }) {
+function MiniStat({
+  backgroundColor,
+  icon,
+  label,
+  value
+}: {
+  backgroundColor: string;
+  icon: ReactNode;
+  label: string;
+  value: string;
+}) {
   return (
-    <View style={styles.miniStat}>
+    <View style={[styles.miniStat, { backgroundColor }]}>
+      <View style={styles.miniStatIcon}>{icon}</View>
       <Text style={styles.miniStatLabel}>{label}</Text>
-      <Text style={styles.miniStatValue}>{value}</Text>
+      <Text numberOfLines={2} style={styles.miniStatValue}>{value}</Text>
+    </View>
+  );
+}
+
+function FocusCard({
+  backgroundColor,
+  body,
+  icon,
+  label,
+  title
+}: {
+  backgroundColor: string;
+  body: string;
+  icon: ReactNode;
+  label: string;
+  title: string;
+}) {
+  return (
+    <View style={[styles.focusCard, { backgroundColor }]}>
+      <View style={styles.focusIcon}>{icon}</View>
+      <Text style={styles.focusLabel}>{label}</Text>
+      <Text numberOfLines={2} style={styles.focusTitle}>{title}</Text>
+      <Text numberOfLines={3} style={styles.focusBody}>{body}</Text>
+    </View>
+  );
+}
+
+function QuickAction({
+  backgroundColor,
+  color,
+  href,
+  icon,
+  label
+}: {
+  backgroundColor: string;
+  color: string;
+  href: ComponentProps<typeof Link>["href"];
+  icon: ReactNode;
+  label: string;
+}) {
+  return (
+    <Link href={href} asChild>
+      <Pressable accessibilityRole="button" style={[styles.quickAction, { backgroundColor }]}>
+        <View style={styles.quickIcon}>{icon}</View>
+        <Text style={[styles.quickLabel, { color }]}>{label}</Text>
+        <ChevronRight color={color} size={18} />
+      </Pressable>
+    </Link>
+  );
+}
+
+function RecordItem({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.recordItem}>
+      <Text style={styles.recordValue}>{value}</Text>
+      <Text style={styles.recordLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function SectionHeading({
+  description,
+  eyebrow,
+  title
+}: {
+  description: string;
+  eyebrow: string;
+  title: string;
+}) {
+  return (
+    <View style={styles.sectionHeading}>
+      <Text style={styles.sectionEyebrow}>{eyebrow}</Text>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <Text style={styles.sectionDescription}>{description}</Text>
     </View>
   );
 }
 
 function BackButton() {
   return (
-    <Pressable accessibilityRole="button" onPress={() => router.back()}>
-      <View style={styles.backRow}>
-        <ArrowLeft color={colors.primary} size={20} />
-        <Text style={styles.backText}>Geri dön</Text>
-      </View>
+    <Pressable
+      accessibilityLabel="Geri dön"
+      accessibilityRole="button"
+      onPress={() => router.back()}
+      style={styles.backButton}
+    >
+      <ArrowLeft color={vibrantColors.primary} size={21} strokeWidth={2.6} />
     </Pressable>
   );
 }
 
-function typeLabel(type: "bebek" | "anne" | "kontrol" | "beslenme") {
-  switch (type) {
-    case "anne":
-      return "Anne";
-    case "kontrol":
-      return "Kontrol";
-    case "beslenme":
-      return "Beslenme";
-    default:
-      return "Bebek";
+function getTrimesterLabel(week: number) {
+  if (week <= 13) return "1. trimester";
+  if (week <= 27) return "2. trimester";
+  return "3. trimester";
+}
+
+function getMotherFocus(
+  week: number,
+  milestones: ReturnType<typeof getTimelineMilestonesForWeek>
+) {
+  const motherMilestone = milestones.find((item) => item.type === "anne");
+  if (motherMilestone) {
+    return { body: motherMilestone.body, title: motherMilestone.title };
   }
+
+  if (week <= 13) {
+    return {
+      body: "Enerji, bulantı ve duygusal değişimlerini kısa notlarla takip et; kontrolde paylaş.",
+      title: "Bedeninin yeni ritmini gözle"
+    };
+  }
+  if (week <= 27) {
+    return {
+      body: "Uyku, hareket ve beslenme düzeninde sana iyi gelen küçük rutinleri görünür kıl.",
+      title: "Günlük ritmini güçlendir"
+    };
+  }
+  return {
+    body: "Dinlenme ihtiyacını, hareket düzenini ve doğum hazırlığını haftalık olarak gözden geçir.",
+    title: "Hazırlığını küçük adımlara böl"
+  };
 }
 
 function isArticleVisibleForWeek(
@@ -427,33 +636,106 @@ function isArticleVisibleForWeek(
 }
 
 const styles = StyleSheet.create({
-  container: {
-    gap: spacing.lg
-  },
-  backRow: {
-    alignItems: "center",
+  actionGrid: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing.sm
   },
-  backText: {
-    ...typography.label,
-    color: colors.primary
+  articleCard: {
+    ...radii.card,
+    backgroundColor: vibrantColors.surface,
+    borderColor: vibrantColors.border,
+    borderWidth: 1,
+    gap: spacing.xs,
+    overflow: "hidden",
+    padding: spacing.sm,
+    width: 236
   },
-  hero: {
-    ...radii.cardLarge,
-    gap: spacing.sm,
-    padding: spacing.lg
+  articleExcerpt: {
+    ...typography.body,
+    color: vibrantColors.body,
+    fontSize: 14,
+    lineHeight: 20
   },
-  heroIcon: {
+  articleImage: {
+    borderRadius: radii.lg,
+    height: 126,
+    width: "100%"
+  },
+  articleImageFallback: {
+    alignItems: "center",
+    borderRadius: radii.lg,
+    height: 126,
+    justifyContent: "center",
+    width: "100%"
+  },
+  articlePeriod: {
+    ...typography.eyebrow,
+    color: vibrantColors.secondary,
+    marginTop: spacing.xs
+  },
+  articleRail: {
+    gap: spacing.md,
+    paddingRight: spacing.lg
+  },
+  articleTitle: {
+    ...typography.heading3,
+    color: vibrantColors.heading
+  },
+  backButton: {
+    alignItems: "center",
+    backgroundColor: vibrantColors.surfaceTranslucent,
+    borderColor: vibrantColors.border,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    height: 44,
+    justifyContent: "center",
+    width: 44
+  },
+  bandBody: {
+    ...typography.body,
+    color: vibrantColors.body,
+    fontSize: 14,
+    lineHeight: 20
+  },
+  bandCard: {
+    ...radii.card,
+    alignItems: "flex-start",
+    backgroundColor: vibrantColors.surfaceTranslucent,
+    borderColor: vibrantColors.border,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.md,
+    padding: spacing.md
+  },
+  bandIcon: {
     alignItems: "center",
     borderRadius: radii.pill,
-    height: 52,
+    height: 44,
     justifyContent: "center",
-    width: 52
+    width: 44
   },
-  heroText: {
+  bandList: { gap: spacing.sm },
+  bandTitle: {
+    ...typography.heading3,
+    color: vibrantColors.heading
+  },
+  calmCard: {
+    ...radii.card,
+    alignItems: "center",
+    backgroundColor: vibrantColors.mintSoft,
+    flexDirection: "row",
+    gap: spacing.md,
+    padding: spacing.md
+  },
+  calmText: {
     ...typography.body,
-    color: colors.text
+    color: vibrantColors.body,
+    flex: 1
+  },
+  cardEyebrow: {
+    ...typography.eyebrow,
+    color: vibrantColors.primary
   },
   cardHeader: {
     alignItems: "center",
@@ -461,173 +743,308 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     justifyContent: "space-between"
   },
-  currentWeekButton: {
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm
+  cardTitle: {
+    ...typography.heading2,
+    color: vibrantColors.heading
   },
-  currentWeekText: {
-    ...typography.label
+  container: {
+    gap: spacing.lg,
+    position: "relative"
   },
-  weekRail: {
-    gap: spacing.sm,
-    paddingRight: spacing.lg
+  disclaimerCard: {
+    ...radii.card,
+    alignItems: "flex-start",
+    backgroundColor: vibrantColors.primaryLight,
+    flexDirection: "row",
+    gap: spacing.md,
+    padding: spacing.md
   },
-  weekNode: {
+  disclaimerIcon: {
     alignItems: "center",
-    backgroundColor: colors.surfaceMuted,
-    borderColor: colors.border,
+    backgroundColor: vibrantColors.surfaceTranslucent,
     borderRadius: radii.pill,
-    borderWidth: 1,
-    gap: 1,
-    minHeight: 74,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    width: 58
+    height: 38,
+    justifyContent: "center",
+    width: 38
   },
-  weekNumber: {
-    ...typography.dataStrong,
-    color: colors.text,
-    fontSize: 22,
-    lineHeight: 27
-  },
-  weekNumberSelected: {
-    color: colors.onPrimary
-  },
-  weekLabel: {
-    ...typography.label,
-    color: colors.textMuted,
+  disclaimerText: {
+    ...typography.body,
+    color: vibrantColors.body,
+    flex: 1,
     fontSize: 14,
+    lineHeight: 20
+  },
+  flexCopy: { flex: 1, gap: 3 },
+  focusBody: {
+    ...typography.body,
+    color: vibrantColors.body,
+    fontSize: 14,
+    lineHeight: 20
+  },
+  focusCard: {
+    ...radii.card,
+    flex: 1,
+    gap: spacing.xs,
+    minHeight: 204,
+    padding: spacing.md
+  },
+  focusGrid: {
+    flexDirection: "row",
+    gap: spacing.sm
+  },
+  focusIcon: {
+    alignItems: "center",
+    backgroundColor: vibrantColors.surfaceTranslucent,
+    borderRadius: radii.pill,
+    height: 44,
+    justifyContent: "center",
+    marginBottom: spacing.xs,
+    width: 44
+  },
+  focusLabel: {
+    ...typography.eyebrow,
+    color: vibrantColors.heading
+  },
+  focusTitle: {
+    ...typography.heading3,
+    color: vibrantColors.heading,
+    fontSize: 17,
+    lineHeight: 22
+  },
+  inlineLink: {
+    alignItems: "center",
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    gap: spacing.xs,
+    minHeight: 44
+  },
+  inlineLinkText: {
+    ...typography.label,
+    color: vibrantColors.primary
+  },
+  miniStat: {
+    ...radii.card,
+    flex: 1,
+    gap: 3,
+    minHeight: 116,
+    padding: spacing.sm
+  },
+  miniStatIcon: {
+    alignItems: "center",
+    backgroundColor: vibrantColors.surfaceTranslucent,
+    borderRadius: radii.pill,
+    height: 34,
+    justifyContent: "center",
+    marginBottom: spacing.xs,
+    width: 34
+  },
+  miniStatLabel: {
+    ...typography.label,
+    color: vibrantColors.body,
+    fontSize: 12,
+    lineHeight: 17
+  },
+  miniStatValue: {
+    ...typography.dataStrong,
+    color: vibrantColors.heading,
+    fontSize: 15,
+    lineHeight: 20
+  },
+  progressCard: {
+    backgroundColor: vibrantColors.surfaceTranslucent,
+    borderColor: vibrantColors.border,
+    borderWidth: 1,
+    gap: spacing.md
+  },
+  progressFill: {
+    borderRadius: radii.pill,
+    height: "100%"
+  },
+  progressHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md
+  },
+  progressIcon: {
+    alignItems: "center",
+    backgroundColor: vibrantColors.primaryLight,
+    borderRadius: radii.pill,
+    height: 44,
+    justifyContent: "center",
+    width: 44
+  },
+  progressMeta: {
+    ...typography.label,
+    color: vibrantColors.body,
+    fontSize: 13,
     lineHeight: 18
   },
-  milestoneDot: {
-    borderRadius: radii.pill,
-    height: 7,
-    marginTop: spacing.xs,
-    width: 7
+  progressMetaRow: {
+    flexDirection: "row",
+    justifyContent: "space-between"
   },
-  selectedCard: {
-    borderWidth: 1
+  progressTrack: {
+    backgroundColor: vibrantColors.primaryLight,
+    borderRadius: radii.pill,
+    height: 10,
+    overflow: "hidden"
+  },
+  quickAction: {
+    ...radii.card,
+    alignItems: "center",
+    flexBasis: "47%",
+    flexDirection: "row",
+    flexGrow: 1,
+    gap: spacing.sm,
+    minHeight: 76,
+    padding: spacing.sm
+  },
+  quickIcon: {
+    alignItems: "center",
+    backgroundColor: vibrantColors.surfaceTranslucent,
+    borderRadius: radii.pill,
+    height: 42,
+    justifyContent: "center",
+    width: 42
+  },
+  quickLabel: {
+    ...typography.label,
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18
+  },
+  recordItem: {
+    alignItems: "center",
+    flex: 1,
+    gap: 2,
+    paddingHorizontal: spacing.xs
+  },
+  recordLabel: {
+    ...typography.label,
+    color: vibrantColors.body,
+    fontSize: 12,
+    lineHeight: 17,
+    textAlign: "center"
+  },
+  recordRow: {
+    backgroundColor: vibrantColors.secondarySoft,
+    borderRadius: radii.lg,
+    flexDirection: "row",
+    paddingVertical: spacing.md
+  },
+  recordValue: {
+    ...typography.dataStrong,
+    color: vibrantColors.heading,
+    fontSize: 17,
+    lineHeight: 22,
+    textAlign: "center"
+  },
+  screenEyebrow: {
+    ...typography.eyebrow,
+    color: vibrantColors.secondary
+  },
+  screenTitle: {
+    ...typography.heading1,
+    color: vibrantColors.heading,
+    fontSize: 27,
+    lineHeight: 33
+  },
+  screenTitleGroup: { flex: 1, gap: 2 },
+  sectionDescription: {
+    ...typography.body,
+    color: vibrantColors.body
+  },
+  sectionEyebrow: {
+    ...typography.eyebrow,
+    color: vibrantColors.secondary
+  },
+  sectionHeading: { gap: 3, marginTop: spacing.xs },
+  sectionTitle: {
+    ...typography.heading2,
+    color: vibrantColors.heading
+  },
+  sourceText: {
+    ...typography.label,
+    color: vibrantColors.body,
+    fontSize: 11,
+    lineHeight: 16,
+    opacity: 0.8
   },
   statRow: {
     flexDirection: "row",
     gap: spacing.sm
   },
-  miniStat: {
-    ...radii.card,
-    backgroundColor: colors.surfaceMuted,
-    flex: 1,
-    gap: spacing.xs,
-    padding: spacing.md
-  },
-  miniStatLabel: {
-    ...typography.label,
-    color: colors.textMuted
-  },
-  miniStatValue: {
-    ...typography.label,
-    color: colors.text
-  },
-  milestoneCard: {
-    ...radii.card,
-    backgroundColor: colors.surfaceMuted,
-    gap: spacing.xs,
-    padding: spacing.md
-  },
-  milestoneType: {
-    ...typography.eyebrow,
-    color: colors.accent
-  },
-  milestoneTitle: {
-    ...typography.heading3,
-    color: colors.text
-  },
-  milestoneBody: {
-    ...typography.body,
-    color: colors.text
-  },
-  sourceText: {
-    ...typography.label,
-    color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 19
-  },
-  articleRow: {
-    ...radii.card,
-    alignItems: "center",
-    backgroundColor: colors.surfaceMuted,
-    flexDirection: "row",
-    gap: spacing.md,
-    padding: spacing.md
-  },
-  articleImage: {
-    ...radii.card,
-    height: 96,
-    width: 82
-  },
-  articleFallback: {
-    ...radii.card,
-    height: 96,
-    justifyContent: "flex-end",
-    padding: spacing.sm,
-    width: 82
-  },
-  articleFallbackText: {
-    ...typography.label,
-    color: colors.onPrimary
-  },
-  bandCanvas: {
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    width: TIMELINE_WIDTH
-  },
-  bandWeekHeader: {
-    flexDirection: "row"
-  },
-  bandWeekLabel: {
-    ...typography.label,
-    color: colors.textMuted,
-    textAlign: "center",
-    width: WEEK_CELL_WIDTH
-  },
-  bandRow: {
-    backgroundColor: colors.surfaceMuted,
+  todayButton: {
+    backgroundColor: vibrantColors.primaryLight,
     borderRadius: radii.pill,
-    height: 42,
-    overflow: "hidden",
-    position: "relative",
-    width: TIMELINE_WIDTH
-  },
-  bandBar: {
-    alignItems: "center",
-    borderRadius: radii.pill,
-    bottom: 5,
+    minHeight: 40,
     justifyContent: "center",
-    position: "absolute",
-    top: 5
+    paddingHorizontal: spacing.md
   },
-  bandText: {
+  todayButtonText: {
     ...typography.label,
-    color: colors.onPrimary,
-    textAlign: "center"
+    color: vibrantColors.primary,
+    fontSize: 12,
+    lineHeight: 17
   },
-  activeBandCard: {
-    ...radii.card,
-    alignItems: "flex-start",
-    backgroundColor: colors.surfaceMuted,
+  todayRecordsCard: {
+    backgroundColor: vibrantColors.surfaceTranslucent,
+    gap: spacing.md
+  },
+  topBar: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md
+  },
+  visitBody: {
+    ...typography.body,
+    color: vibrantColors.body,
+    fontSize: 14,
+    lineHeight: 20
+  },
+  visitCard: {
+    ...radii.cardLarge,
+    alignItems: "center",
+    backgroundColor: vibrantColors.primaryLight,
+    borderColor: vibrantColors.primary,
+    borderWidth: 1,
     flexDirection: "row",
     gap: spacing.md,
     padding: spacing.md
   },
-  bandColorDot: {
+  visitIcon: {
+    alignItems: "center",
+    backgroundColor: vibrantColors.surfaceTranslucent,
     borderRadius: radii.pill,
-    height: 16,
-    marginTop: spacing.xs,
-    width: 16
+    height: 52,
+    justifyContent: "center",
+    width: 52
   },
-  activeBandTitle: {
+  visitPeriod: {
+    ...typography.eyebrow,
+    color: vibrantColors.primary
+  },
+  visitStatus: {
+    backgroundColor: vibrantColors.peachSoft,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3
+  },
+  visitStatusCurrent: { backgroundColor: vibrantColors.mintSoft },
+  visitStatusText: {
+    ...typography.label,
+    color: vibrantColors.heading,
+    fontSize: 11,
+    lineHeight: 15
+  },
+  visitTitle: {
     ...typography.heading3,
-    color: colors.text
+    color: vibrantColors.heading
+  },
+  visitTopLine: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+    justifyContent: "space-between"
   }
 });

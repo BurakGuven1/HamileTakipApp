@@ -1,3 +1,5 @@
+import { vibrantColors } from "@/theme";
+
 export type PregnancyTimelineBand = {
   color: string;
   endWeek: number;
@@ -5,6 +7,15 @@ export type PregnancyTimelineBand = {
   note: string;
   source: string;
   startWeek: number;
+  tint: string;
+  title: string;
+};
+
+export type PrenatalVisitGuidance = {
+  body: string;
+  period: string;
+  source: string;
+  status: "current" | "upcoming" | "ongoing";
   title: string;
 };
 
@@ -20,53 +31,58 @@ export const TIMELINE_TOTAL_WEEKS = 42;
 
 export const pregnancyTimelineBands: PregnancyTimelineBand[] = [
   {
-    color: "#D97895",
+    color: vibrantColors.secondary,
     endWeek: 12,
     id: "folic-acid",
     note:
       "Türkiye rehberi gebelik planlayan kadınlarda gebelikten en az 1 ay önce başlayıp 12. haftaya kadar günde 400–800 mikrogram folik asit tanımlar. Kişisel doz için doktor takibi esastır.",
     source: "T.C. Sağlık Bakanlığı / WHO",
     startWeek: 1,
+    tint: vibrantColors.secondarySoft,
     title: "Folik asit"
   },
   {
-    color: "#E3B873",
+    color: vibrantColors.yellow,
     endWeek: 42,
     id: "vitamin-d",
     note:
       "Türkiye destek programında 12. haftadan itibaren günde 1200 IU D vitamini bilgisi yer alır. Diğer ürünlerdeki D vitaminiyle toplam doz doktorla kontrol edilmelidir.",
     source: "T.C. Sağlık Bakanlığı",
     startWeek: 12,
+    tint: vibrantColors.yellowSoft,
     title: "D vitamini"
   },
   {
-    color: "#B86F55",
+    color: vibrantColors.peach,
     endWeek: 42,
     id: "iron-support",
     note:
       "Türkiye destek programında 16. haftadan itibaren günde 40–60 mg elemental demir bilgisi yer alır. Kan sonuçları ve kişisel plan için doktor takibi önceliklidir.",
     source: "T.C. Sağlık Bakanlığı / WHO",
     startWeek: 16,
+    tint: vibrantColors.peachSoft,
     title: "Demir desteği"
   },
   {
-    color: "#6B96C7",
+    color: vibrantColors.blue,
     endWeek: 28,
     id: "anatomy-scan-window",
     note:
       "Detaylı ultrason ve rutin kontrollerin zamanı ülke, hekim ve gebelik riskine göre değişebilir.",
     source: "Klinik takip",
     startWeek: 18,
+    tint: vibrantColors.blueSoft,
     title: "Detaylı değerlendirme dönemi"
   },
   {
-    color: "#8A75BD",
+    color: vibrantColors.primary,
     endWeek: 36,
     id: "movement-awareness",
     note:
       "Bebek hareket düzeni kişiseldir. Hareketlerde belirgin azalma hissedersen doktorunla görüşmelisin.",
     source: "Klinik takip",
     startWeek: 20,
+    tint: vibrantColors.primaryLight,
     title: "Hareket farkındalığı"
   }
 ];
@@ -201,4 +217,51 @@ export function getActiveTimelineBands(week: number) {
   return pregnancyTimelineBands.filter(
     (band) => week >= band.startWeek && week <= band.endWeek
   );
+}
+
+const prenatalVisitWindows = [
+  { endWeek: 14, label: "İlk gebelik izlemi", startWeek: 1 },
+  { endWeek: 24, label: "İkinci gebelik izlemi", startWeek: 18 },
+  { endWeek: 32, label: "Üçüncü gebelik izlemi", startWeek: 28 },
+  { endWeek: 38, label: "Dördüncü gebelik izlemi", startWeek: 36 }
+] as const;
+
+export function getPrenatalVisitGuidance(week: number): PrenatalVisitGuidance {
+  const currentWindow = prenatalVisitWindows.find(
+    (window) => week >= window.startWeek && week <= window.endWeek
+  );
+
+  if (currentWindow) {
+    const period =
+      currentWindow.startWeek === 1
+        ? "İlk 14 hafta içinde"
+        : `${currentWindow.startWeek}–${currentWindow.endWeek}. haftalar`;
+
+    return {
+      body: "Sorularını ve son ölçümlerini hazırlayıp randevu planını doktorunla netleştir.",
+      period,
+      source: "T.C. Sağlık Bakanlığı · Doğum Öncesi Bakım Yönetim Rehberi",
+      status: "current",
+      title: currentWindow.label
+    };
+  }
+
+  const nextWindow = prenatalVisitWindows.find((window) => week < window.startWeek);
+  if (nextWindow) {
+    return {
+      body: "Randevu tarihini şimdiden kontrol et; kişisel takip planın bu genel aralıktan farklı olabilir.",
+      period: `${nextWindow.startWeek}–${nextWindow.endWeek}. haftalar`,
+      source: "T.C. Sağlık Bakanlığı · Doğum Öncesi Bakım Yönetim Rehberi",
+      status: "upcoming",
+      title: `Sırada ${nextWindow.label.toLocaleLowerCase("tr-TR")}`
+    };
+  }
+
+  return {
+    body: "Kontrol sıklığını, doğum planını ve ne zaman başvuracağını kendi sağlık ekibinle netleştir.",
+    period: "38. hafta sonrası",
+    source: "T.C. Sağlık Bakanlığı · Doğum Öncesi Bakım Yönetim Rehberi",
+    status: "ongoing",
+    title: "Yakın takip ve doğum planı"
+  };
 }

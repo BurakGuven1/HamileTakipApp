@@ -1,4 +1,12 @@
-export { accentColors, colors, palette } from "@/theme/colors";
+export {
+  accentColors,
+  colors,
+  palette,
+  vibrantColors,
+  vibrantGradients,
+  vibrantPalette,
+  vibrantTheme
+} from "@/theme/colors";
 export {
   appThemes,
   getAppTheme,
