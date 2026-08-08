@@ -1597,6 +1597,7 @@ export type Database = {
     Functions: {
       complete_pregnancy_with_birth: {
         Args: {
+          p_baby_id?: string | null;
           p_baby_name: string;
           p_birth_date: string;
           p_gender?: "kiz" | "erkek" | "belirtilmemis";

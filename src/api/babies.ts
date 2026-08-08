@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { trackEvent } from "@/lib/analytics";
 import type { Tables, TablesInsert, TablesUpdate } from "@/types/database";
-import type { Profile } from "@/api/profiles";
+import { updateCurrentProfile, type Profile } from "@/api/profiles";
 
 export type Baby = Tables<"babies">;
 export type BabyInsert = TablesInsert<"babies">;
@@ -10,6 +10,7 @@ export type BabyGender = "kiz" | "erkek" | "belirtilmemis";
 export type FeedingMode = "breastfeeding" | "pumping" | "mixed" | "formula";
 
 export type CompletePregnancyWithBirthInput = {
+  babyId?: string | null;
   babyName: string;
   birthDate: string;
   gender: BabyGender;
@@ -64,6 +65,7 @@ export async function completePregnancyWithBirth(
   input: CompletePregnancyWithBirthInput
 ) {
   const { data, error } = await supabase.rpc("complete_pregnancy_with_birth", {
+    p_baby_id: input.babyId ?? null,
     p_baby_name: input.babyName.trim(),
     p_birth_date: input.birthDate,
     p_gender: input.gender,
@@ -71,7 +73,31 @@ export async function completePregnancyWithBirth(
   });
 
   if (error) {
-    throw error;
+    const oldRpcSignature = error.code === "PGRST202";
+    if (!input.babyId || !oldRpcSignature) {
+      throw error;
+    }
+
+    // Compatibility path while the id-aware RPC migration is waiting to be
+    // deployed. The existing child id is preserved, so related care, growth,
+    // vaccination and gallery records remain attached to the same profile.
+    const baby = await updateBaby(input.babyId, {
+      birth_date: input.birthDate,
+      gender: input.gender,
+      name: input.babyName.trim()
+    });
+    const profile = await updateCurrentProfile({
+      feeding_mode: input.feedingMode,
+      is_pregnant: false,
+      notify_weekly_pregnancy_updates: false
+    });
+
+    await trackEvent("pregnancy_completed_with_birth", {
+      baby_id: baby.id,
+      reused_existing_baby: true
+    }).catch(() => undefined);
+
+    return { baby, profile };
   }
 
   const result = data as unknown as { baby: Baby; profile: Profile };

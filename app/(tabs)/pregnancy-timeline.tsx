@@ -1,39 +1,41 @@
 import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { Link, router } from "expo-router";
-import { ArrowLeft, CalendarDays, CheckCircle2, Info } from "lucide-react-native";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, Baby, CheckCircle2, Info, Ruler, Scale, Sparkles } from "lucide-react-native";
+import { useMemo, useState, type ReactNode } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useReducedMotion } from "react-native-reanimated";
 
 import { listArticles } from "@/api/articles";
 import { getCurrentProfile } from "@/api/profiles";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { ExpandableText } from "@/components/ExpandableText";
-import { PregnancyJourneyArtwork } from "@/components/PregnancyJourneyArtwork";
 import { QueryState } from "@/components/QueryState";
 import { Reveal } from "@/components/Reveal";
 import { Screen } from "@/components/Screen";
+import { VibrantBackdrop } from "@/components/VibrantBackdrop";
+import { WeeklyBabyDevelopmentCard } from "@/components/WeeklyBabyDevelopmentCard";
 import { getPregnancyWeekInfo } from "@/features/pregnancy/weekInfo";
 import {
   TIMELINE_TOTAL_WEEKS,
   getActiveTimelineBands,
   getTimelineMilestonesForWeek,
-  pregnancyTimelineBands,
-  pregnancyTimelineMilestones
+  pregnancyTimelineBands
 } from "@/features/pregnancy/timeline";
 import { getPregnancyWeek } from "@/lib/dates";
-import { useAppTheme } from "@/providers/AppThemeProvider";
-import { colors, radii, spacing, typography } from "@/theme";
+import {
+  colors,
+  radii,
+  spacing,
+  typography,
+  vibrantColors,
+  vibrantTheme
+} from "@/theme";
 
 const WEEK_CELL_WIDTH = 68;
 const TIMELINE_WIDTH = TIMELINE_TOTAL_WEEKS * WEEK_CELL_WIDTH;
 
 export default function PregnancyTimelineScreen() {
-  const accentColor = useAppTheme();
-  const reducedMotion = useReducedMotion();
-  const weekScroller = useRef<ScrollView>(null);
   const profileQuery = useQuery({
     queryKey: ["current-profile"],
     queryFn: getCurrentProfile
@@ -44,8 +46,8 @@ export default function PregnancyTimelineScreen() {
   });
 
   const profile = profileQuery.data;
-  const currentWeek = getPregnancyWeek(profile?.due_date) ?? 1;
-  const appTheme = accentColor.theme;
+  const currentWeek = Math.max(2, Math.min(40, getPregnancyWeek(profile?.due_date) ?? 2));
+  const appTheme = vibrantTheme;
   const [selectedWeek, setSelectedWeek] = useState(currentWeek);
 
   const weekInfo = getPregnancyWeekInfo(selectedWeek);
@@ -59,16 +61,6 @@ export default function PregnancyTimelineScreen() {
     () => Array.from({ length: TIMELINE_TOTAL_WEEKS }, (_, index) => index + 1),
     []
   );
-
-  useEffect(() => {
-    setSelectedWeek(currentWeek);
-    const x = Math.max(0, (currentWeek - 2) * WEEK_CELL_WIDTH);
-    const timeout = setTimeout(
-      () => weekScroller.current?.scrollTo({ x, animated: !reducedMotion }),
-      reducedMotion ? 0 : 250
-    );
-    return () => clearTimeout(timeout);
-  }, [currentWeek, reducedMotion]);
 
   if (profileQuery.isLoading) {
     return <Screen scroll={false}><QueryState loading description="Hamilelik çizelgesi hazırlanıyor…" /></Screen>;
@@ -103,113 +95,33 @@ export default function PregnancyTimelineScreen() {
   return (
     <Screen>
       <View style={styles.container}>
+        <VibrantBackdrop />
         <BackButton />
 
         <Reveal>
-          <View style={[styles.hero, { backgroundColor: appTheme.primarySoft }]}>
-            <View style={[styles.heroIcon, { backgroundColor: appTheme.accentSoft }]}>
-              <CalendarDays color={appTheme.primary} size={28} />
+          <View style={styles.hero}>
+            <View style={styles.heroIcon}>
+              <Baby
+                color={vibrantColors.secondary}
+                fill={vibrantColors.secondarySoft}
+                size={30}
+                strokeWidth={2.5}
+              />
             </View>
-            <Text style={typography.eyebrow}>Hamilelik çizelgesi</Text>
-            <Text style={typography.heading1}>Hafta hafta yol haritası</Text>
-            <Text numberOfLines={3} style={styles.heroText}>
-              Güncel haftana odaklanan, soldan sağa ilerleyen gelişim ve takip
-              çizelgesi. Bilgiler genel rehberdir; kişisel takip planın doktorunla
-              netleşmelidir.
+            <Text style={styles.heroEyebrow}>Bebek gelişimi</Text>
+            <Text style={styles.heroTitle}>Her hafta yeni bir mucize</Text>
+            <Text numberOfLines={2} style={styles.heroText}>
+              Bebeğinin büyüklüğünü, gelişim notlarını ve haftana özel önerileri keşfet.
             </Text>
           </View>
         </Reveal>
 
-        <Card>
-          <View style={{ gap: spacing.lg }}>
-            <View style={styles.cardHeader}>
-              <View style={{ flex: 1, gap: spacing.xs }}>
-                <Text style={typography.heading2}>Hafta seç</Text>
-                <Text style={typography.body}>
-                  Şu an hesaplanan hafta: {currentWeek}. hafta
-                </Text>
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setSelectedWeek(currentWeek)}
-                style={[styles.currentWeekButton, { borderColor: appTheme.primary }]}
-              >
-                <Text style={[styles.currentWeekText, { color: appTheme.primary }]}>
-                  Bugünkü hafta
-                </Text>
-              </Pressable>
-            </View>
-
-            <ScrollView
-              ref={weekScroller}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.weekRail}
-            >
-              {weeks.map((week) => {
-                const selected = week === selectedWeek;
-                const current = week === currentWeek;
-                const hasMilestone = pregnancyTimelineMilestones.some(
-                  (item) => item.week === week
-                );
-                const hasArticle = articles.some((article) =>
-                  isArticleVisibleForWeek(
-                    article.timelineStartWeek,
-                    article.timelineEndWeek,
-                    week
-                  )
-                );
-
-                return (
-                  <Pressable
-                    key={week}
-                    accessibilityRole="button"
-                    onPress={() => setSelectedWeek(week)}
-                    style={[
-                      styles.weekNode,
-                      selected && {
-                        backgroundColor: appTheme.primary,
-                        borderColor: appTheme.primary
-                      },
-                      current && !selected && { borderColor: appTheme.accent }
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.weekNumber,
-                        selected && styles.weekNumberSelected
-                      ]}
-                    >
-                      {week}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.weekLabel,
-                        selected && styles.weekNumberSelected
-                      ]}
-                    >
-                      hafta
-                    </Text>
-                    {hasMilestone || hasArticle ? (
-                      <View
-                        style={[
-                          styles.milestoneDot,
-                          {
-                            backgroundColor: selected
-                              ? colors.onPrimary
-                              : hasArticle
-                                ? appTheme.primary
-                                : appTheme.accent
-                          }
-                        ]}
-                      />
-                    ) : null}
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
-        </Card>
+        <Reveal delay={60}>
+          <WeeklyBabyDevelopmentCard
+            initialWeek={currentWeek}
+            onWeekChange={setSelectedWeek}
+          />
+        </Reveal>
 
         <Card style={[styles.selectedCard, { borderColor: appTheme.primary }]}>
           <View style={{ gap: spacing.md }}>
@@ -222,15 +134,37 @@ export default function PregnancyTimelineScreen() {
                     : "Bu hafta için genel takip"}
                 </Text>
               </View>
-              <Info color={appTheme.primary} size={28} />
+              <Pressable
+                accessibilityLabel={`${currentWeek}. hafta olan bugünkü haftaya dön`}
+                accessibilityRole="button"
+                onPress={() => setSelectedWeek(currentWeek)}
+                style={styles.currentWeekButton}
+              >
+                <Sparkles color={vibrantColors.primary} size={16} strokeWidth={2.5} />
+                <Text style={styles.currentWeekText}>Bugün</Text>
+              </Pressable>
             </View>
-
-            <PregnancyJourneyArtwork height={196} week={selectedWeek} />
 
             {weekInfo ? (
               <View style={styles.statRow}>
-                <MiniStat label="Boy" value={weekInfo.lengthCm} />
-                <MiniStat label="Kilo" value={weekInfo.weightG} />
+                <MiniStat
+                  backgroundColor={vibrantColors.blueSoft}
+                  icon={<Ruler color={vibrantColors.blue} size={20} strokeWidth={2.5} />}
+                  label="Boy"
+                  value={weekInfo.lengthCm}
+                />
+                <MiniStat
+                  backgroundColor={vibrantColors.peachSoft}
+                  icon={<Scale color={vibrantColors.peach} size={20} strokeWidth={2.5} />}
+                  label="Kilo"
+                  value={weekInfo.weightG}
+                />
+                <MiniStat
+                  backgroundColor={vibrantColors.mintSoft}
+                  icon={<Baby color={vibrantColors.mint} size={20} strokeWidth={2.5} />}
+                  label="Hafta"
+                  value={`${selectedWeek}.`}
+                />
               </View>
             ) : null}
 
@@ -384,9 +318,20 @@ export default function PregnancyTimelineScreen() {
   );
 }
 
-function MiniStat({ label, value }: { label: string; value: string }) {
+function MiniStat({
+  backgroundColor,
+  icon,
+  label,
+  value
+}: {
+  backgroundColor: string;
+  icon: ReactNode;
+  label: string;
+  value: string;
+}) {
   return (
-    <View style={styles.miniStat}>
+    <View style={[styles.miniStat, { backgroundColor }]}>
+      <View style={styles.miniStatIcon}>{icon}</View>
       <Text style={styles.miniStatLabel}>{label}</Text>
       <Text style={styles.miniStatValue}>{value}</Text>
     </View>
@@ -395,7 +340,7 @@ function MiniStat({ label, value }: { label: string; value: string }) {
 
 function BackButton() {
   return (
-    <Pressable accessibilityRole="button" onPress={() => router.back()}>
+    <Pressable accessibilityRole="button" onPress={() => router.back()} style={styles.backButton}>
       <View style={styles.backRow}>
         <ArrowLeft color={colors.primary} size={20} />
         <Text style={styles.backText}>Geri dön</Text>
@@ -428,12 +373,18 @@ function isArticleVisibleForWeek(
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.lg
+    gap: spacing.lg,
+    position: "relative"
   },
   backRow: {
     alignItems: "center",
     flexDirection: "row",
     gap: spacing.sm
+  },
+  backButton: {
+    alignSelf: "flex-start",
+    justifyContent: "center",
+    minHeight: 44
   },
   backText: {
     ...typography.label,
@@ -441,19 +392,34 @@ const styles = StyleSheet.create({
   },
   hero: {
     ...radii.cardLarge,
+    backgroundColor: vibrantColors.primaryLight,
+    borderColor: vibrantColors.border,
+    borderWidth: 1,
     gap: spacing.sm,
+    overflow: "hidden",
     padding: spacing.lg
   },
   heroIcon: {
     alignItems: "center",
+    backgroundColor: vibrantColors.secondarySoft,
     borderRadius: radii.pill,
     height: 52,
     justifyContent: "center",
     width: 52
   },
+  heroEyebrow: {
+    ...typography.eyebrow,
+    color: vibrantColors.heading
+  },
+  heroTitle: {
+    ...typography.heading1,
+    color: vibrantColors.heading,
+    fontSize: 30,
+    lineHeight: 36
+  },
   heroText: {
     ...typography.body,
-    color: colors.text
+    color: vibrantColors.body
   },
   cardHeader: {
     alignItems: "center",
@@ -462,52 +428,21 @@ const styles = StyleSheet.create({
     justifyContent: "space-between"
   },
   currentWeekButton: {
+    alignItems: "center",
+    backgroundColor: vibrantColors.primaryLight,
     borderRadius: radii.pill,
-    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.xs,
+    minHeight: 44,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm
   },
   currentWeekText: {
-    ...typography.label
-  },
-  weekRail: {
-    gap: spacing.sm,
-    paddingRight: spacing.lg
-  },
-  weekNode: {
-    alignItems: "center",
-    backgroundColor: colors.surfaceMuted,
-    borderColor: colors.border,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    gap: 1,
-    minHeight: 74,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    width: 58
-  },
-  weekNumber: {
-    ...typography.dataStrong,
-    color: colors.text,
-    fontSize: 22,
-    lineHeight: 27
-  },
-  weekNumberSelected: {
-    color: colors.onPrimary
-  },
-  weekLabel: {
     ...typography.label,
-    color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 18
-  },
-  milestoneDot: {
-    borderRadius: radii.pill,
-    height: 7,
-    marginTop: spacing.xs,
-    width: 7
+    color: vibrantColors.heading
   },
   selectedCard: {
+    backgroundColor: vibrantColors.surfaceTranslucent,
     borderWidth: 1
   },
   statRow: {
@@ -516,22 +451,33 @@ const styles = StyleSheet.create({
   },
   miniStat: {
     ...radii.card,
-    backgroundColor: colors.surfaceMuted,
+    alignItems: "flex-start",
     flex: 1,
-    gap: spacing.xs,
-    padding: spacing.md
+    gap: 3,
+    padding: spacing.sm
+  },
+  miniStatIcon: {
+    alignItems: "center",
+    backgroundColor: vibrantColors.surfaceTranslucent,
+    borderRadius: radii.pill,
+    height: 34,
+    justifyContent: "center",
+    marginBottom: spacing.xs,
+    width: 34
   },
   miniStatLabel: {
     ...typography.label,
     color: colors.textMuted
   },
   miniStatValue: {
-    ...typography.label,
+    ...typography.dataStrong,
     color: colors.text
   },
   milestoneCard: {
     ...radii.card,
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: vibrantColors.secondarySoft,
+    borderLeftColor: vibrantColors.secondary,
+    borderLeftWidth: 4,
     gap: spacing.xs,
     padding: spacing.md
   },
@@ -556,7 +502,7 @@ const styles = StyleSheet.create({
   articleRow: {
     ...radii.card,
     alignItems: "center",
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: vibrantColors.blueSoft,
     flexDirection: "row",
     gap: spacing.md,
     padding: spacing.md

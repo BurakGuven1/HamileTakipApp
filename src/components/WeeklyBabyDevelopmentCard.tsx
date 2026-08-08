@@ -19,7 +19,6 @@ import Animated, {
   useReducedMotion,
   useSharedValue,
   withDelay,
-  withRepeat,
   withSequence,
   withTiming
 } from "react-native-reanimated";
@@ -28,8 +27,14 @@ import {
   getPregnancyWeekInfo,
   PREGNANCY_WEEK_GROWTH
 } from "@/features/pregnancy/weekInfo";
-import { colors, radii, spacing, typography } from "@/theme";
-import { semanticColor } from "@/theme/colors";
+import {
+  colors,
+  radii,
+  spacing,
+  typography,
+  vibrantColors,
+  vibrantGradients
+} from "@/theme";
 
 const babyImageContext = require.context(
   "../../assets/photos",
@@ -107,25 +112,19 @@ function DevelopmentVisual({
     }
 
     float.value = 0;
-    float.value = withRepeat(
+    float.value = withSequence(
       withTiming(1, {
-        duration: 2000,
-        easing: Easing.inOut(Easing.sin)
+        duration: 260,
+        easing: Easing.out(Easing.cubic)
       }),
-      -1,
-      true
+      withTiming(0.5, { duration: 220, easing: Easing.inOut(Easing.quad) })
     );
     pulse.value = 0;
-    pulse.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 90 }),
-        withTiming(0, { duration: 140 }),
-        withDelay(80, withTiming(0.68, { duration: 80 })),
-        withTiming(0, { duration: 150 }),
-        withDelay(560, withTiming(0, { duration: 1 }))
-      ),
-      -1,
-      false
+    pulse.value = withSequence(
+      withTiming(1, { duration: 90 }),
+      withTiming(0, { duration: 140 }),
+      withDelay(80, withTiming(0.68, { duration: 80 })),
+      withTiming(0, { duration: 150 })
     );
 
     return () => {
@@ -154,27 +153,36 @@ function DevelopmentVisual({
         pointerEvents="none"
         style={[styles.pulseRing, pulseStyle]}
       />
-      <Animated.View style={[styles.babyOrb, floatingStyle]}>
-        {selectedSource ? (
-          <Image
-            accessibilityLabel={`${week}. hafta bebeğinin temsili gelişim görseli`}
-            accessibilityRole="image"
-            contentFit="contain"
-            onError={() => setImageAttempt((attempt) => attempt + 1)}
-            source={selectedSource}
-            style={styles.babyImage}
-            transition={reducedMotion ? 0 : 220}
-          />
-        ) : (
-          <View
-            accessibilityLabel={`${week}. hafta gelişim görseli hazırlanıyor`}
-            accessibilityRole="image"
-            style={styles.babyPlaceholder}
-          >
-            <Baby color={weeklyColors.indigo} size={52} strokeWidth={1.6} />
-            <Text style={styles.placeholderWeek}>{week}. hafta</Text>
+      <Animated.View style={[styles.visualFrame, floatingStyle]}>
+        <LinearGradient colors={vibrantGradients.hero} style={styles.visualFrameGradient}>
+          <View style={styles.babyOrb}>
+            {selectedSource ? (
+              <Image
+                accessibilityLabel={`${week}. hafta bebeğinin temsili gelişim görseli`}
+                accessibilityRole="image"
+                contentFit="contain"
+                onError={() => setImageAttempt((attempt) => attempt + 1)}
+                source={selectedSource}
+                style={styles.babyImage}
+                transition={reducedMotion ? 0 : 220}
+              />
+            ) : (
+              <View
+                accessibilityLabel={`${week}. hafta gelişim görseli hazırlanıyor`}
+                accessibilityRole="image"
+                style={styles.babyPlaceholder}
+              >
+                <Baby
+                  color={vibrantColors.primary}
+                  fill={vibrantColors.primaryLight}
+                  size={52}
+                  strokeWidth={2.4}
+                />
+                <Text style={styles.placeholderWeek}>{week}. hafta</Text>
+              </View>
+            )}
           </View>
-        )}
+        </LinearGradient>
       </Animated.View>
     </View>
   );
@@ -279,14 +287,10 @@ export function WeeklyBabyDevelopmentCard({
     }
 
     bubbleDrift.value = 0;
-    bubbleDrift.value = withRepeat(
-      withTiming(1, {
-        duration: 5200,
-        easing: Easing.inOut(Easing.sin)
-      }),
-      -1,
-      true
-    );
+    bubbleDrift.value = withTiming(0.5, {
+      duration: 300,
+      easing: Easing.out(Easing.quad)
+    });
 
     return () => cancelAnimation(bubbleDrift);
   }, [bubbleDrift, reducedMotion]);
@@ -334,13 +338,14 @@ export function WeeklyBabyDevelopmentCard({
 
   return (
     <LinearGradient
-      colors={[weeklyColors.gradientStart, weeklyColors.gradientEnd]}
+      colors={vibrantGradients.backdrop}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.shell}
     >
       <Animated.View style={[styles.bubbleOne, bubbleOneStyle]} />
       <Animated.View style={[styles.bubbleTwo, bubbleTwoStyle]} />
+      <View style={styles.bubbleThree} />
 
       <View
         accessibilityActions={[
@@ -418,7 +423,7 @@ export function WeeklyBabyDevelopmentCard({
             pressed && styles.arrowPressed
           ]}
         >
-          <ChevronLeft color={weeklyColors.indigo} size={24} strokeWidth={2.2} />
+          <ChevronLeft color={vibrantColors.primary} size={24} strokeWidth={2.6} />
         </Pressable>
         <Pressable
           accessibilityLabel="Sonraki hafta"
@@ -433,7 +438,7 @@ export function WeeklyBabyDevelopmentCard({
             pressed && styles.arrowPressed
           ]}
         >
-          <ChevronRight color={weeklyColors.indigo} size={24} strokeWidth={2.2} />
+          <ChevronRight color={vibrantColors.primary} size={24} strokeWidth={2.6} />
         </Pressable>
       </View>
 
@@ -458,7 +463,12 @@ export function WeeklyBabyDevelopmentCard({
           accessibilityValue={{ max: MAX_WEEK, min: MIN_WEEK, now: selectedWeek }}
           style={styles.progressTrack}
         >
-          <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+          <LinearGradient
+            colors={vibrantGradients.primary}
+            end={{ x: 1, y: 0 }}
+            start={{ x: 0, y: 0 }}
+            style={[styles.progressFill, { width: `${progress * 100}%` }]}
+          />
           <View style={[styles.progressThumb, { left: `${progress * 100}%` }]} />
         </View>
         <View style={styles.progressLabels}>
@@ -470,20 +480,10 @@ export function WeeklyBabyDevelopmentCard({
   );
 }
 
-const weeklyColors = {
-  coral: semanticColor("#FF8B7A", "#FF9E91"),
-  gradientEnd: semanticColor("#F6E9F0", "#201A28"),
-  gradientStart: semanticColor("#FBF2ED", "#2C222E"),
-  indigo: semanticColor("#5341C4", "#B8A9FF"),
-  indigoSoft: semanticColor("rgba(110, 86, 229, 0.13)", "rgba(184, 169, 255, 0.16)"),
-  ring: semanticColor("rgba(110, 86, 229, 0.42)", "rgba(184, 169, 255, 0.48)"),
-  surface: semanticColor("rgba(255, 252, 248, 0.92)", "rgba(41, 36, 44, 0.92)")
-} as const;
-
 const styles = StyleSheet.create({
   arrowButton: {
     alignItems: "center",
-    backgroundColor: weeklyColors.surface,
+    backgroundColor: vibrantColors.surfaceTranslucent,
     borderRadius: radii.pill,
     height: 48,
     justifyContent: "center",
@@ -499,16 +499,27 @@ const styles = StyleSheet.create({
   babyImage: { height: "100%", width: "100%" },
   babyOrb: {
     alignItems: "center",
-    backgroundColor: weeklyColors.surface,
+    backgroundColor: vibrantColors.surfaceTranslucent,
     borderRadius: radii.pill,
-    height: 190,
+    height: 184,
     justifyContent: "center",
     overflow: "hidden",
-    shadowColor: weeklyColors.indigo,
+    width: 184
+  },
+  visualFrame: {
+    borderRadius: radii.pill,
+    shadowColor: vibrantColors.secondary,
     shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.14,
+    shadowOpacity: 0.2,
     shadowRadius: 24,
-    width: 190
+  },
+  visualFrameGradient: {
+    alignItems: "center",
+    borderRadius: radii.pill,
+    height: 204,
+    justifyContent: "center",
+    padding: 10,
+    width: 204
   },
   babyPlaceholder: {
     alignItems: "center",
@@ -516,7 +527,7 @@ const styles = StyleSheet.create({
     justifyContent: "center"
   },
   bubbleOne: {
-    backgroundColor: weeklyColors.indigoSoft,
+    backgroundColor: vibrantColors.mintSoft,
     borderRadius: radii.pill,
     height: 92,
     opacity: 0.42,
@@ -526,18 +537,28 @@ const styles = StyleSheet.create({
     width: 92
   },
   bubbleTwo: {
-    backgroundColor: weeklyColors.coral,
+    backgroundColor: vibrantColors.secondarySoft,
     borderRadius: radii.pill,
     bottom: 94,
     height: 52,
     left: -18,
-    opacity: 0.08,
+    opacity: 0.68,
     position: "absolute",
     width: 52
   },
+  bubbleThree: {
+    backgroundColor: vibrantColors.yellowSoft,
+    borderRadius: radii.pill,
+    height: 66,
+    opacity: 0.82,
+    position: "absolute",
+    right: 34,
+    top: 150,
+    width: 66
+  },
   comparisonBadge: {
     alignItems: "center",
-    backgroundColor: weeklyColors.surface,
+    backgroundColor: vibrantColors.blueSoft,
     borderRadius: radii.lg,
     height: 68,
     justifyContent: "center",
@@ -574,7 +595,7 @@ const styles = StyleSheet.create({
   },
   kicker: {
     ...typography.label,
-    color: weeklyColors.indigo,
+    color: vibrantColors.heading,
     fontSize: 13,
     lineHeight: 18
   },
@@ -585,12 +606,11 @@ const styles = StyleSheet.create({
   },
   placeholderWeek: {
     ...typography.data,
-    color: weeklyColors.indigo,
+    color: vibrantColors.heading,
     fontSize: 14,
     lineHeight: 20
   },
   progressFill: {
-    backgroundColor: weeklyColors.indigo,
     borderRadius: radii.pill,
     height: "100%"
   },
@@ -603,8 +623,8 @@ const styles = StyleSheet.create({
   },
   progressLabels: { flexDirection: "row", justifyContent: "space-between" },
   progressThumb: {
-    backgroundColor: weeklyColors.coral,
-    borderColor: weeklyColors.surface,
+    backgroundColor: vibrantColors.secondary,
+    borderColor: vibrantColors.surface,
     borderRadius: radii.pill,
     borderWidth: 3,
     height: 16,
@@ -614,13 +634,13 @@ const styles = StyleSheet.create({
     width: 16
   },
   progressTrack: {
-    backgroundColor: weeklyColors.indigoSoft,
+    backgroundColor: vibrantColors.primaryLight,
     borderRadius: radii.pill,
     height: 6,
     position: "relative"
   },
   pulseRing: {
-    borderColor: weeklyColors.ring,
+    borderColor: vibrantColors.secondary,
     borderRadius: radii.pill,
     borderWidth: 2,
     height: 210,
@@ -628,6 +648,8 @@ const styles = StyleSheet.create({
     width: 210
   },
   shell: {
+    borderColor: vibrantColors.peach,
+    borderWidth: 1,
     borderRadius: 30,
     gap: spacing.md,
     overflow: "hidden",
@@ -635,7 +657,7 @@ const styles = StyleSheet.create({
     position: "relative"
   },
   trimesterBadge: {
-    backgroundColor: weeklyColors.indigoSoft,
+    backgroundColor: vibrantColors.primaryLight,
     borderRadius: radii.pill,
     minHeight: 32,
     paddingHorizontal: spacing.md,
@@ -643,7 +665,7 @@ const styles = StyleSheet.create({
   },
   trimesterText: {
     ...typography.label,
-    color: weeklyColors.indigo,
+    color: vibrantColors.heading,
     fontSize: 12,
     lineHeight: 17
   },

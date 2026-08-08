@@ -39,16 +39,6 @@ Thumbs.db
 .idea/
 .vscode/
 
-# Local agent skills and design hooks
-# Impeccable stays installed locally, but its generated harness payloads do not
-# belong in the application source history.
-.agents/skills/impeccable/
-.codex/hooks.json
-.github/hooks/impeccable.json
-.github/skills/impeccable/
-.impeccable/config.local.json
-.impeccable/cache/
-
 # Supabase local temp
 supabase/.branches/
 supabase/.temp/
