@@ -29,6 +29,7 @@ import { PregnancyAgeField } from "@/components/PregnancyAgeField";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
 import { Thread } from "@/components/Thread";
+import { trackEvent } from "@/lib/analytics";
 import { registerAndSavePushToken } from "@/lib/notifications";
 import {
   getPregnancyAgeError,
@@ -74,6 +75,7 @@ export default function OnboardingScreen() {
   const appTheme = useAppTheme();
   const { showError, showInfo } = useFeedback();
   const hasHydrated = useRef(false);
+  const trackedStepRef = useRef<OnboardingStep | null>(null);
   const [step, setStep] = useState<OnboardingStep>("family");
   const [status, setStatus] = useState<ParentStatus>();
   const [motherName, setMotherName] = useState("");
@@ -166,6 +168,26 @@ export default function OnboardingScreen() {
 
     setStep(restoredStep[profile.onboarding_step] ?? "family");
   }, [babiesQuery.data, babiesQuery.isFetched, profile, profileQuery.isFetched]);
+
+  useEffect(() => {
+    if (!hasHydrated.current) return;
+
+    const previousStep = trackedStepRef.current;
+    if (previousStep && previousStep !== step) {
+      void trackEvent("onboarding_step_completed", {
+        life_stage: status ?? "unknown",
+        step_key: previousStep
+      });
+    }
+
+    if (previousStep !== step) {
+      trackedStepRef.current = step;
+      void trackEvent("onboarding_step_viewed", {
+        life_stage: status ?? "unknown",
+        step_key: step
+      });
+    }
+  }, [status, step]);
 
   useEffect(() => {
     if (step !== "nickname" || nickname.trim().length < 3) {
@@ -402,6 +424,10 @@ export default function OnboardingScreen() {
       await updateStepMutation.mutateAsync({
         onboarding_completed: true,
         onboarding_step: "completed"
+      });
+      await trackEvent("onboarding_completed", {
+        life_stage: status ?? "unknown",
+        notifications_requested: requestNotifications
       });
       if (notificationSetupFailed) {
         showInfo(

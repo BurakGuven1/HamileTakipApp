@@ -42,6 +42,7 @@ import { Reveal } from "@/components/Reveal";
 import { Screen } from "@/components/Screen";
 import { VibrantBackdrop } from "@/components/VibrantBackdrop";
 import { WeeklyBabyDevelopmentCard } from "@/components/WeeklyBabyDevelopmentCard";
+import { trackEvent } from "@/lib/analytics";
 import {
   getActiveTimelineBands,
   getPrenatalVisitGuidance,
@@ -77,6 +78,13 @@ export default function PregnancyTimelineScreen() {
   const currentWeek = Math.max(2, Math.min(40, getPregnancyWeek(profile?.due_date) ?? 2));
   const [selectedWeek, setSelectedWeek] = useState(currentWeek);
   const isPregnant = Boolean(profile?.is_pregnant);
+
+  useEffect(() => {
+    if (!isPregnant) return;
+    void trackEvent("pregnancy_timeline_viewed", {
+      pregnancy_week_bucket: Math.floor(currentWeek / 4) * 4
+    });
+  }, [currentWeek, isPregnant]);
 
   const weightQuery = useQuery({
     enabled: isPregnant,

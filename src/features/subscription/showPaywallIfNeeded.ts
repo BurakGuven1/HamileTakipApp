@@ -8,14 +8,6 @@ import {
   getSubscriptionStatusFromCustomerInfo
 } from "@/lib/revenuecat";
 
-export type PaywallTriggerSource =
-  | "ad_limit_reached"
-  | "day5_offer"
-  | "onboarding_end"
-  | "premium_feature"
-  | "seasonal"
-  | "settings";
-
 type PaywallTriggerProperties = Record<string, string | number | boolean | null>;
 
 export type PaywallPresentationResult = {
@@ -25,9 +17,14 @@ export type PaywallPresentationResult = {
 };
 
 export async function showPaywallIfNeeded(
-  triggerSource: PaywallTriggerSource,
+  source: string,
   properties: PaywallTriggerProperties = {}
 ): Promise<PaywallPresentationResult> {
+  await trackEvent("premium_gate_hit", {
+    ...properties,
+    source
+  });
+
   try {
     configureRevenueCat();
     const [customerInfo, effectiveAccess] = await Promise.all([
@@ -47,12 +44,12 @@ export async function showPaywallIfNeeded(
     console.warn("Premium durum kontrolu yapilamadi", error);
   }
 
-  await trackEvent("paywall_viewed", {
+  await trackEvent("paywall_requested", {
     ...properties,
-    trigger_source: triggerSource
+    source
   });
 
-  router.push("/paywall");
+  router.push({ pathname: "/paywall", params: { source } });
 
   return {
     didBecomePremium: false,

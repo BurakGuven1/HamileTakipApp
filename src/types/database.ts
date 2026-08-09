@@ -88,6 +88,36 @@ export type Database = {
         };
         Relationships: [];
       };
+      paywall_views: {
+        Row: {
+          id: string;
+          user_id: string;
+          source: string;
+          app_version: string | null;
+          installation_id: string | null;
+          session_id: string | null;
+          viewed_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          source: string;
+          app_version?: string | null;
+          installation_id?: string | null;
+          session_id?: string | null;
+          viewed_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          source?: string;
+          app_version?: string | null;
+          installation_id?: string | null;
+          session_id?: string | null;
+          viewed_at?: string;
+        };
+        Relationships: [];
+      };
       user_age_assurance: {
         Row: {
           user_id: string;
@@ -1368,6 +1398,12 @@ export type Database = {
           user_id: string | null;
           event_name: string;
           event_properties: Json;
+          event_version: number;
+          installation_id: string | null;
+          occurred_at: string;
+          app_version: string | null;
+          platform: "android" | "ios" | "web" | null;
+          paywall_view_id: string | null;
           session_id: string | null;
           created_at: string;
         };
@@ -1376,8 +1412,114 @@ export type Database = {
           user_id?: string | null;
           event_name: string;
           event_properties?: Json;
+          event_version?: number;
+          installation_id?: string | null;
+          occurred_at?: string;
+          app_version?: string | null;
+          platform?: "android" | "ios" | "web" | null;
+          paywall_view_id?: string | null;
           session_id?: string | null;
           created_at?: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
+      analytics_installation_users: {
+        Row: {
+          installation_id: string;
+          user_id: string;
+          linked_at: string;
+        };
+        Insert: {
+          installation_id: string;
+          user_id: string;
+          linked_at?: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
+      analytics_admins: {
+        Row: {
+          user_id: string;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
+      revenuecat_events: {
+        Row: {
+          revenuecat_event_id: string;
+          user_id: string | null;
+          event_type: string;
+          product_id: string | null;
+          new_product_id: string | null;
+          presented_offering_id: string | null;
+          transaction_id: string | null;
+          original_transaction_id: string | null;
+          period_type: string | null;
+          price: number | null;
+          currency: string | null;
+          commission_percentage: number | null;
+          tax_percentage: number | null;
+          store: string | null;
+          environment: string | null;
+          cancel_reason: string | null;
+          expiration_reason: string | null;
+          purchased_at: string | null;
+          expiration_at: string | null;
+          event_at: string;
+          received_at: string;
+        };
+        Insert: {
+          revenuecat_event_id: string;
+          user_id?: string | null;
+          event_type: string;
+          product_id?: string | null;
+          new_product_id?: string | null;
+          presented_offering_id?: string | null;
+          transaction_id?: string | null;
+          original_transaction_id?: string | null;
+          period_type?: string | null;
+          price?: number | null;
+          currency?: string | null;
+          commission_percentage?: number | null;
+          tax_percentage?: number | null;
+          store?: string | null;
+          environment?: string | null;
+          cancel_reason?: string | null;
+          expiration_reason?: string | null;
+          purchased_at?: string | null;
+          expiration_at?: string | null;
+          event_at: string;
+          received_at?: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
+      analytics_daily_metrics: {
+        Row: {
+          metric_date: string;
+          metric_name: string;
+          dimension_key: string;
+          dimension_value: string;
+          event_count: number;
+          unique_actors: number;
+          updated_at: string;
+        };
+        Insert: {
+          metric_date: string;
+          metric_name: string;
+          dimension_key?: string;
+          dimension_value?: string;
+          event_count?: number;
+          unique_actors?: number;
+          updated_at?: string;
         };
         Update: never;
         Relationships: [];
@@ -2027,6 +2169,77 @@ export type Database = {
       can_create_care_reminder: {
         Args: { p_baby_id: string };
         Returns: boolean;
+      };
+      is_analytics_admin: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
+      get_analytics_overview: {
+        Args: { p_from: string; p_to: string };
+        Returns: Json;
+      };
+      get_analytics_funnel: {
+        Args: { p_from: string; p_to: string };
+        Returns: {
+          step_key: string;
+          step_order: number;
+          users: number;
+        }[];
+      };
+      get_paywall_source_performance: {
+        Args: { p_from: string; p_to: string };
+        Returns: {
+          source: string;
+          impressions: number;
+          unique_viewers: number;
+          verified_conversions: number;
+          conversion_rate: number;
+        }[];
+      };
+      get_offering_performance: {
+        Args: { p_from: string; p_to: string };
+        Returns: {
+          offering_id: string;
+          impressions: number;
+          purchase_starts: number;
+          verified_purchases: number;
+        }[];
+      };
+      get_subscription_health: {
+        Args: { p_from: string; p_to: string };
+        Returns: {
+          event_type: string;
+          events: number;
+          customers: number;
+          gross_revenue: number;
+        }[];
+      };
+      get_analytics_timeseries: {
+        Args: { p_from: string; p_to: string };
+        Returns: {
+          metric_date: string;
+          paywall_viewers: number;
+          verified_purchases: number;
+          active_users: number;
+        }[];
+      };
+      get_analytics_retention: {
+        Args: { p_from: string; p_to: string };
+        Returns: {
+          cohort_date: string;
+          cohort_users: number;
+          d1_users: number;
+          d7_users: number;
+          d30_users: number;
+        }[];
+      };
+      get_analytics_data_quality: {
+        Args: { p_from: string; p_to: string };
+        Returns: Json;
+      };
+      rollup_analytics_daily: {
+        Args: { p_metric_date?: string };
+        Returns: undefined;
       };
       get_upcoming_vaccinations: {
         Args: {

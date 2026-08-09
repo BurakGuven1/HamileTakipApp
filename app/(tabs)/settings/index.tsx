@@ -913,7 +913,10 @@ export default function SettingsScreen() {
               Premium içerikler ve gelişmiş takip özellikleri için satın alma sayfası
               burada açılır.
             </Text>
-            <Link href="/paywall" asChild>
+            <Link
+              href={{ pathname: "/paywall", params: { source: "settings" } }}
+              asChild
+            >
               <Button label="Premium'a geç" />
             </Link>
             <Button

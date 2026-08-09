@@ -83,7 +83,7 @@ export async function uploadBabyPhoto(input: {
     throw error;
   }
 
-  await trackEvent("photo_uploaded", { baby_id: input.babyId });
+  await trackEvent("photo_uploaded");
 
   return data;
 }
@@ -150,7 +150,7 @@ export async function uploadBabyHomePhoto(input: {
     await supabase.storage.from(bucketName).remove([input.previousPath]).catch(() => undefined);
   }
 
-  await trackEvent("home_photo_updated", { baby_id: input.babyId });
+  await trackEvent("home_photo_updated");
   return data;
 }
 
@@ -174,7 +174,7 @@ export async function removeBabyHomePhoto(input: {
     if (storageError) throw storageError;
   }
 
-  await trackEvent("home_photo_removed", { baby_id: input.babyId });
+  await trackEvent("home_photo_removed");
   return data;
 }
 
@@ -208,5 +208,5 @@ export async function deleteBabyPhoto(photo: BabyPhoto) {
     throw error;
   }
 
-  await trackEvent("photo_deleted", { baby_id: photo.baby_id });
+  await trackEvent("photo_deleted");
 }

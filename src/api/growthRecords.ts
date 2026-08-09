@@ -31,7 +31,7 @@ export async function addGrowthRecord(record: GrowthRecordInsert) {
     throw error;
   }
 
-  await trackEvent("growth_record_added", { baby_id: record.baby_id });
+  await trackEvent("growth_record_added");
 
   return data;
 }

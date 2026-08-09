@@ -903,7 +903,7 @@ function AdvancedCareJournalContent() {
   const cancelReminderMutation = useMutation({ mutationFn: async (reminder: CareReminder) => { const { cancelLocalCareReminder } = await import("@/features/care-journal/reminders"); await cancelLocalCareReminder(reminder.local_notification_id).catch(() => undefined); return cancelCareReminder(reminder.id); }, onSuccess: async () => { showSuccess("Alarm iptal edildi."); await queryClient.invalidateQueries({ queryKey: ["care-reminders", selectedBaby?.id] }); }, onError: (e) => showError(e, "Alarm iptal edilemedi") });
 
   async function openPremium(feature: string) {
-    try { await showPaywallIfNeeded("premium_feature", { feature }); } catch (error) { showError(error, "Premium ekranı açılamadı"); }
+    try { await showPaywallIfNeeded(feature, { feature }); } catch (error) { showError(error, "Premium ekranı açılamadı"); }
   }
 
   async function exportPermanentArchive() {

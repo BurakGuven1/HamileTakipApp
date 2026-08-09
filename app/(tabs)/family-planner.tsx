@@ -231,7 +231,7 @@ export default function FamilyPlannerScreen() {
     onSuccess: async (result) => {
       if (!result.allowed) {
         if (isPremiumRequiredReason(result.reason)) {
-          await showPaywallIfNeeded("premium_feature", {
+          await showPaywallIfNeeded("family_task_alarm", {
             feature: "family_task_alarm",
             life_stage: lifeStage,
             reason: "free_credits_exhausted",
@@ -309,7 +309,7 @@ export default function FamilyPlannerScreen() {
     onSuccess: async (result) => {
       if (!result.allowed) {
         if (isPremiumRequiredReason(result.reason)) {
-          await showPaywallIfNeeded("premium_feature", {
+          await showPaywallIfNeeded("pregnancy_support_handover", {
             feature: "pregnancy_support_handover",
             life_stage: "pregnancy",
             reason: "free_credits_exhausted",

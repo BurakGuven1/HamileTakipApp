@@ -105,7 +105,7 @@ export async function createForumPost(
     throw error;
   }
 
-  await trackEvent("forum_post_created", { post_id: data.id });
+  await trackEvent("forum_post_created");
 
   return data;
 }
@@ -123,7 +123,7 @@ export async function createForumComment(
     throw error;
   }
 
-  await trackEvent("forum_comment_created", { comment_id: data.id });
+  await trackEvent("forum_comment_created");
 
   return data;
 }
@@ -158,7 +158,7 @@ export async function toggleForumPostLike(post: PublicForumPost) {
       throw error;
     }
 
-    await trackEvent("forum_post_unliked", { post_id: post.id });
+    await trackEvent("forum_post_unliked");
     return { liked: false };
   }
 
@@ -173,7 +173,7 @@ export async function toggleForumPostLike(post: PublicForumPost) {
     throw error;
   }
 
-  await trackEvent("forum_post_liked", { post_id: post.id });
+  await trackEvent("forum_post_liked");
   return { liked: true };
 }
 
@@ -190,7 +190,7 @@ export async function toggleForumCommentLike(comment: PublicForumComment) {
       throw error;
     }
 
-    await trackEvent("forum_comment_unliked", { comment_id: comment.id });
+    await trackEvent("forum_comment_unliked");
     return { liked: false };
   }
 
@@ -205,7 +205,7 @@ export async function toggleForumCommentLike(comment: PublicForumComment) {
     throw error;
   }
 
-  await trackEvent("forum_comment_liked", { comment_id: comment.id });
+  await trackEvent("forum_comment_liked");
   return { liked: true };
 }
 
@@ -226,8 +226,7 @@ export async function reportForumContent(report: TablesInsert<"forum_reports">) 
   }
 
   await trackEvent("forum_content_reported", {
-    target_type: report.target_type,
-    target_id: report.target_id
+    target_type: report.target_type
   });
 
   return data;
@@ -296,8 +295,7 @@ export async function resolveForumReport(
   }
 
   await trackEvent("forum_report_resolved", {
-    action,
-    report_id: reportId
+    action
   });
 }
 
@@ -389,8 +387,7 @@ export async function blockForumAuthor(
   }
 
   await trackEvent("forum_user_blocked", {
-    target_type: targetType,
-    target_id: targetId
+    target_type: targetType
   });
 
   return data;
@@ -405,9 +402,7 @@ export async function unblockForumAuthor(blockedUserId: string) {
     throw error;
   }
 
-  await trackEvent("forum_user_unblocked", {
-    blocked_user_id: blockedUserId
-  });
+  await trackEvent("forum_user_unblocked");
 
   return data;
 }

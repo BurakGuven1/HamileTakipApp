@@ -33,7 +33,7 @@ export function PremiumFeatureBoundary({
   async function openPaywall() {
     setOpening(true);
     try {
-      const result = await showPaywallIfNeeded("premium_feature", {
+      const result = await showPaywallIfNeeded(featureKey, {
         feature: featureKey
       });
 

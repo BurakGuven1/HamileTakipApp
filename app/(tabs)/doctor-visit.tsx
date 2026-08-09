@@ -249,7 +249,7 @@ export default function DoctorVisitScreen() {
 
       if (!credit.allowed) {
         if (credit.reason === "premium_required" || credit.reason === "free_credits_exhausted") {
-          await showPaywallIfNeeded("premium_feature", {
+          await showPaywallIfNeeded("doctor_visit_report", {
             feature: "doctor_visit_report",
             reason: "free_credits_exhausted"
           });

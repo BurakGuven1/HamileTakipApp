@@ -14,7 +14,7 @@ export async function shareCareJournalReport(baby: Baby, entries: CareJournalEnt
   const { uri } = await Print.printToFileAsync({ html });
   if (!(await Sharing.isAvailableAsync())) throw new Error("Bu cihazda paylaşım kullanılamıyor.");
   await Sharing.shareAsync(uri, { dialogTitle: `${baby.name} doktor bakım özeti`, mimeType: "application/pdf", UTI: ".pdf" });
-  await trackEvent("care_journal_report_shared", { baby_id: baby.id, days });
+  await trackEvent("care_journal_report_shared", { days });
 }
 
 export async function shareCareJournalArchive(
@@ -35,7 +35,7 @@ export async function shareCareJournalArchive(
     milk_events: milkEvents
   }, null, 2));
   await Sharing.shareAsync(file.uri, { dialogTitle: `${baby.name} kalıcı bakım arşivi`, mimeType: "application/json", UTI: "public.json" });
-  await trackEvent("care_journal_archive_shared", { baby_id: baby.id, entries: entries.length });
+  await trackEvent("care_journal_archive_shared", { entries: entries.length });
 }
 
 function buildReportHtml(baby: Baby, entries: CareJournalEntry[], days: ReportPeriod) {

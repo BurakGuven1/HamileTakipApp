@@ -41,7 +41,7 @@ export async function createBaby(input: BabyInsert) {
     throw error;
   }
 
-  await trackEvent("baby_profile_created", { baby_id: data.id });
+  await trackEvent("baby_profile_created");
 
   return data;
 }
@@ -93,7 +93,6 @@ export async function completePregnancyWithBirth(
     });
 
     await trackEvent("pregnancy_completed_with_birth", {
-      baby_id: baby.id,
       reused_existing_baby: true
     }).catch(() => undefined);
 
@@ -105,9 +104,7 @@ export async function completePregnancyWithBirth(
     throw new Error("Doğum sonrası geçiş tamamlanamadı. Lütfen yeniden dene.");
   }
 
-  await trackEvent("pregnancy_completed_with_birth", {
-    baby_id: result.baby.id
-  }).catch(() => undefined);
+  await trackEvent("pregnancy_completed_with_birth").catch(() => undefined);
 
   return result;
 }
