@@ -59,6 +59,7 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="articles" />
+        <Stack.Screen name="admin" />
         <Stack.Screen
           name="(modals)/paywall"
           options={{ animation: "fade_from_bottom", presentation: "modal" }}

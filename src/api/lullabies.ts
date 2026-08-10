@@ -35,7 +35,6 @@ export async function recordLullabyPlayed(
   durationSeconds: number
 ) {
   await trackEvent("lullaby_played", {
-    lullaby_id: lullabyId,
     duration: durationSeconds
   });
 }

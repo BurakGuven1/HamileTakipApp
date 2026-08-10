@@ -126,7 +126,6 @@ export async function listCareJournalEntriesSince(babyId: string, days: number) 
 export async function addCareJournalEntry(input: CareJournalInput) {
   const result = await createCareEntryOfflineFirst(input);
   await trackEvent("care_journal_entry_added", {
-    baby_id: input.baby_id,
     entry_type: input.entry_type,
     queued_offline: result.queued
   });
@@ -198,7 +197,6 @@ export async function addMedicineCareEntrySafely({
       temperature_site: null
     }, { overrideRecent });
     await trackEvent("care_journal_entry_added", {
-      baby_id: babyId,
       entry_type: "medicine",
       queued_offline: result.queued,
       recent_override: overrideRecent
@@ -513,7 +511,7 @@ export async function startNightShift(
     p_summary_notification_id: summaryNotificationId
   });
   if (error) throw error;
-  await trackEvent("night_shift_started", { baby_id: babyId });
+  await trackEvent("night_shift_started");
   return data;
 }
 

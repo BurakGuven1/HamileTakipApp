@@ -38,6 +38,7 @@ import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
+import { trackEvent } from "@/lib/analytics";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { colors, radii, spacing, typography } from "@/theme";
@@ -119,6 +120,13 @@ export default function BirthPreparationScreen() {
         queryClient.setQueryData(QUERY_KEY, context.previous);
       }
       showError(error, "Liste güncellenemedi");
+    },
+    onSuccess: (_data, variables) => {
+      if (variables.completed) {
+        void trackEvent("birth_preparation_item_completed", {
+          kind: activeKind
+        });
+      }
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY })
   });

@@ -7,7 +7,9 @@ import {
 
 // Uygulama her açılışta açık görünümle başlar; kayıtlı koyu tema tercihi
 // AppThemeProvider tarafından profil yüklendiğinde açıkça etkinleştirilir.
-Appearance.setColorScheme("light");
+if (typeof Appearance.setColorScheme === "function") {
+  Appearance.setColorScheme("light");
+}
 
 const alpha = (rgb: string, opacity: number) => `rgba(${rgb}, ${opacity})`;
 

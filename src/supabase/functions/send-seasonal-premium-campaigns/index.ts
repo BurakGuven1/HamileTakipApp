@@ -37,6 +37,7 @@ type ProfileRow = {
   created_at: string;
   id: string;
   mother_name: string | null;
+  notify_premium_offers: boolean;
 };
 
 type PushTokenRow = {
@@ -68,18 +69,16 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // App Review 4.5.4 requires explicit in-app marketing consent before a
-    // promotional push is sent. The app currently has no separate, persisted
-    // marketing-consent preference, so promotional push delivery is disabled.
-    // Re-enable only after adding an opt-in preference (default false), its
-    // settings control, and filtering recipients by that preference.
-    return json({
-      success: true,
-      sent: 0,
-      message: "Promotional push notifications are disabled pending explicit opt-in."
+    if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+
+    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+      auth: { persistSession: false },
     });
 
-    /*
+    if (!await isAuthorized(req, supabase)) {
+      return json({ error: "unauthorized" }, 401);
+    }
+
     const requestBody = await req.json().catch(() => ({}));
     const campaign =
       getForcedCampaign(requestBody?.campaignKey) ?? getActiveTurkeyCampaign();
@@ -88,14 +87,11 @@ Deno.serve(async (req) => {
       return json({ success: true, sent: 0, message: "Aktif kampanya yok" });
     }
 
-    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
-      auth: { persistSession: false },
-    });
-
     const eligibleBefore = new Date(Date.now() - 5 * DAY_MS).toISOString();
     const { data: profiles, error: profileError } = await supabase
       .from("profiles")
-      .select("id, mother_name, created_at")
+      .select("id, mother_name, created_at, notify_premium_offers")
+      .eq("notify_premium_offers", true)
       .lte("created_at", eligibleBefore)
       .limit(5000);
 
@@ -245,12 +241,34 @@ Deno.serve(async (req) => {
       sent: sentCount,
       users: usersWithMessages.size,
     });
-    */
   } catch (error) {
     console.error("send-seasonal-premium-campaigns hata:", error);
     return json({ error: String(error) }, 500);
   }
 });
+
+async function isAuthorized(req: Request, supabase: any) {
+  const provided = req.headers.get("x-notification-dispatch-secret");
+  if (!provided) return false;
+
+  const { data } = await supabase
+    .from("notification_dispatch_config")
+    .select("dispatch_secret")
+    .eq("singleton", true)
+    .maybeSingle();
+
+  return typeof data?.dispatch_secret === "string" &&
+    safeEqual(provided, data.dispatch_secret);
+}
+
+function safeEqual(left: string, right: string) {
+  if (left.length !== right.length) return false;
+  let difference = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    difference |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  }
+  return difference === 0;
+}
 
 function getActiveTurkeyCampaign(now = new Date()): Campaign | null {
   const today = getTurkeyDateOnly(now);

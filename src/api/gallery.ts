@@ -7,7 +7,32 @@ import type { Tables, TablesInsert, TablesUpdate } from "@/types/database";
 export type BabyPhoto = Tables<"baby_photos">;
 export type BabyPhotoUpdate = TablesUpdate<"baby_photos">;
 
+export type BabyGalleryAccess = {
+  allowed: boolean;
+  isPremium: boolean;
+  limit: number;
+  remaining: number | null;
+  used: number;
+};
+
 const bucketName = "baby-photos";
+
+export async function getBabyGalleryAccess(): Promise<BabyGalleryAccess> {
+  const { data, error } = await supabase.rpc("get_baby_gallery_access");
+  if (error) throw error;
+
+  const value = data && typeof data === "object" && !Array.isArray(data)
+    ? data as Record<string, unknown>
+    : {};
+
+  return {
+    allowed: value.allowed === true,
+    isPremium: value.is_premium === true,
+    limit: typeof value.limit === "number" ? value.limit : 5,
+    remaining: typeof value.remaining === "number" ? value.remaining : null,
+    used: typeof value.used === "number" ? value.used : 0
+  };
+}
 
 export async function listBabyPhotos(babyId: string) {
   const { data, error } = await supabase
@@ -80,10 +105,11 @@ export async function uploadBabyPhoto(input: {
     .single();
 
   if (error) {
+    await supabase.storage.from(bucketName).remove([storagePath]).catch(() => undefined);
     throw error;
   }
 
-  await trackEvent("photo_uploaded", { baby_id: input.babyId });
+  await trackEvent("photo_uploaded");
 
   return data;
 }
@@ -150,7 +176,7 @@ export async function uploadBabyHomePhoto(input: {
     await supabase.storage.from(bucketName).remove([input.previousPath]).catch(() => undefined);
   }
 
-  await trackEvent("home_photo_updated", { baby_id: input.babyId });
+  await trackEvent("home_photo_updated");
   return data;
 }
 
@@ -174,7 +200,7 @@ export async function removeBabyHomePhoto(input: {
     if (storageError) throw storageError;
   }
 
-  await trackEvent("home_photo_removed", { baby_id: input.babyId });
+  await trackEvent("home_photo_removed");
   return data;
 }
 
@@ -208,5 +234,5 @@ export async function deleteBabyPhoto(photo: BabyPhoto) {
     throw error;
   }
 
-  await trackEvent("photo_deleted", { baby_id: photo.baby_id });
+  await trackEvent("photo_deleted");
 }

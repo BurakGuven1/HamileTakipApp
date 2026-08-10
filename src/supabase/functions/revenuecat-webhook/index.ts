@@ -1,130 +1,156 @@
-// ============================================================
-// Edge Function: revenuecat-webhook
-// ============================================================
-// AMAÇ: RevenueCat'ten gelen abonelik olaylarını (satın alma, yenileme,
-// iptal, süre dolumu vb.) dinler ve public.subscriptions tablosunu günceller.
-//
-// KURULUM:
-// 1) Bu fonksiyonu deploy et:
-//      supabase functions deploy revenuecat-webhook --no-verify-jwt
-//    (--no-verify-jwt ZORUNLU, çünkü RevenueCat bir Supabase auth token'ı
-//    göndermez, kendi Authorization header'ını gönderir)
-//
-// 2) Secret'ları ayarla:
-//      supabase secrets set REVENUECAT_WEBHOOK_AUTH_HEADER=<kendi-belirlediğin-gizli-değer>
-//
-// 3) RevenueCat Dashboard > Project Settings > Integrations > Webhooks:
-//      URL: https://<PROJECT_REF>.supabase.co/functions/v1/revenuecat-webhook
-//      Authorization header value: Bearer <2. adımdaki gizli değer>
-//
-// 4) RevenueCat'te ürün ID'leri:
-//      - com.burakguven.hamiletakip.premium.monthly
-//      - com.burakguven.hamiletakip.premium.yearly
-// ============================================================
-
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const WEBHOOK_AUTH_HEADER = Deno.env.get("REVENUECAT_WEBHOOK_AUTH_HEADER")!;
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const WEBHOOK_AUTH_HEADER =
+  Deno.env.get("REVENUECAT_WEBHOOK_AUTH_HEADER") ?? "";
 
-// Lifetime (ömür boyu, tek seferlik) olarak kabul edilecek ürün ID'leri.
-// Şu an monthly/yearly abonelik kullanıldığı için boş.
 const LIFETIME_PRODUCT_IDS: string[] = [];
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-// RevenueCat event.type değerlerine göre subscriptions.status eşlemesi
-function mapEventTypeToStatus(
-  eventType: string,
-  expirationAtMs: number | null,
-): string {
-  const expiresInFuture =
-    typeof expirationAtMs === "number" && expirationAtMs > Date.now();
+type RevenueCatEvent = Record<string, unknown> & {
+  aliases?: unknown;
+  app_user_id?: unknown;
+  original_app_user_id?: unknown;
+  type?: unknown;
+};
 
-  switch (eventType) {
-    case "INITIAL_PURCHASE":
-    case "RENEWAL":
-    case "UNCANCELLATION":
-    case "NON_RENEWING_PURCHASE":
-    case "PRODUCT_CHANGE":
-      return "active";
-    case "CANCELLATION":
-      // Kullanıcı yenilemeyi iptal etmiş olsa bile süre dolana kadar entitlement
-      // aktif kalır. Supabase cache de bu dönemde active tutulur.
-      return expiresInFuture ? "active" : "cancelled";
-    case "EXPIRATION":
-      return "expired";
-    case "BILLING_ISSUE":
-      return "grace_period";
-    default:
-      return "expired";
-  }
-}
-
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
+Deno.serve(async (request) => {
+  if (request.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  // ---- Güvenlik: RevenueCat'in gönderdiği Authorization header'ını doğrula ----
-  const authHeader = req.headers.get("authorization") ?? "";
+  if (request.method !== "POST") {
+    return json({ error: "method_not_allowed" }, 405);
+  }
+
+  const authHeader = request.headers.get("authorization") ?? "";
   if (!WEBHOOK_AUTH_HEADER || authHeader !== `Bearer ${WEBHOOK_AUTH_HEADER}`) {
-    return new Response(JSON.stringify({ error: "unauthorized" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json({ error: "unauthorized" }, 401);
+  }
+
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+    return json({ error: "server_not_configured" }, 500);
   }
 
   try {
-    const payload = await req.json();
-    const event = payload?.event;
-
-    if (!event) {
-      return new Response(JSON.stringify({ error: "no event in payload" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const payload = await request.json();
+    const event = payload?.event as RevenueCatEvent | undefined;
+    if (!event || typeof event.type !== "string") {
+      return json({ error: "invalid_event" }, 400);
     }
 
-    const eventType: string = event.type;
-
-    if (eventType === "TEST") {
-      return new Response(JSON.stringify({ success: true, ignored: "test" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (event.type === "TEST") {
+      return json({ ignored: "test", success: true });
     }
 
-    // app_user_id, RevenueCat'e client tarafında Supabase auth.uid() olarak
-    // set edilmelidir (Purchases.logIn(supabaseUserId)). Bu şekilde eşleşme sağlanır.
-    const userId: string | undefined = event.app_user_id;
-    const productId: string | undefined = event.product_id;
-    const expirationAtMs: number | null = event.expiration_at_ms ?? null;
-
-    if (!userId || !productId) {
-      return new Response(
-        JSON.stringify({ success: true, ignored: "missing_app_user_id_or_product_id" }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+    const eventId = stringValue(event.id);
+    const eventTimestampMs = numberValue(event.event_timestamp_ms);
+    if (!eventId || eventTimestampMs === null) {
+      return json({ error: "missing_event_identity" }, 400);
     }
-
-    const isLifetime = LIFETIME_PRODUCT_IDS.includes(productId);
-    const status = mapEventTypeToStatus(eventType, expirationAtMs);
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
       auth: { persistSession: false },
     });
+    const userId = await resolveUserId(supabase, event);
+    const productId = stringValue(event.product_id);
+    const expirationAtMs = numberValue(event.expiration_at_ms);
+    const eventAt = toIsoDate(eventTimestampMs) ?? new Date().toISOString();
 
-    const { error } = await supabase
+    const { data: insertedEvent, error: eventError } = await supabase
+      .from("revenuecat_events")
+      .upsert(
+        {
+          revenuecat_event_id: eventId,
+          user_id: userId,
+          event_type: event.type,
+          product_id: productId,
+          new_product_id: stringValue(event.new_product_id),
+          presented_offering_id: stringValue(event.presented_offering_id),
+          transaction_id: stringValue(event.transaction_id),
+          original_transaction_id: stringValue(event.original_transaction_id),
+          period_type: stringValue(event.period_type),
+          price: numberValue(event.price),
+          currency: stringValue(event.currency),
+          commission_percentage: numberValue(event.commission_percentage),
+          tax_percentage: numberValue(event.tax_percentage),
+          store: stringValue(event.store),
+          environment: stringValue(event.environment),
+          cancel_reason: stringValue(event.cancel_reason),
+          expiration_reason: stringValue(event.expiration_reason),
+          purchased_at: toIsoDate(numberValue(event.purchased_at_ms)),
+          expiration_at: toIsoDate(expirationAtMs),
+          event_at: eventAt,
+        },
+        {
+          ignoreDuplicates: true,
+          onConflict: "revenuecat_event_id",
+        },
+      )
+      .select("revenuecat_event_id")
+      .maybeSingle();
+
+    if (eventError) {
+      console.error("RevenueCat event insert failed", eventError);
+      return json({ error: eventError.message }, 500);
+    }
+
+    const duplicate = !insertedEvent;
+
+    const status = mapEventTypeToStatus(
+      event.type,
+      expirationAtMs,
+    );
+
+    if (!status || !userId || !productId) {
+      return json({
+        duplicate,
+        recorded: true,
+        subscription_updated: false,
+        success: true,
+      });
+    }
+
+    const { data: currentSubscription, error: currentSubscriptionError } =
+      await supabase
+        .from("subscriptions")
+        .select("updated_at")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+    if (currentSubscriptionError) {
+      console.error(
+        "Current subscription lookup failed",
+        currentSubscriptionError,
+      );
+      return json({ error: currentSubscriptionError.message }, 500);
+    }
+
+    if (
+      currentSubscription?.updated_at &&
+      new Date(currentSubscription.updated_at).getTime() >
+        new Date(eventAt).getTime()
+    ) {
+      return json({
+        duplicate,
+        recorded: true,
+        stale: true,
+        subscription_updated: false,
+        success: true,
+      });
+    }
+
+    const isLifetime = LIFETIME_PRODUCT_IDS.includes(productId);
+    const { error: subscriptionError } = await supabase
       .from("subscriptions")
       .upsert(
         {
@@ -132,40 +158,96 @@ Deno.serve(async (req) => {
           product_id: productId,
           status,
           is_lifetime: isLifetime,
-          expires_at: isLifetime
-            ? null
-            : expirationAtMs
-            ? new Date(expirationAtMs).toISOString()
-            : null,
-          updated_at: new Date().toISOString(),
+          expires_at: isLifetime ? null : toIsoDate(expirationAtMs),
+          updated_at: eventAt,
         },
         { onConflict: "user_id" },
       );
 
-    if (error) {
-      console.error("subscriptions upsert hatası:", error);
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (subscriptionError) {
+      console.error("Subscription cache update failed", subscriptionError);
+      return json({ error: subscriptionError.message }, 500);
     }
 
-    // Bilgilendirme amaçlı: bu event'i analytics_events tablosuna da yazalım.
-    await supabase.from("analytics_events").insert({
-      user_id: userId,
-      event_name: `revenuecat_${eventType?.toLowerCase()}`,
-      event_properties: { product_id: productId, status },
+    return json({
+      duplicate,
+      recorded: true,
+      subscription_updated: true,
+      success: true,
     });
-
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (err) {
-    console.error("revenuecat-webhook hata:", err);
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+  } catch (error) {
+    console.error("RevenueCat webhook failed", error);
+    return json({ error: String(error) }, 500);
   }
 });
+
+export function mapEventTypeToStatus(
+  eventType: string,
+  expirationAtMs: number | null,
+): "active" | "cancelled" | "expired" | "grace_period" | null {
+  const expiresInFuture =
+    expirationAtMs !== null && expirationAtMs > Date.now();
+
+  switch (eventType) {
+    case "INITIAL_PURCHASE":
+    case "RENEWAL":
+    case "UNCANCELLATION":
+    case "NON_RENEWING_PURCHASE":
+    case "PRODUCT_CHANGE":
+    case "SUBSCRIPTION_EXTENDED":
+    case "REFUND_REVERSED":
+      return "active";
+    case "CANCELLATION":
+      return expiresInFuture ? "active" : "cancelled";
+    case "EXPIRATION":
+      return "expired";
+    case "BILLING_ISSUE":
+      return "grace_period";
+    default:
+      return null;
+  }
+}
+
+async function resolveUserId(
+  supabase: ReturnType<typeof createClient<any>>,
+  event: RevenueCatEvent,
+) {
+  const aliases = Array.isArray(event.aliases) ? event.aliases : [];
+  const candidates = [
+    event.app_user_id,
+    event.original_app_user_id,
+    ...aliases,
+  ].filter((value): value is string =>
+    typeof value === "string" && UUID_PATTERN.test(value)
+  );
+
+  for (const candidate of [...new Set(candidates)]) {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", candidate)
+      .maybeSingle();
+    if (!error && data?.id) return data.id as string;
+  }
+
+  return null;
+}
+
+function stringValue(value: unknown) {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+function numberValue(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function toIsoDate(value: number | null) {
+  return value === null ? null : new Date(value).toISOString();
+}
+
+function json(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}

@@ -15,6 +15,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   icon: "./assets/branding/app-icon.png",
   orientation: "portrait",
   userInterfaceStyle: "light",
+  web: {
+    bundler: "metro",
+    output: "static"
+  },
   ios: {
     icon: "./assets/branding/app-icon.png",
     supportsTablet: false,

@@ -29,6 +29,7 @@ import { PregnancyAgeField } from "@/components/PregnancyAgeField";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
 import { Thread } from "@/components/Thread";
+import { trackEvent } from "@/lib/analytics";
 import { registerAndSavePushToken } from "@/lib/notifications";
 import {
   getPregnancyAgeError,
@@ -52,18 +53,27 @@ type OnboardingStep =
   | "status"
   | "details"
   | "feeding"
+  | "goal"
   | "theme"
   | "nickname"
   | "notifications";
 type ParentStatus = "pregnant" | "baby" | "skip";
 type BabyGender = "kiz" | "erkek" | "belirtilmemis";
 type FeedingMode = "breastfeeding" | "pumping" | "mixed" | "formula";
+type PrimaryGoal =
+  | "pregnancy_prepare"
+  | "pregnancy_wellbeing"
+  | "partner_support"
+  | "baby_sleep"
+  | "baby_feeding"
+  | "family_coordination";
 
 const steps: { id: OnboardingStep; label: string }[] = [
   { id: "family", label: "Aile" },
   { id: "status", label: "Durum" },
   { id: "details", label: "Bilgiler" },
   { id: "feeding", label: "Beslenme" },
+  { id: "goal", label: "Hedef" },
   { id: "theme", label: "Tema" },
   { id: "nickname", label: "Forum" },
   { id: "notifications", label: "Bildirim" }
@@ -74,6 +84,7 @@ export default function OnboardingScreen() {
   const appTheme = useAppTheme();
   const { showError, showInfo } = useFeedback();
   const hasHydrated = useRef(false);
+  const trackedStepRef = useRef<OnboardingStep | null>(null);
   const [step, setStep] = useState<OnboardingStep>("family");
   const [status, setStatus] = useState<ParentStatus>();
   const [motherName, setMotherName] = useState("");
@@ -86,6 +97,7 @@ export default function OnboardingScreen() {
   const [babyGender, setBabyGender] = useState<BabyGender>("belirtilmemis");
   const [createdBabyId, setCreatedBabyId] = useState<string>();
   const [feedingMode, setFeedingMode] = useState<FeedingMode>("mixed");
+  const [primaryGoal, setPrimaryGoal] = useState<PrimaryGoal>("pregnancy_prepare");
   const [themePreference, setThemePreference] = useState<ThemePreference>("auto");
   const [nickname, setNickname] = useState("");
   const [nicknameAvailable, setNicknameAvailable] = useState<boolean | null>(null);
@@ -141,6 +153,10 @@ export default function OnboardingScreen() {
       restoredPregnancyAge ? String(restoredPregnancyAge.day) : "0"
     );
     setFeedingMode(profile.feeding_mode ?? "mixed");
+    setPrimaryGoal(
+      profile.primary_goal ??
+        (restoredStatus === "baby" ? "baby_sleep" : "pregnancy_prepare")
+    );
     setThemePreference(profile.theme_preference ?? "auto");
     setNickname(profile.forum_nickname ?? "");
 
@@ -153,8 +169,9 @@ export default function OnboardingScreen() {
 
     const restoredStep: Record<string, OnboardingStep> = {
       family_names_added: "status",
-      details_added: restoredStatus === "baby" ? "feeding" : "theme",
-      feeding_mode_selected: "theme",
+      details_added: restoredStatus === "baby" ? "feeding" : "goal",
+      feeding_mode_selected: "goal",
+      goal_selected: "theme",
       nickname_set: "notifications",
       theme_selected: "nickname"
     };
@@ -166,6 +183,26 @@ export default function OnboardingScreen() {
 
     setStep(restoredStep[profile.onboarding_step] ?? "family");
   }, [babiesQuery.data, babiesQuery.isFetched, profile, profileQuery.isFetched]);
+
+  useEffect(() => {
+    if (!hasHydrated.current) return;
+
+    const previousStep = trackedStepRef.current;
+    if (previousStep && previousStep !== step) {
+      void trackEvent("onboarding_step_completed", {
+        life_stage: status ?? "unknown",
+        step_key: previousStep
+      });
+    }
+
+    if (previousStep !== step) {
+      trackedStepRef.current = step;
+      void trackEvent("onboarding_step_viewed", {
+        life_stage: status ?? "unknown",
+        step_key: step
+      });
+    }
+  }, [status, step]);
 
   useEffect(() => {
     if (step !== "nickname" || nickname.trim().length < 3) {
@@ -188,7 +225,7 @@ export default function OnboardingScreen() {
     }
     if (status === "skip") {
       return steps.filter(
-        (item) => item.id !== "details" && item.id !== "feeding"
+        (item) => item.id !== "details" && item.id !== "feeding" && item.id !== "goal"
       );
     }
     return steps;
@@ -243,6 +280,7 @@ export default function OnboardingScreen() {
       setStatus(nextStatus);
 
       if (nextStatus === "pregnant") {
+        setPrimaryGoal("pregnancy_prepare");
         await updateStepMutation.mutateAsync({
           is_pregnant: true,
           onboarding_step: "status_selected"
@@ -252,6 +290,7 @@ export default function OnboardingScreen() {
       }
 
       if (nextStatus === "baby") {
+        setPrimaryGoal("baby_sleep");
         await updateStepMutation.mutateAsync({
           is_pregnant: false,
           due_date: null,
@@ -298,7 +337,7 @@ export default function OnboardingScreen() {
           due_date: dueDate,
           onboarding_step: "details_added"
         });
-        setStep("theme");
+        setStep("goal");
         return;
       }
 
@@ -330,7 +369,7 @@ export default function OnboardingScreen() {
         return;
       }
 
-      setStep("theme");
+      setStep("goal");
     } catch (error) {
       showError(error, "Bilgiler kaydedilemedi");
     }
@@ -342,9 +381,21 @@ export default function OnboardingScreen() {
         feeding_mode: feedingMode,
         onboarding_step: "feeding_mode_selected"
       });
-      setStep("theme");
+      setStep("goal");
     } catch (error) {
       showError(error, "Beslenme tercihi kaydedilemedi");
+    }
+  }
+
+  async function savePrimaryGoal() {
+    try {
+      await updateStepMutation.mutateAsync({
+        primary_goal: primaryGoal,
+        onboarding_step: "goal_selected"
+      });
+      setStep("theme");
+    } catch (error) {
+      showError(error, "Hedef kaydedilemedi");
     }
   }
 
@@ -403,6 +454,11 @@ export default function OnboardingScreen() {
         onboarding_completed: true,
         onboarding_step: "completed"
       });
+      await trackEvent("onboarding_completed", {
+        life_stage: status ?? "unknown",
+        notifications_requested: requestNotifications,
+        primary_goal: status === "skip" ? null : primaryGoal
+      });
       if (notificationSetupFailed) {
         showInfo(
           "Kurulum tamamlandı. Bildirim kaydı şu anda tamamlanamadı; Profil > Bildirim tercihleri bölümünden yeniden deneyebilirsin.",
@@ -449,6 +505,11 @@ export default function OnboardingScreen() {
 
     if (step === "feeding") {
       void saveFeedingMode();
+      return;
+    }
+
+    if (step === "goal") {
+      void savePrimaryGoal();
       return;
     }
 
@@ -695,6 +756,38 @@ export default function OnboardingScreen() {
                 <ChoiceCard active={feedingMode === "formula"} icon={<Baby color={colors.primary} size={23} />} title="Mama" body="Biberon miktarı ve mama hatırlatmalarını öne çıkarır." onPress={() => setFeedingMode("formula")} />
               </View>
               <Button label={updateStepMutation.isPending ? "Kaydediliyor…" : "Akışımı kişiselleştir"} disabled={updateStepMutation.isPending} onPress={saveFeedingMode} />
+            </View>
+          </Card>
+        ) : null}
+
+        {step === "goal" ? (
+          <Card style={styles.focusCard}>
+            <View style={{ gap: spacing.lg }}>
+              <HeaderBlock
+                icon={<Sparkles color={colors.primary} size={26} />}
+                title="Şu anda en çok neyi kolaylaştırmak istersin?"
+                body="Anne+ Günüm, ana sayfanı ve hatırlatmalarını bu hedefe göre önceliklendirir. İstersen daha sonra değiştirebilirsin."
+              />
+              <View accessibilityRole="radiogroup" style={{ gap: spacing.md }}>
+                {status === "pregnant" ? (
+                  <>
+                    <ChoiceCard active={primaryGoal === "pregnancy_prepare"} icon={<CalendarHeart color={colors.primary} size={23} />} title="Doğuma hazırlanmak" body="Kontrolleri, doğum çantasını ve haftalık hazırlıkları öne çıkarır." onPress={() => setPrimaryGoal("pregnancy_prepare")} />
+                    <ChoiceCard active={primaryGoal === "pregnancy_wellbeing"} icon={<Heart color={colors.primary} size={23} />} title="Kendimi iyi takip etmek" body="Su, hareket, dinlenme ve haftalık anne odağını öne çıkarır." onPress={() => setPrimaryGoal("pregnancy_wellbeing")} />
+                    <ChoiceCard active={primaryGoal === "partner_support"} icon={<UserRound color={colors.primary} size={23} />} title="Yükü birlikte paylaşmak" body="Partner desteğini, ortak görevleri ve hazırlık devrini öne çıkarır." onPress={() => setPrimaryGoal("partner_support")} />
+                  </>
+                ) : (
+                  <>
+                    <ChoiceCard active={primaryGoal === "baby_sleep"} icon={<Sparkles color={colors.primary} size={23} />} title="Uyku düzenini anlamak" body="Uyku kayıtlarını, öngörüleri ve gece planını öne çıkarır." onPress={() => setPrimaryGoal("baby_sleep")} />
+                    <ChoiceCard active={primaryGoal === "baby_feeding"} icon={<Milk color={colors.primary} size={23} />} title="Beslenmeyi kolay takip etmek" body="Beslenme, sağım ve süt stoğu araçlarını öne çıkarır." onPress={() => setPrimaryGoal("baby_feeding")} />
+                    <ChoiceCard active={primaryGoal === "family_coordination"} icon={<UserRound color={colors.primary} size={23} />} title="Bakımı ailece paylaşmak" body="Görevleri, alarmları ve aile vardiyasını öne çıkarır." onPress={() => setPrimaryGoal("family_coordination")} />
+                  </>
+                )}
+              </View>
+              <Button
+                label={updateStepMutation.isPending ? "Kaydediliyor…" : "Günümü kişiselleştir"}
+                disabled={updateStepMutation.isPending}
+                onPress={savePrimaryGoal}
+              />
             </View>
           </Card>
         ) : null}

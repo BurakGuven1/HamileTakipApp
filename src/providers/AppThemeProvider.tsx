@@ -13,7 +13,9 @@ export function AppThemeProvider({ children }: PropsWithChildren) {
   const accentColor = useAccentColor();
 
   useLayoutEffect(() => {
-    Appearance.setColorScheme(accentColor.isDark ? "dark" : "light");
+    if (typeof Appearance.setColorScheme === "function") {
+      Appearance.setColorScheme(accentColor.isDark ? "dark" : "light");
+    }
   }, [accentColor.isDark]);
 
   return (

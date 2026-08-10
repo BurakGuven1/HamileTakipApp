@@ -28,7 +28,6 @@ export async function setBabyToothErupted(input: {
       .eq("tooth_code", input.toothCode);
     if (error) throw error;
     await trackEvent("baby_tooth_unmarked", {
-      baby_id: input.babyId,
       tooth_code: input.toothCode
     }).catch(() => undefined);
     return null;
@@ -49,7 +48,6 @@ export async function setBabyToothErupted(input: {
 
   if (error) throw error;
   await trackEvent("baby_tooth_marked", {
-    baby_id: input.babyId,
     tooth_code: input.toothCode
   }).catch(() => undefined);
   return data;

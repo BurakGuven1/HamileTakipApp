@@ -27,6 +27,7 @@ import {
   type AgeAssuranceContext
 } from "@/lib/ageAssurance";
 import { parseDateOnly } from "@/lib/dates";
+import { trackEvent } from "@/lib/analytics";
 import { registerAndSavePushToken } from "@/lib/notifications";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { useFeedback } from "@/providers/FeedbackProvider";
@@ -118,6 +119,7 @@ export default function SignInScreen() {
       }
 
       setLoading(true);
+      void trackEvent("auth_sign_in_started", { audience: "family" });
       try {
         await signInFatherWithFamilyCode(cleanFamilyCode, {
           displayName: familyMemberName,
@@ -142,6 +144,7 @@ export default function SignInScreen() {
             ? "Aile profiline bağlandın. Premium erişim ve ortak görevler bu cihazda hazır."
             : "Aile profiline bağlandın. Görevler ve vardiyalar bu cihazla eşitlenecek.";
         registerAndSavePushToken(true).catch(() => undefined);
+        await trackEvent("auth_sign_in_completed", { audience: "family" });
         showSuccess(successMessage, "Aile girişi hazır");
         router.replace("/");
       } catch (error) {
@@ -163,6 +166,10 @@ export default function SignInScreen() {
     }
 
     setLoading(true);
+    void trackEvent(
+      isSignUp ? "auth_sign_up_started" : "auth_sign_in_started",
+      { audience: "mother" }
+    );
     try {
       if (isSignUp) {
         const { data, error } = await supabase.auth.signUp({
@@ -180,7 +187,12 @@ export default function SignInScreen() {
 
         if (error) throw error;
 
+        await trackEvent("sign_up_submitted", {
+          email_verification_required: !data.session
+        });
+
         if (!data.session) {
+          await trackEvent("email_verification_required");
           showInfo(
             "Kaydını tamamlamak için e-postandaki onay bağlantısına dokun.",
             "E-postanı kontrol et"
@@ -199,6 +211,7 @@ export default function SignInScreen() {
         });
 
         if (error) throw error;
+        await trackEvent("auth_sign_in_completed", { audience: "mother" });
         await recordRequiredAgeAssurance("sign_in");
       }
 

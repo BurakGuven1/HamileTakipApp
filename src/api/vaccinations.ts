@@ -226,7 +226,7 @@ export async function setVaccinationCompleted({
 
   await trackEvent(
     completed ? "vaccination_marked_done" : "vaccination_marked_pending",
-    { source, vaccination_id: vaccinationId }
+    { source }
   );
 
   return result.data;

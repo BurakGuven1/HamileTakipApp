@@ -8,6 +8,7 @@ import {
   CARE_ALARM_SNOOZE_ACTION,
   rescheduleCareAlarmFromNotification
 } from "@/features/care-journal/reminders";
+import { trackEvent } from "@/lib/analytics";
 
 export function useNotificationNavigation() {
   useEffect(() => {
@@ -30,8 +31,25 @@ export function useNotificationNavigation() {
       }
       if (response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
 
+      void trackEvent("notification_opened", {
+        campaign_key:
+          typeof data?.campaign_key === "string" ? data.campaign_key : null,
+        destination:
+          typeof data?.screen === "string" ? data.screen : "unknown",
+        notification_type:
+          typeof data?.type === "string" ? data.type : "unknown"
+      });
+
       if (data?.screen === "paywall") {
-        router.push("/paywall");
+        router.push({
+          pathname: "/paywall",
+          params: {
+            source:
+              data.type === "premium_campaign"
+                ? "seasonal_notification"
+                : "notification"
+          }
+        });
       } else if (data?.screen === "article" && typeof data.slug === "string") {
         router.push({ pathname: "/articles/[slug]", params: { slug: data.slug } });
       } else if (data?.screen === "baby-vaccines") {

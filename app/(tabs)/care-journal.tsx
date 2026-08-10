@@ -56,6 +56,7 @@ import { TextField } from "@/components/TextField";
 import type { ReportPeriod } from "@/features/care-journal/report";
 import { syncCareQuickWidget } from "@/features/care-journal/widgetSync";
 import { showPaywallIfNeeded } from "@/features/subscription/showPaywallIfNeeded";
+import { PREMIUM_FEATURES } from "@/features/subscription/premiumFeatures";
 import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
 import { useCareSyncStatus } from "@/hooks/useCareSync";
 import { useAppTheme } from "@/providers/AppThemeProvider";
@@ -903,7 +904,7 @@ function AdvancedCareJournalContent() {
   const cancelReminderMutation = useMutation({ mutationFn: async (reminder: CareReminder) => { const { cancelLocalCareReminder } = await import("@/features/care-journal/reminders"); await cancelLocalCareReminder(reminder.local_notification_id).catch(() => undefined); return cancelCareReminder(reminder.id); }, onSuccess: async () => { showSuccess("Alarm iptal edildi."); await queryClient.invalidateQueries({ queryKey: ["care-reminders", selectedBaby?.id] }); }, onError: (e) => showError(e, "Alarm iptal edilemedi") });
 
   async function openPremium(feature: string) {
-    try { await showPaywallIfNeeded("premium_feature", { feature }); } catch (error) { showError(error, "Premium ekranı açılamadı"); }
+    try { await showPaywallIfNeeded(feature, { feature }); } catch (error) { showError(error, "Premium ekranı açılamadı"); }
   }
 
   async function exportPermanentArchive() {
@@ -1108,7 +1109,7 @@ function AdvancedCareJournalContent() {
                   isPremium={isPremium}
                   loading={sleepPredictionQuery.isLoading}
                   now={predictionNow}
-                  onOpenPremium={() => void openPremium("sleep_prediction")}
+                  onOpenPremium={() => void openPremium(PREMIUM_FEATURES.sleepPrediction.source)}
                   prediction={sleepPredictionQuery.data ?? null}
                 />}
 
@@ -1210,6 +1211,22 @@ function AdvancedCareJournalContent() {
             {activeSection !== "record" ? <CareSectionBoundary
               title={activeSection === "plan" ? "Süt ve beslenme araçları" : activeSection === "family" ? "Aile desteği" : "Bakım eğilimleri"}
             >
+              <View style={{ gap: spacing.lg }}>
+              {activeSection === "family" && membershipQuery.isSuccess && !membershipQuery.data ? (
+                <Card>
+                  <View style={{ gap: spacing.md }}>
+                    <Text style={typography.eyebrow}>Anne için</Text>
+                    <Text style={typography.heading2}>Bugün nasılsın?</Text>
+                    <Text style={typography.label}>Ruh hali</Text>
+                    <Rating value={mood} onChange={setMood} />
+                    <Text style={typography.label}>Dinlenmişlik</Text>
+                    <Rating value={rest} onChange={setRest} />
+                    <TextField label="Bugün kendin için ne yaptın?" value={selfCare} onChangeText={setSelfCare} />
+                    <Button disabled={checkinMutation.isPending} label={checkinMutation.isPending ? "Kaydediliyor..." : "Anne check-in’ini kaydet"} onPress={() => checkinMutation.mutate()} />
+                    <Text style={styles.safetyNote}>Bu alan iyi oluş farkındalığı içindir; değerlendirme veya teşhis yapmaz. Kendin ya da bebeğin için acil bir endişen varsa sağlık profesyoneline başvur.</Text>
+                  </View>
+                </Card>
+              ) : null}
               {isPremium ? (
                 <View style={{ gap: spacing.lg }}>
                 {activeSection === "insights" ? <InsightsCard entries={reportEntries} days={trendDays} onArchive={() => void exportPermanentArchive()} onDaysChange={setTrendDays} /> : null}
@@ -1245,23 +1262,15 @@ function AdvancedCareJournalContent() {
                     </View>
                   </Card>
                 ) : null}
-                {activeSection === "family" && membershipQuery.isSuccess && !membershipQuery.data ? (
-                  <Card>
-                    <View style={{ gap: spacing.md }}>
-                      <Text style={typography.eyebrow}>Anne için</Text>
-                      <Text style={typography.heading2}>Bugün nasılsın?</Text>
-                      <Text style={typography.label}>Ruh hali</Text>
-                      <Rating value={mood} onChange={setMood} />
-                      <Text style={typography.label}>Dinlenmişlik</Text>
-                      <Rating value={rest} onChange={setRest} />
-                      <TextField label="Bugün kendin için ne yaptın?" value={selfCare} onChangeText={setSelfCare} />
-                      <Button disabled={checkinMutation.isPending} label={checkinMutation.isPending ? "Kaydediliyor..." : "Anne check-in’ini kaydet"} onPress={() => checkinMutation.mutate()} />
-                      <Text style={styles.safetyNote}>Bu alan iyi oluş farkındalığı içindir; değerlendirme veya teşhis yapmaz. Kendin ya da bebeğin için acil bir endişen varsa sağlık profesyoneline başvur.</Text>
-                    </View>
-                  </Card>
-                ) : null}
                 </View>
-              ) : <PremiumUpsellCard onPress={() => void openPremium("care_insights")} />}
+              ) : <PremiumUpsellCard onPress={() => void openPremium(
+                activeSection === "plan"
+                  ? PREMIUM_FEATURES.carePlan.source
+                  : activeSection === "family"
+                    ? PREMIUM_FEATURES.careFamily.source
+                    : PREMIUM_FEATURES.careInsights.source
+              )} />}
+              </View>
             </CareSectionBoundary> : null}
 
             {activeSection === "record" ? <View style={{ gap: spacing.md }}>
@@ -1885,7 +1894,7 @@ function isToday(value: string) {
 function sideLabel(value: CareJournalEntry["breast_side"]) { return value === "left" ? "Sol" : value === "right" ? "Sağ" : "İki taraf"; }
 function diaperLabel(value: CareJournalEntry["diaper_type"]) { return value === "wet" ? "Islak" : value === "dirty" ? "Kaka" : "Islak + kaka"; }
 function temperatureSiteLabel(value: CareJournalEntry["temperature_site"]) { return value === "armpit" ? "Koltuk altı" : value === "forehead" ? "Alın" : value === "ear" ? "Kulak" : value === "oral" ? "Ağız" : value === "rectal" ? "Rektal" : "Diğer"; }
-function isFreeType(type: CareEntryType) { return type === "breastfeeding" || type === "bottle" || type === "sleep" || type === "diaper" || type === "temperature"; }
+function isFreeType(type: CareEntryType) { return type === "breastfeeding" || type === "bottle" || type === "sleep" || type === "diaper" || type === "temperature" || type === "pumping"; }
 function isCareJournalSection(value?: string): value is CareJournalSection { return CARE_JOURNAL_SECTIONS.some((item) => item.section === value); }
 function isCareEntryType(value: string): value is CareEntryType { return ENTRY_TYPES.some((item) => item.type === value); }
 type FeedingMode = "breastfeeding" | "pumping" | "mixed" | "formula";

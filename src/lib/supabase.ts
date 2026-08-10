@@ -8,6 +8,7 @@ import type { Database } from "@/types/database";
 
 const fallbackSupabaseUrl = "https://example.supabase.co";
 const fallbackSupabaseAnonKey = "missing-anon-key";
+const isWebServer = Platform.OS === "web" && typeof window === "undefined";
 
 export const isSupabaseConfigured = Boolean(
   env.supabaseUrl && env.supabaseAnonKey
@@ -16,6 +17,7 @@ export const isSupabaseConfigured = Boolean(
 const secureStorageAdapter = {
   getItem: (key: string) => {
     if (Platform.OS === "web") {
+      if (isWebServer) return Promise.resolve(null);
       return AsyncStorage.getItem(key);
     }
 
@@ -23,6 +25,7 @@ const secureStorageAdapter = {
   },
   setItem: (key: string, value: string) => {
     if (Platform.OS === "web") {
+      if (isWebServer) return Promise.resolve();
       return AsyncStorage.setItem(key, value);
     }
 
@@ -30,6 +33,7 @@ const secureStorageAdapter = {
   },
   removeItem: (key: string) => {
     if (Platform.OS === "web") {
+      if (isWebServer) return Promise.resolve();
       return AsyncStorage.removeItem(key);
     }
 
@@ -42,9 +46,9 @@ export const supabase = createClient<Database>(
   env.supabaseAnonKey ?? fallbackSupabaseAnonKey,
   {
     auth: {
-      autoRefreshToken: true,
+      autoRefreshToken: !isWebServer,
       detectSessionInUrl: false,
-      persistSession: true,
+      persistSession: !isWebServer,
       storage: secureStorageAdapter
     }
   }
