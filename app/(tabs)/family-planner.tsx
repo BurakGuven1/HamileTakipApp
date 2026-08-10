@@ -59,6 +59,7 @@ import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
 import { createCareUuid } from "@/features/care-journal/careSync";
 import { showPaywallIfNeeded } from "@/features/subscription/showPaywallIfNeeded";
+import { PREMIUM_FEATURES } from "@/features/subscription/premiumFeatures";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { colors, radii, spacing, typography } from "@/theme";
@@ -231,7 +232,7 @@ export default function FamilyPlannerScreen() {
     onSuccess: async (result) => {
       if (!result.allowed) {
         if (isPremiumRequiredReason(result.reason)) {
-          await showPaywallIfNeeded("family_task_alarm", {
+          await showPaywallIfNeeded(PREMIUM_FEATURES.familyTaskAlarm.source, {
             feature: "family_task_alarm",
             life_stage: lifeStage,
             reason: "free_credits_exhausted",
@@ -309,7 +310,7 @@ export default function FamilyPlannerScreen() {
     onSuccess: async (result) => {
       if (!result.allowed) {
         if (isPremiumRequiredReason(result.reason)) {
-          await showPaywallIfNeeded("pregnancy_support_handover", {
+          await showPaywallIfNeeded(PREMIUM_FEATURES.pregnancySupportHandover.source, {
             feature: "pregnancy_support_handover",
             life_stage: "pregnancy",
             reason: "free_credits_exhausted",

@@ -29,7 +29,7 @@ import {
   Users,
   Wrench
 } from "lucide-react-native";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Alert,
   Pressable,
@@ -53,7 +53,8 @@ import {
 import {
   getNextUpcomingVaccination,
   listVaccinationsForBaby,
-  type BabyVaccinationWithSchedule
+  type BabyVaccinationWithSchedule,
+  type UpcomingVaccinationContext
 } from "@/api/vaccinations";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
@@ -69,6 +70,10 @@ import { syncCareQuickWidget } from "@/features/care-journal/widgetSync";
 import type { Article } from "@/features/articles/articles";
 import { getExperienceStage } from "@/features/life-stage/lifeStage";
 import { getPregnancyWeekInfo } from "@/features/pregnancy/weekInfo";
+import { PREMIUM_FEATURES } from "@/features/subscription/premiumFeatures";
+import { showPaywallIfNeeded } from "@/features/subscription/showPaywallIfNeeded";
+import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
+import { trackEvent } from "@/lib/analytics";
 import {
   formatDate,
   getBabyAgeLabel,
@@ -92,6 +97,8 @@ export default function HomeScreen() {
   const queryClient = useQueryClient();
   const { showError, showInfo, showSuccess } = useFeedback();
   const reducedMotion = useReducedMotion();
+  const dailyPlanViewedRef = useRef<string | null>(null);
+  const { isLoading: isSubscriptionLoading, isPremium } = useSubscriptionStatus();
   const profileQuery = useQuery({
     queryKey: ["current-profile"],
     queryFn: getCurrentProfile
@@ -176,6 +183,40 @@ export default function HomeScreen() {
   const careGiverName = membershipQuery.data
     ? profile?.father_name || "Baba"
     : profile?.mother_name || profile?.display_name || "Anne";
+  const dailyPlanItems = useMemo(
+    () => buildDailyPlanItems({
+      experienceStage,
+      hasBaby: Boolean(firstBaby),
+      isPremium,
+      nextVaccination: nextVaccinationQuery.data ?? null,
+      primaryGoal: profile?.primary_goal ?? null,
+      week
+    }),
+    [experienceStage, firstBaby, isPremium, nextVaccinationQuery.data, profile?.primary_goal, week]
+  );
+
+  useEffect(() => {
+    if (isSubscriptionLoading || !profile?.id || dailyPlanItems.length === 0) return;
+    const viewKey = `${profile.id}:${experienceStage}:${isPremium}`;
+    if (dailyPlanViewedRef.current === viewKey) return;
+    dailyPlanViewedRef.current = viewKey;
+    void trackEvent("daily_plan_viewed", {
+      item_count: dailyPlanItems.length,
+      is_premium: isPremium,
+      life_stage: experienceStage,
+      primary_goal: profile.primary_goal
+    });
+  }, [dailyPlanItems.length, experienceStage, isPremium, isSubscriptionLoading, profile?.id, profile?.primary_goal]);
+
+  function openDailyPlanItem(item: DailyPlanItem) {
+    void trackEvent("daily_plan_action_opened", {
+      action_key: item.key,
+      is_premium: isPremium,
+      life_stage: experienceStage,
+      primary_goal: profile?.primary_goal ?? null
+    });
+    router.push(item.href);
+  }
   const handoverMutation = useMutation({
     mutationFn: async () => {
       if (!firstBaby) throw new Error("Bebek profili bulunamadı.");
@@ -509,6 +550,71 @@ export default function HomeScreen() {
           </Reveal>
         ) : null}
 
+        {experienceStage !== "general" ? (
+          <Reveal delay={70}>
+            <Card style={[styles.dailyPlanCard, { borderColor: appTheme.primary }]}>
+              <View style={{ gap: spacing.lg }}>
+                <View style={styles.dailyPlanHeader}>
+                  <View style={{ flex: 1, gap: spacing.xs }}>
+                    <Text style={[typography.eyebrow, { color: appTheme.primary }]}>ANNE+ GÜNÜM</Text>
+                    <Text style={typography.heading2}>Bugün neye odaklanalım?</Text>
+                    <Text style={typography.body}>
+                      {isPregnancyMode
+                        ? `${week ?? "Bu"}. haftana ve seçtiğin hedefe göre kısa planın.`
+                        : `${firstBaby?.name ?? "Bebeğin"} için bakım, aile ve anne odağın tek yerde.`}
+                    </Text>
+                  </View>
+                  <View style={[styles.dailyPlanIcon, { backgroundColor: appTheme.primarySoft }]}>
+                    <CalendarHeart color={appTheme.primary} size={26} />
+                  </View>
+                </View>
+
+                <View style={styles.dailyPlanList}>
+                  {dailyPlanItems.map((item, index) => (
+                    <Pressable
+                      key={item.key}
+                      accessibilityRole="button"
+                      onPress={() => openDailyPlanItem(item)}
+                      style={({ pressed }) => [styles.dailyPlanRow, pressed && styles.shortcutPressed]}
+                    >
+                      <View style={[styles.dailyPlanIndex, { backgroundColor: appTheme.primarySoft }]}>
+                        <Text style={[styles.dailyPlanIndexText, { color: appTheme.primary }]}>{index + 1}</Text>
+                      </View>
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <View style={styles.dailyPlanTitleRow}>
+                          <Text style={styles.dailyPlanTitle}>{item.title}</Text>
+                          {item.premium ? <Text style={styles.dailyPlanPremium}>Premium</Text> : null}
+                        </View>
+                        <Text style={styles.dailyPlanDetail}>{item.detail}</Text>
+                      </View>
+                      <ChevronRight color={colors.textMuted} size={19} />
+                    </Pressable>
+                  ))}
+                </View>
+
+                {!isSubscriptionLoading && !isPremium ? (
+                  <View style={[styles.dailyPlanPremiumBox, { backgroundColor: appTheme.primarySoft }]}>
+                    <Text style={typography.label}>Planını kayıtlarınla kişiselleştir</Text>
+                    <Text style={styles.dailyPlanDetail}>
+                      Premium; uyku öngörüsü, bakım eğilimleri ve aile planını bugünün akışına ekler.
+                    </Text>
+                    <Button
+                      label="Kişisel planı keşfet"
+                      variant="secondary"
+                      onPress={() => void showPaywallIfNeeded(
+                        PREMIUM_FEATURES.dailyPlanInsights.source,
+                        { life_stage: experienceStage, placement: "home_daily_plan" }
+                      )}
+                    />
+                  </View>
+                ) : !isSubscriptionLoading ? (
+                  <Text style={styles.dailyPlanActiveNote}>Premium planın kayıtların değiştikçe güncellenir.</Text>
+                ) : null}
+              </View>
+            </Card>
+          </Reveal>
+        ) : null}
+
         <Reveal delay={90} style={styles.shortcutsSection}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleCopy}>
@@ -717,8 +823,7 @@ export default function HomeScreen() {
                     accent={vibrantColors.secondary}
                     href="/gallery"
                     icon={<Images color={vibrantColors.secondary} fill={vibrantColors.secondarySoft} size={23} strokeWidth={2.6} />}
-                    premium
-                    subtitle="Özel anılarını güvenle sakla"
+                    subtitle="İlk 5 anıyı ücretsiz, devamını Premium ile sakla"
                     title="Anı galerisi"
                     tint={vibrantColors.secondarySoft}
                   />
@@ -903,6 +1008,145 @@ export default function HomeScreen() {
   );
 }
 
+type DailyPlanItem = {
+  detail: string;
+  href: Href;
+  key: string;
+  premium?: boolean;
+  title: string;
+};
+
+function buildDailyPlanItems({
+  experienceStage,
+  hasBaby,
+  isPremium,
+  nextVaccination,
+  primaryGoal,
+  week
+}: {
+  experienceStage: "general" | "pregnancy" | "postpartum";
+  hasBaby: boolean;
+  isPremium: boolean;
+  nextVaccination: UpcomingVaccinationContext | null;
+  primaryGoal: string | null;
+  week: number | null;
+}): DailyPlanItem[] {
+  if (experienceStage === "pregnancy") {
+    const goalItem: DailyPlanItem = primaryGoal === "partner_support"
+      ? {
+          detail: "Bugünün hazırlığını aile içinde paylaş.",
+          href: "/family-planner",
+          key: "pregnancy_partner_support",
+          title: "Bir görevi birlikte tamamla"
+        }
+      : primaryGoal === "pregnancy_wellbeing"
+        ? {
+            detail: "Su ilerlemeni ve haftana uygun anne odağını kontrol et.",
+            href: "/pregnancy-nutrition",
+            key: "pregnancy_wellbeing",
+            title: "Kendine kısa bir alan aç"
+          }
+        : {
+            detail: "Doğum çantası veya planından açık bir maddeyi tamamla.",
+            href: "/birth-preparation",
+            key: "pregnancy_prepare",
+            title: "Hazırlığında bir adım ilerle"
+          };
+
+    const items: DailyPlanItem[] = [
+      {
+        detail: `${week ?? "Bu"}. haftanın bebeğin ve senin için öne çıkanlarını gör.`,
+        href: "/pregnancy-timeline",
+        key: "pregnancy_week",
+        title: "Haftanın odağını gör"
+      },
+      goalItem
+    ];
+
+    if (nextVaccination) {
+      items.push({
+        detail: `${nextVaccination.vaccineName} · ${getRelativeDayLabel(nextVaccination.scheduledDate)}`,
+        href: "/vaccines",
+        key: "pregnancy_vaccine",
+        title: "Yaklaşan aşını kontrol et"
+      });
+    } else {
+      items.push({
+        detail: "Sorularını ve notlarını görüşmeden önce tek yerde hazırla.",
+        href: { pathname: "/doctor-visit", params: { subject: "pregnancy" } },
+        key: "pregnancy_doctor",
+        title: "Doktor görüşmene hazırlan"
+      });
+    }
+
+    if (isPremium) {
+      items.push({
+        detail: "Hazırlıklarını aile desteği ve sınırsız akıllı özetlerle birleştir.",
+        href: "/family-planner",
+        key: "pregnancy_premium_plan",
+        premium: true,
+        title: "Kişisel haftalık planını tamamla"
+      });
+    }
+    return items;
+  }
+
+  if (experienceStage === "postpartum" && hasBaby) {
+    const goalItem: DailyPlanItem = primaryGoal === "family_coordination"
+      ? {
+          detail: "Açık görevleri ve bakım vardiyasını ailece kontrol et.",
+          href: "/family-planner",
+          key: "postpartum_family",
+          title: "Bakım yükünü paylaş"
+        }
+      : primaryGoal === "baby_feeding"
+        ? {
+            detail: "Beslenme veya sağım kaydını birkaç dokunuşla ekle.",
+            href: { pathname: "/care-journal", params: { section: "record" } },
+            key: "postpartum_feeding",
+            title: "Beslenme akışını güncelle"
+          }
+        : {
+            detail: "Son uykuyu kaydet; düzen oluştuğunda öngörün hazırlanır.",
+            href: { pathname: "/care-journal", params: { entry: "sleep", section: "record" } },
+            key: "postpartum_sleep",
+            title: "Uyku ritmini takip et"
+          };
+
+    const items: DailyPlanItem[] = [
+      {
+        detail: "Beslenme, uyku veya bez bilgisini güncel tut.",
+        href: { pathname: "/care-journal", params: { section: "record" } },
+        key: "postpartum_care",
+        title: "Şimdiki bakımı kaydet"
+      },
+      goalItem
+    ];
+
+    if (nextVaccination) {
+      items.push({
+        detail: `${nextVaccination.vaccineName} · ${getRelativeDayLabel(nextVaccination.scheduledDate)}`,
+        href: "/vaccines",
+        key: "postpartum_vaccine",
+        title: "Yaklaşan aşıyı kontrol et"
+      });
+    }
+
+    if (isPremium) {
+      items.push({
+        detail: "Uyku öngörüsü, eğilimler ve aile planını birlikte aç.",
+        href: { pathname: "/care-journal", params: { section: "insights" } },
+        key: "postpartum_premium_plan",
+        premium: true,
+        title: "Bakım içgörünü gör"
+      });
+    }
+    return items;
+  }
+
+  return [];
+}
+
 function HomeCareRow({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return <View style={styles.latestCareRow}><View style={styles.homeCareLabelRow}>{icon}<Text style={styles.latestCareLabel}>{label}</Text></View><Text style={styles.latestCareValue}>{value}</Text></View>;
 }
@@ -1051,6 +1295,79 @@ function ShortcutCard({
 }
 
 const styles = StyleSheet.create({
+  dailyPlanCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1
+  },
+  dailyPlanHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md
+  },
+  dailyPlanIcon: {
+    alignItems: "center",
+    borderRadius: radii.pill,
+    height: 52,
+    justifyContent: "center",
+    width: 52
+  },
+  dailyPlanList: {
+    gap: spacing.sm
+  },
+  dailyPlanRow: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.md,
+    flexDirection: "row",
+    gap: spacing.md,
+    minHeight: 70,
+    padding: spacing.md
+  },
+  dailyPlanIndex: {
+    alignItems: "center",
+    borderRadius: radii.pill,
+    height: 32,
+    justifyContent: "center",
+    width: 32
+  },
+  dailyPlanIndexText: {
+    ...typography.label,
+    fontSize: 13,
+    lineHeight: 18
+  },
+  dailyPlanTitleRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs
+  },
+  dailyPlanTitle: {
+    ...typography.label,
+    color: colors.text,
+    flexShrink: 1
+  },
+  dailyPlanDetail: {
+    ...typography.body,
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 19
+  },
+  dailyPlanPremium: {
+    ...typography.eyebrow,
+    color: colors.highlight,
+    fontSize: 10,
+    lineHeight: 14
+  },
+  dailyPlanPremiumBox: {
+    borderRadius: radii.md,
+    gap: spacing.sm,
+    padding: spacing.md
+  },
+  dailyPlanActiveNote: {
+    ...typography.label,
+    color: colors.textMuted,
+    textAlign: "center"
+  },
   latestCareList: {
     backgroundColor: colors.surface,
     borderRadius: radii.md,

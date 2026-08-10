@@ -11,6 +11,7 @@ import { listBabies } from "@/api/babies";
 import { getCurrentProfile } from "@/api/profiles";
 import {
   deleteBabyPhoto,
+  getBabyGalleryAccess,
   getBabyPhotoSignedUrl,
   listBabyPhotos,
   updateBabyPhoto,
@@ -23,7 +24,8 @@ import { EmptyState } from "@/components/EmptyState";
 import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
-import { PremiumFeatureBoundary } from "@/features/subscription/PremiumFeatureBoundary";
+import { PREMIUM_FEATURES } from "@/features/subscription/premiumFeatures";
+import { showPaywallIfNeeded } from "@/features/subscription/showPaywallIfNeeded";
 import { formatDate } from "@/lib/dates";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { useAppTheme } from "@/providers/AppThemeProvider";
@@ -70,15 +72,7 @@ export default function GalleryScreen() {
     );
   }
 
-  return (
-    <PremiumFeatureBoundary
-      description="Bebeğinin anı fotoğraflarını güvenli bir zaman çizgisinde saklamak Premium ile açılır."
-      featureKey="baby_memory_gallery"
-      title="Anı galerisi"
-    >
-      <GalleryContent />
-    </PremiumFeatureBoundary>
-  );
+  return <GalleryContent />;
 }
 
 function GalleryContent() {
@@ -108,6 +102,30 @@ function GalleryContent() {
     queryFn: () => listBabyPhotos(selectedBaby?.id as string),
     enabled: Boolean(selectedBaby?.id)
   });
+  const galleryAccessQuery = useQuery({
+    queryKey: ["baby-gallery-access"],
+    queryFn: getBabyGalleryAccess
+  });
+
+  async function requestUpload(source: "camera" | "library") {
+    if (galleryAccessQuery.isLoading) return;
+
+    if (galleryAccessQuery.isError) {
+      showError(galleryAccessQuery.error, "Galeri hakkı kontrol edilemedi");
+      return;
+    }
+
+    if (!galleryAccessQuery.data?.allowed) {
+      await showPaywallIfNeeded(PREMIUM_FEATURES.babyMemoryGallery.source, {
+        feature: "baby_memory_gallery",
+        free_limit: galleryAccessQuery.data?.limit ?? 5,
+        used: galleryAccessQuery.data?.used ?? 5
+      });
+      return;
+    }
+
+    uploadMutation.mutate(source);
+  }
 
   const uploadMutation = useMutation({
     mutationFn: async (source: "camera" | "library") => {
@@ -157,7 +175,10 @@ function GalleryContent() {
         () => undefined
       );
       showSuccess("Fotoğraf galeriye eklendi.");
-      await queryClient.invalidateQueries({ queryKey: ["baby-photos", selectedBaby?.id] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["baby-photos", selectedBaby?.id] }),
+        queryClient.invalidateQueries({ queryKey: ["baby-gallery-access"] })
+      ]);
     },
     onError: (error) => showError(error, "Fotoğraf eklenemedi")
   });
@@ -288,6 +309,23 @@ function GalleryContent() {
           </View>
         ) : null}
 
+        {galleryAccessQuery.data && !galleryAccessQuery.data.isPremium ? (
+          <Card style={styles.allowanceCard}>
+            <View style={styles.allowanceRow}>
+              <View style={{ flex: 1, gap: spacing.xs }}>
+                <Text style={typography.eyebrow}>Ücretsiz anılar</Text>
+                <Text style={typography.heading3}>
+                  {galleryAccessQuery.data.used}/{galleryAccessQuery.data.limit} fotoğraf
+                </Text>
+                <Text style={typography.body}>
+                  İlk {galleryAccessQuery.data.limit} anını ücretsiz sakla; sınırsız galeri Premium ile açılır.
+                </Text>
+              </View>
+              <Images color={accentColor.primary} size={26} />
+            </View>
+          </Card>
+        ) : null}
+
         {!selectedBaby ? (
           <EmptyState
             actionHint="Bebek profili oluşturma ekranını açar"
@@ -303,16 +341,16 @@ function GalleryContent() {
             <View style={styles.actionRow}>
               <Button
                 label={uploadMutation.isPending ? "Yükleniyor..." : "Galeriden seç"}
-                disabled={uploadMutation.isPending}
+                disabled={uploadMutation.isPending || galleryAccessQuery.isLoading}
                 style={styles.actionButton}
-                onPress={() => uploadMutation.mutate("library")}
+                onPress={() => void requestUpload("library")}
               />
               <Button
                 label="Kamera"
-                disabled={uploadMutation.isPending}
+                disabled={uploadMutation.isPending || galleryAccessQuery.isLoading}
                 style={styles.actionButton}
                 variant="secondary"
-                onPress={() => uploadMutation.mutate("camera")}
+                onPress={() => void requestUpload("camera")}
               />
             </View>
 
@@ -337,7 +375,7 @@ function GalleryContent() {
               actionLabel="Fotoğraf seç"
               description="Fotoğraflar burada tarihe göre bir yol çizgisi üzerinde listelenecek."
               title="İlk anıyı ekle"
-              onActionPress={() => uploadMutation.mutate("library")}
+              onActionPress={() => void requestUpload("library")}
             />
           ) : null
         }
@@ -448,6 +486,14 @@ const styles = StyleSheet.create({
   },
   galleryContent: {
     gap: spacing.lg
+  },
+  allowanceCard: {
+    backgroundColor: colors.primarySoft
+  },
+  allowanceRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md
   },
   hero: {
     backgroundColor: colors.accentSoft,

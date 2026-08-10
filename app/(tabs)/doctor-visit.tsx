@@ -64,6 +64,7 @@ import {
   shareAndCleanupDoctorVisitPdf
 } from "@/features/doctor-visit/report";
 import { showPaywallIfNeeded } from "@/features/subscription/showPaywallIfNeeded";
+import { PREMIUM_FEATURES } from "@/features/subscription/premiumFeatures";
 import { trackEvent } from "@/lib/analytics";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { useFeedback } from "@/providers/FeedbackProvider";
@@ -249,7 +250,7 @@ export default function DoctorVisitScreen() {
 
       if (!credit.allowed) {
         if (credit.reason === "premium_required" || credit.reason === "free_credits_exhausted") {
-          await showPaywallIfNeeded("doctor_visit_report", {
+          await showPaywallIfNeeded(PREMIUM_FEATURES.doctorVisitReport.source, {
             feature: "doctor_visit_report",
             reason: "free_credits_exhausted"
           });

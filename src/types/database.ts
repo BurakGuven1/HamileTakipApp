@@ -23,6 +23,7 @@ export type Database = {
           due_date: string | null;
           onboarding_completed: boolean;
           onboarding_step: string;
+          primary_goal: "pregnancy_prepare" | "pregnancy_wellbeing" | "partner_support" | "baby_sleep" | "baby_feeding" | "family_coordination" | null;
           notify_forum_comments: boolean;
           notify_forum_likes: boolean;
           notify_vaccine_reminders: boolean;
@@ -32,6 +33,7 @@ export type Database = {
           notify_development_periods: boolean;
           notify_milk_inventory: boolean;
           notify_daily_support: boolean;
+          notify_premium_offers: boolean;
           feeding_mode: "breastfeeding" | "pumping" | "mixed" | "formula";
           created_at: string;
           updated_at: string;
@@ -49,6 +51,7 @@ export type Database = {
           due_date?: string | null;
           onboarding_completed?: boolean;
           onboarding_step?: string;
+          primary_goal?: "pregnancy_prepare" | "pregnancy_wellbeing" | "partner_support" | "baby_sleep" | "baby_feeding" | "family_coordination" | null;
           notify_forum_comments?: boolean;
           notify_forum_likes?: boolean;
           notify_vaccine_reminders?: boolean;
@@ -58,6 +61,7 @@ export type Database = {
           notify_development_periods?: boolean;
           notify_milk_inventory?: boolean;
           notify_daily_support?: boolean;
+          notify_premium_offers?: boolean;
           feeding_mode?: "breastfeeding" | "pumping" | "mixed" | "formula";
           created_at?: string;
           updated_at?: string;
@@ -74,6 +78,7 @@ export type Database = {
           due_date?: string | null;
           onboarding_completed?: boolean;
           onboarding_step?: string;
+          primary_goal?: "pregnancy_prepare" | "pregnancy_wellbeing" | "partner_support" | "baby_sleep" | "baby_feeding" | "family_coordination" | null;
           notify_forum_comments?: boolean;
           notify_forum_likes?: boolean;
           notify_vaccine_reminders?: boolean;
@@ -83,6 +88,7 @@ export type Database = {
           notify_development_periods?: boolean;
           notify_milk_inventory?: boolean;
           notify_daily_support?: boolean;
+          notify_premium_offers?: boolean;
           feeding_mode?: "breastfeeding" | "pumping" | "mixed" | "formula";
           updated_at?: string;
         };
@@ -1889,6 +1895,10 @@ export type Database = {
           family_trial_started_at: string | null;
           family_trial_expires_at: string | null;
         }[];
+      };
+      get_baby_gallery_access: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
       };
       get_family_feature_access: {
         Args: Record<PropertyKey, never>;

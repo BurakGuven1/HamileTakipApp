@@ -406,10 +406,10 @@ export default function BabyScreen() {
             <View style={{ gap: spacing.md }}>
               <View style={styles.summaryHeader}>
                 <View style={{ flex: 1, gap: spacing.xs }}>
-                  <Text style={typography.eyebrow}>Premium</Text>
+                  <Text style={typography.eyebrow}>Temel kayıtlar ücretsiz</Text>
                   <Text style={typography.heading2}>Akıllı bakım günlüğü</Text>
                   <Text style={typography.body}>
-                    Emzirme, biberon, uyku, bez, sağım ve ilaç kayıtlarını ailece takip et.
+                    Emzirme, biberon, uyku, bez ve sağım kayıtlarını ailece takip et; Premium ile öngörü ve eğilimleri aç.
                   </Text>
                 </View>
                 <HeartPulse color={appTheme.primary} size={28} />

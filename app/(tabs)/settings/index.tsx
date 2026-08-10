@@ -40,6 +40,7 @@ import {
   WATER_REMINDER_TIME_LABEL
 } from "@/features/pregnancy/waterReminders";
 import { reconcileCustomerInfoWithSupabase } from "@/features/subscription/reconcileSubscription";
+import { showPaywallIfNeeded } from "@/features/subscription/showPaywallIfNeeded";
 import {
   getSubscriptionStatusFromCustomerInfo,
   hasPremiumEntitlement,
@@ -69,6 +70,14 @@ import {
 } from "@/theme";
 import type { ThemePreference } from "@/theme";
 
+type PrimaryGoal =
+  | "pregnancy_prepare"
+  | "pregnancy_wellbeing"
+  | "partner_support"
+  | "baby_sleep"
+  | "baby_feeding"
+  | "family_coordination";
+
 export default function SettingsScreen() {
   const queryClient = useQueryClient();
   const { showError, showInfo, showSuccess } = useFeedback();
@@ -85,6 +94,7 @@ export default function SettingsScreen() {
   const [forumNickname, setForumNickname] = useState("");
   const [themePreference, setThemePreference] = useState<ThemePreference>("auto");
   const [feedingMode, setFeedingMode] = useState<"breastfeeding" | "pumping" | "mixed" | "formula">("mixed");
+  const [primaryGoal, setPrimaryGoal] = useState<PrimaryGoal>("pregnancy_prepare");
   const [ownUserId, setOwnUserId] = useState<string>();
   const [restoringPurchases, setRestoringPurchases] = useState(false);
   const [showMoreProfileSettings, setShowMoreProfileSettings] = useState(false);
@@ -137,7 +147,8 @@ export default function SettingsScreen() {
     setFatherName(profile.father_name ?? "");
     setThemePreference(profile.theme_preference);
     setFeedingMode(profile.feeding_mode ?? "mixed");
-  }, [profile, profileEditOpen]);
+    setPrimaryGoal(normalizePrimaryGoal(profile.primary_goal, experienceStage));
+  }, [experienceStage, profile, profileEditOpen]);
 
   const updatePreferenceMutation = useMutation({
     mutationFn: async (update: ProfileUpdate) => {
@@ -162,6 +173,23 @@ export default function SettingsScreen() {
     },
     onError: (error) => showError(error, "Ayar kaydedilemedi")
   });
+
+  function updatePremiumNotificationPreference(
+    update: ProfileUpdate,
+    source: string
+  ) {
+    if (isLoading) return;
+
+    if (!isPremium) {
+      void showPaywallIfNeeded(source, {
+        feature: source,
+        placement: "notification_preferences"
+      });
+      return;
+    }
+
+    updatePreferenceMutation.mutate(update);
+  }
 
   const updateProfileMutation = useMutation({
     mutationFn: async () => {
@@ -192,6 +220,7 @@ export default function SettingsScreen() {
         ...(experienceStage === "postpartum"
           ? { feeding_mode: feedingMode }
           : {}),
+        ...(experienceStage !== "general" ? { primary_goal: primaryGoal } : {}),
         theme_preference: themePreference
       });
     },
@@ -387,6 +416,8 @@ export default function SettingsScreen() {
     setMotherName(profile?.mother_name ?? profile?.display_name ?? "");
     setFatherName(profile?.father_name ?? "");
     setThemePreference(profile?.theme_preference ?? "auto");
+    setFeedingMode(profile?.feeding_mode ?? "mixed");
+    setPrimaryGoal(normalizePrimaryGoal(profile?.primary_goal, experienceStage));
     setShowMoreProfileSettings(true);
     setProfileEditOpen(true);
     requestAnimationFrame(() => scrollToProfileEditor());
@@ -725,6 +756,28 @@ export default function SettingsScreen() {
                 </View>
               ) : null}
 
+              {experienceStage !== "general" ? (
+                <View style={{ gap: spacing.sm }}>
+                  <Text style={typography.label}>Anne+ Günüm odağı</Text>
+                  <Text style={typography.body}>Ana sayfadaki günlük planın bu hedefi öne çıkarır.</Text>
+                  <View style={styles.segmentRow}>
+                    {experienceStage === "pregnancy" ? (
+                      <>
+                        <SegmentButton active={primaryGoal === "pregnancy_prepare"} label="Hazırlık" onPress={() => setPrimaryGoal("pregnancy_prepare")} />
+                        <SegmentButton active={primaryGoal === "pregnancy_wellbeing"} label="İyi oluş" onPress={() => setPrimaryGoal("pregnancy_wellbeing")} />
+                        <SegmentButton active={primaryGoal === "partner_support"} label="Paylaşım" onPress={() => setPrimaryGoal("partner_support")} />
+                      </>
+                    ) : (
+                      <>
+                        <SegmentButton active={primaryGoal === "baby_sleep"} label="Uyku" onPress={() => setPrimaryGoal("baby_sleep")} />
+                        <SegmentButton active={primaryGoal === "baby_feeding"} label="Beslenme" onPress={() => setPrimaryGoal("baby_feeding")} />
+                        <SegmentButton active={primaryGoal === "family_coordination"} label="Aile" onPress={() => setPrimaryGoal("family_coordination")} />
+                      </>
+                    )}
+                  </View>
+                </View>
+              ) : null}
+
               <View style={{ gap: spacing.sm }}>
                 <Text style={typography.label}>Görünüm ve tema</Text>
                 <View style={styles.themeGrid}>
@@ -835,6 +888,15 @@ export default function SettingsScreen() {
                     updatePreferenceMutation.mutate({ notify_daily_support: value })
                   }
                 />
+                <PreferenceRow
+                  label="Premium fırsatları"
+                  description="Yalnızca özel dönemlerde Anne+ Premium teklif bildirimi al. Varsayılan olarak kapalıdır."
+                  value={Boolean(profile?.notify_premium_offers)}
+                  disabled={!profile || updatePreferenceMutation.isPending}
+                  onValueChange={(value) =>
+                    updatePreferenceMutation.mutate({ notify_premium_offers: value })
+                  }
+                />
                 {experienceStage === "pregnancy" ? (
                   <PreferenceRow
                     label="Günlük su hatırlatmaları · Ücretsiz"
@@ -846,39 +908,51 @@ export default function SettingsScreen() {
                 ) : experienceStage === "postpartum" ? (
                   <>
                     <PreferenceRow
-                      label="Akıllı uyku tahminleri"
+                      label="Akıllı uyku tahminleri · Premium"
                       description="Yeterli kayıt oluştuğunda yaklaşan uyku penceresinden haber ver."
-                      value={Boolean(profile?.notify_sleep_predictions)}
-                      disabled={!profile || updatePreferenceMutation.isPending}
+                      value={Boolean(isPremium && profile?.notify_sleep_predictions)}
+                      disabled={!profile || isLoading || updatePreferenceMutation.isPending}
                       onValueChange={(value) =>
-                        updatePreferenceMutation.mutate({ notify_sleep_predictions: value })
+                        updatePremiumNotificationPreference(
+                          { notify_sleep_predictions: value },
+                          "notification_sleep_prediction"
+                        )
                       }
                     />
                     <PreferenceRow
-                      label="İlaç ve vitamin güvenlik uyarıları"
+                      label="İlaç ve vitamin güvenlik uyarıları · Premium"
                       description="Başka bir bakıcı doz kaydettiğinde çift doz riskine karşı haber ver."
-                      value={Boolean(profile?.notify_medicine_safety)}
-                      disabled={!profile || updatePreferenceMutation.isPending}
+                      value={Boolean(isPremium && profile?.notify_medicine_safety)}
+                      disabled={!profile || isLoading || updatePreferenceMutation.isPending}
                       onValueChange={(value) =>
-                        updatePreferenceMutation.mutate({ notify_medicine_safety: value })
+                        updatePremiumNotificationPreference(
+                          { notify_medicine_safety: value },
+                          "notification_medicine_safety"
+                        )
                       }
                     />
                     <PreferenceRow
-                      label="Gelişim dönemi notları"
+                      label="Gelişim dönemi notları · Premium"
                       description="Bebeğin yaşına göre empatik ve güvenli gelişim notları al."
-                      value={Boolean(profile?.notify_development_periods)}
-                      disabled={!profile || updatePreferenceMutation.isPending}
+                      value={Boolean(isPremium && profile?.notify_development_periods)}
+                      disabled={!profile || isLoading || updatePreferenceMutation.isPending}
                       onValueChange={(value) =>
-                        updatePreferenceMutation.mutate({ notify_development_periods: value })
+                        updatePremiumNotificationPreference(
+                          { notify_development_periods: value },
+                          "notification_development_period"
+                        )
                       }
                     />
                     <PreferenceRow
-                      label="Anne sütü stok uyarıları"
+                      label="Anne sütü stok uyarıları · Premium"
                       description="Poşet veya kabın son kullanım süresi yaklaşınca haber ver."
-                      value={Boolean(profile?.notify_milk_inventory)}
-                      disabled={!profile || updatePreferenceMutation.isPending}
+                      value={Boolean(isPremium && profile?.notify_milk_inventory)}
+                      disabled={!profile || isLoading || updatePreferenceMutation.isPending}
                       onValueChange={(value) =>
-                        updatePreferenceMutation.mutate({ notify_milk_inventory: value })
+                        updatePremiumNotificationPreference(
+                          { notify_milk_inventory: value },
+                          "notification_milk_inventory"
+                        )
                       }
                     />
                   </>
@@ -913,12 +987,18 @@ export default function SettingsScreen() {
               Premium içerikler ve gelişmiş takip özellikleri için satın alma sayfası
               burada açılır.
             </Text>
-            <Link
-              href={{ pathname: "/paywall", params: { source: "settings" } }}
-              asChild
-            >
-              <Button label="Premium'a geç" />
-            </Link>
+            {!isLoading && !isPremium ? (
+              <Link
+                href={{ pathname: "/paywall", params: { source: "settings" } }}
+                asChild
+              >
+                <Button label="Premium'a geç" />
+              </Link>
+            ) : !isLoading ? (
+              <Text style={styles.familyPremiumNote}>
+                Premium erişimin aktif. Tüm Premium özellikleri kullanabilirsin.
+              </Text>
+            ) : null}
             <Button
               label={
                 restoringPurchases
@@ -992,6 +1072,25 @@ export default function SettingsScreen() {
       </View>
     </Screen>
   );
+}
+
+function normalizePrimaryGoal(
+  value: string | null | undefined,
+  stage: ReturnType<typeof getExperienceStage>
+): PrimaryGoal {
+  if (stage === "postpartum") {
+    return value === "baby_feeding" || value === "family_coordination"
+      ? value
+      : "baby_sleep";
+  }
+
+  if (stage === "pregnancy") {
+    return value === "pregnancy_wellbeing" || value === "partner_support"
+      ? value
+      : "pregnancy_prepare";
+  }
+
+  return "pregnancy_prepare";
 }
 
 function formatPremiumAccessDate(value: string) {
