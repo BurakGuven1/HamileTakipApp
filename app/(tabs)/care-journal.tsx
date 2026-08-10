@@ -1034,10 +1034,21 @@ function AdvancedCareJournalContent() {
           <EmptyState title="Bebek profili gerekli" description="Günlüğü kullanmak için Bebek sekmesinden bir profil oluştur." />
         ) : (
           <>
-            {isPremium && babies.length > 1 ? (
+            {babies.length > 1 ? (
               <View style={styles.chips}>
                 {babies.map((baby) => (
-                  <ChoiceChip key={baby.id} active={baby.id === selectedBaby?.id} label={baby.name} onPress={() => setSelectedBabyId(baby.id)} />
+                  <ChoiceChip
+                    key={baby.id}
+                    active={baby.id === selectedBaby?.id}
+                    label={`${baby.name}${!isPremium && baby.id !== babies[0]?.id ? " · Premium" : ""}`}
+                    onPress={() => {
+                      if (!isPremium && baby.id !== babies[0]?.id) {
+                        void openPremium(PREMIUM_FEATURES.careMultiBaby.source);
+                        return;
+                      }
+                      setSelectedBabyId(baby.id);
+                    }}
+                  />
                 ))}
               </View>
             ) : null}
@@ -1054,7 +1065,7 @@ function AdvancedCareJournalContent() {
                     onRetry={() => void remindersQuery.refetch()}
                     retrying={remindersQuery.isFetching}
                   />
-                ) : <ReminderCard currentUserId={currentUserQuery.data ?? null} entryType={entryType} isPremium={isPremium} reminders={Array.isArray(remindersQuery.data) ? remindersQuery.data : []} reminderTime={reminderTime} onTimeChange={setReminderTime} scheduling={reminderMutation.isPending} cancelling={cancelReminderMutation.isPending} onSchedule={() => reminderMutation.mutate()} onCancel={(reminder) => cancelReminderMutation.mutate(reminder)} />}
+                ) : <ReminderCard currentUserId={currentUserQuery.data ?? null} entryType={entryType} isPremium={isPremium} reminders={Array.isArray(remindersQuery.data) ? remindersQuery.data : []} reminderTime={reminderTime} onTimeChange={setReminderTime} scheduling={reminderMutation.isPending} cancelling={cancelReminderMutation.isPending} onSchedule={() => reminderMutation.mutate()} onCancel={(reminder) => cancelReminderMutation.mutate(reminder)} onOpenPremium={() => void openPremium(PREMIUM_FEATURES.careFamilyReminders.source)} />}
               </CareSectionBoundary>
             ) : null}
 
@@ -1113,27 +1124,36 @@ function AdvancedCareJournalContent() {
                   prediction={sleepPredictionQuery.data ?? null}
                 />}
 
-                {isPremium && (feedingMode === "pumping" || feedingMode === "mixed") ? (
-                  <PumpingFocusCard
-                    blocked={Boolean(activeTimer)}
-                    leftAmount={pumpLeftAmount}
-                    leftTimer={activePumpLeft}
-                    now={timerNow}
-                    onLeftAmountChange={setPumpLeftAmount}
-                    onRightAmountChange={setPumpRightAmount}
-                    onStart={(side) => timerMutation.mutate({ action: "start", type: "pumping", side })}
-                    onStop={(timer, amountValue) => {
-                      const parsed = amountValue.trim() ? Number(amountValue.replace(",", ".")) : null;
-                      if (parsed !== null && (!Number.isFinite(parsed) || parsed <= 0)) {
-                        showInfo("Miktarı ml olarak doğru gir.", "Miktarı kontrol et");
-                        return;
-                      }
-                      timerMutation.mutate({ action: "stop", timer, amountMl: parsed });
-                    }}
-                    pending={timerMutation.isPending}
-                    rightAmount={pumpRightAmount}
-                    rightTimer={activePumpRight}
-                  />
+                {feedingMode === "pumping" || feedingMode === "mixed" ? (
+                  isPremium ? (
+                    <PumpingFocusCard
+                      blocked={Boolean(activeTimer)}
+                      leftAmount={pumpLeftAmount}
+                      leftTimer={activePumpLeft}
+                      now={timerNow}
+                      onLeftAmountChange={setPumpLeftAmount}
+                      onRightAmountChange={setPumpRightAmount}
+                      onStart={(side) => timerMutation.mutate({ action: "start", type: "pumping", side })}
+                      onStop={(timer, amountValue) => {
+                        const parsed = amountValue.trim() ? Number(amountValue.replace(",", ".")) : null;
+                        if (parsed !== null && (!Number.isFinite(parsed) || parsed <= 0)) {
+                          showInfo("Miktarı ml olarak doğru gir.", "Miktarı kontrol et");
+                          return;
+                        }
+                        timerMutation.mutate({ action: "stop", timer, amountMl: parsed });
+                      }}
+                      pending={timerMutation.isPending}
+                      rightAmount={pumpRightAmount}
+                      rightTimer={activePumpRight}
+                    />
+                  ) : (
+                    <PremiumLockedFeatureCard
+                      body="İki tarafı ayrı zamanlayıp miktarları aile cihazlarıyla eşitle."
+                      buttonLabel="Gelişmiş sağımı aç"
+                      onPress={() => void openPremium(PREMIUM_FEATURES.advancedPumping.source)}
+                      title="İki taraflı sağım odağı"
+                    />
+                  )
                 ) : null}
                 </View>
               </CareSectionBoundary>
@@ -1147,7 +1167,7 @@ function AdvancedCareJournalContent() {
                 </View>
                 <View style={styles.chips}>
                   {visibleEntryTypes.map((item) => (
-                    <ChoiceChip key={item.type} active={entryType === item.type} label={`${item.label}${!isPremium && !isFreeType(item.type) ? " · Premium" : ""}`} onPress={() => { if (!isPremium && !isFreeType(item.type)) { void openPremium(`care_${item.type}`); return; } setEntryType(item.type); }} />
+                    <ChoiceChip key={item.type} active={entryType === item.type} label={`${item.label}${!isPremium && !isFreeType(item.type) ? " · Premium" : ""}`} onPress={() => { if (!isPremium && !isFreeType(item.type)) { void openPremium(item.type === "medicine" ? PREMIUM_FEATURES.careMedicine.source : PREMIUM_FEATURES.careSolidFood.source); return; } setEntryType(item.type); }} />
                   ))}
                 </View>
                 {entryType === "breastfeeding" ? (
@@ -1227,49 +1247,61 @@ function AdvancedCareJournalContent() {
                   </View>
                 </Card>
               ) : null}
-              {isPremium ? (
-                <View style={{ gap: spacing.lg }}>
-                {activeSection === "insights" ? <InsightsCard entries={reportEntries} days={trendDays} onArchive={() => void exportPermanentArchive()} onDaysChange={setTrendDays} /> : null}
-                {activeSection === "plan" && selectedBaby && MilkInventoryComponent ? (
-                  <MilkInventoryComponent actorName={caregiverName || null} babyId={selectedBaby.id} />
-                ) : activeSection === "plan" && selectedBaby ? (
-                  <Card>
-                    <View style={{ gap: spacing.md }}>
-                      <View style={styles.cardTitleRow}>
-                        <View style={{ flex: 1, gap: spacing.xs }}>
-                          <Text style={typography.eyebrow}>Premium · kalıcı stok</Text>
-                          <Text style={typography.heading2}>Anne sütü stoğu</Text>
+              {activeSection === "insights" ? (
+                isPremium ? (
+                  <InsightsCard entries={reportEntries} days={trendDays} onArchive={() => void exportPermanentArchive()} onDaysChange={setTrendDays} />
+                ) : (
+                  <PremiumLockedFeatureCard
+                    body="1, 7 ve 30 günlük bakım eğilimlerini karşılaştır; tüm geçmişini kalıcı arşivle."
+                    buttonLabel="Bakım eğilimlerini aç"
+                    onPress={() => void openPremium(PREMIUM_FEATURES.careInsights.source)}
+                    title="Kayıtlarını anlamlandır"
+                  />
+                )
+              ) : null}
+              {activeSection === "plan" && selectedBaby ? (
+                isPremium ? (
+                  MilkInventoryComponent ? (
+                    <MilkInventoryComponent actorName={caregiverName || null} babyId={selectedBaby.id} />
+                  ) : (
+                    <Card>
+                      <View style={{ gap: spacing.md }}>
+                        <View style={styles.cardTitleRow}>
+                          <View style={{ flex: 1, gap: spacing.xs }}>
+                            <Text style={typography.eyebrow}>Premium · kalıcı stok</Text>
+                            <Text style={typography.heading2}>Anne sütü stoğu</Text>
+                          </View>
+                          <Milk color={colors.sageGreen} size={26} />
                         </View>
-                        <Milk color={colors.sageGreen} size={26} />
+                        <Text style={typography.body}>Saklanan sütleri, son kullanım zamanını ve önce sağılanı önce kullanma sırasını yönet.</Text>
+                        <Button disabled={milkInventoryLoading} label={milkInventoryLoading ? "Açılıyor..." : "Süt stoğunu aç"} variant="secondary" onPress={() => void openMilkInventory()} />
                       </View>
-                      <Text style={typography.body}>Saklanan sütleri, son kullanım zamanını ve önce sağılanı önce kullanma sırasını yönet.</Text>
-                      <Button disabled={milkInventoryLoading} label={milkInventoryLoading ? "Açılıyor..." : "Süt stoğunu aç"} variant="secondary" onPress={() => void openMilkInventory()} />
-                    </View>
-                  </Card>
-                ) : null}
-                {activeSection === "family" ? (
-                  <Card>
-                    <View style={{ gap: spacing.md }}>
-                      <Text style={typography.eyebrow}>İki cihazda ortak</Text>
-                      <Text style={typography.heading2}>Aile görevleri ve alarmlar</Text>
-                      <Text style={typography.body}>
-                        Hazır görevlerden seç veya kendi görevini yaz; anneye, baba/bakıcıya ya da ikinize ata. Zamanlı alarm yalnız görevli kişilerin cihazlarında çalar.
-                      </Text>
-                      <Button
-                        label="Aile görevlerini aç"
-                        onPress={() => router.push("/family-planner")}
-                      />
-                    </View>
-                  </Card>
-                ) : null}
-                </View>
-              ) : <PremiumUpsellCard onPress={() => void openPremium(
-                activeSection === "plan"
-                  ? PREMIUM_FEATURES.carePlan.source
-                  : activeSection === "family"
-                    ? PREMIUM_FEATURES.careFamily.source
-                    : PREMIUM_FEATURES.careInsights.source
-              )} />}
+                    </Card>
+                  )
+                ) : (
+                  <PremiumLockedFeatureCard
+                    body="Saklanan süt miktarını, konumunu ve son kullanım sırasını tek yerde yönet."
+                    buttonLabel="Süt stoğunu aç"
+                    onPress={() => void openPremium(PREMIUM_FEATURES.milkInventory.source)}
+                    title="Anne sütü stoğu"
+                  />
+                )
+              ) : null}
+              {activeSection === "family" ? (
+                <Card>
+                  <View style={{ gap: spacing.md }}>
+                    <Text style={typography.eyebrow}>Görevler ücretsiz</Text>
+                    <Text style={typography.heading2}>Aile görevleri ve alarmlar</Text>
+                    <Text style={typography.body}>
+                      Görev oluşturmak ve tamamlamak ücretsizdir. Zamanlı ortak alarmlar 3 akıllı hakkı kullanır; Premium’da sınırsızdır.
+                    </Text>
+                    <Button
+                      label="Aile görevlerini aç"
+                      onPress={() => router.push("/family-planner")}
+                    />
+                  </View>
+                </Card>
+              ) : null}
               </View>
             </CareSectionBoundary> : null}
 
@@ -1292,6 +1324,14 @@ function AdvancedCareJournalContent() {
               {entries.slice(0, isPremium ? historyLimit : 30).map((entry) => (
                 <EntryCard key={entry.id} entry={entry} deleting={deleteMutation.isPending} onDelete={() => deleteMutation.mutate(entry)} />
               ))}
+              {!isPremium && entries.length > 0 ? (
+                <PremiumLockedFeatureCard
+                  body="Ücretsiz hesapta son 24 saat görünür. Önceki günleri ve tüm bakım geçmişini Premium ile aç."
+                  buttonLabel="Tüm geçmişi aç"
+                  onPress={() => void openPremium(PREMIUM_FEATURES.careHistory.source)}
+                  title="24 saatten eski kayıtlar"
+                />
+              ) : null}
               {isPremium && entries.length >= historyLimit ? (
                 <Button label="Daha eski kayıtları göster" variant="secondary" onPress={() => setHistoryLimit((value) => value + 100)} />
               ) : null}
@@ -1615,7 +1655,7 @@ function showRecentMedicineConfirmation(
   );
 }
 
-function ReminderCard({ cancelling, currentUserId, entryType, isPremium, onCancel, onSchedule, onTimeChange, reminderTime, reminders, scheduling }: { cancelling: boolean; currentUserId: string | null; entryType: CareEntryType; isPremium: boolean; onCancel: (reminder: CareReminder) => void; onSchedule: () => void; onTimeChange: (value: Date) => void; reminderTime: Date; reminders: CareReminder[]; scheduling: boolean }) {
+function ReminderCard({ cancelling, currentUserId, entryType, isPremium, onCancel, onOpenPremium, onSchedule, onTimeChange, reminderTime, reminders, scheduling }: { cancelling: boolean; currentUserId: string | null; entryType: CareEntryType; isPremium: boolean; onCancel: (reminder: CareReminder) => void; onOpenPremium: () => void; onSchedule: () => void; onTimeChange: (value: Date) => void; reminderTime: Date; reminders: CareReminder[]; scheduling: boolean }) {
   const appTheme = useAppTheme();
   const [showAndroidPicker, setShowAndroidPicker] = useState(false);
   const scheduledFor = normalizeNextReminderTime(reminderTime);
@@ -1672,6 +1712,7 @@ function ReminderCard({ cancelling, currentUserId, entryType, isPremium, onCance
           <Text style={styles.selectedReminderText}>Alarm: {formatSelectedReminderDate(scheduledFor)}</Text>
         </View>
         <Button disabled={scheduling} label={scheduling ? "Alarm kuruluyor..." : `${entryLabel(entryType)} alarmı kur`} onPress={onSchedule} />
+        {!isPremium ? <Button label="Aile senkronlu alarmı aç" variant="ghost" onPress={onOpenPremium} /> : null}
         {reminders.length > 0 ? (
           <View style={{ gap: spacing.sm }}>
             <Text style={typography.label}>Planlı alarmlar</Text>
@@ -1725,7 +1766,35 @@ function InsightsCard({ days, entries, onArchive, onDaysChange }: { days: Report
   return <Card style={styles.insightCard}><View style={{ gap: spacing.md }}><View style={styles.cardTitleRow}><View style={{ flex: 1 }}><Text style={typography.eyebrow}>Premium analiz</Text><Text style={typography.heading2}>Güvenli bakım özeti</Text></View><Sparkles color={colors.highlight} size={26} /></View><View style={styles.chips}>{([1, 7, 30] as const).map((value) => <ChoiceChip key={value} active={days === value} label={value === 1 ? "24 saat" : `${value} gün`} onPress={() => onDaysChange(value)} />)}</View><Text style={typography.body}>• Gündüz uykuları ortalama {avgDaySleep} dakika sürdü.</Text><Text style={typography.body}>• Gece uykusu başlangıçları çoğunlukla {nightRange} aralığında kaydedildi.</Text><Text style={typography.body}>• Biberon kayıtlarının ortalaması {avgBottle} ml.</Text><Text style={styles.safetyNote}>Bu özet yalnızca kaydedilen eğilimleri gösterir; bebeğin sağlığı veya yeterli beslenmesi hakkında değerlendirme yapmaz.</Text><Button variant="ghost" label="Tüm geçmişi kalıcı arşivle" onPress={onArchive} /></View></Card>;
 }
 
-function PremiumUpsellCard({ onPress }: { onPress: () => void }) { return <Card style={styles.premiumCard}><View style={{ gap: spacing.md }}><View style={styles.cardTitleRow}><View style={styles.lockBubble}><LockKeyhole color={colors.sageGreen} size={22} /></View><View style={{ flex: 1 }}><Text style={typography.eyebrow}>Premium</Text><Text style={typography.heading2}>Kayıtlarını anlamlandır</Text></View></View><Text style={typography.body}>7/30/90 günlük eğilimler, sınırsız geçmiş, süt stoğu ve aile görevleri.</Text><Button label="Premium özellikleri aç" onPress={onPress} /></View></Card>; }
+function PremiumLockedFeatureCard({
+  body,
+  buttonLabel,
+  onPress,
+  title
+}: {
+  body: string;
+  buttonLabel: string;
+  onPress: () => void;
+  title: string;
+}) {
+  return (
+    <Card style={styles.premiumCard}>
+      <View style={{ gap: spacing.md }}>
+        <View style={styles.cardTitleRow}>
+          <View style={styles.lockBubble}>
+            <LockKeyhole color={colors.sageGreen} size={22} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={typography.eyebrow}>Premium</Text>
+            <Text style={typography.heading2}>{title}</Text>
+          </View>
+        </View>
+        <Text style={typography.body}>{body}</Text>
+        <Button label={buttonLabel} onPress={onPress} />
+      </View>
+    </Card>
+  );
+}
 function Rating({ onChange, value }: { onChange: (value: number) => void; value: number }) { return <View style={styles.chips}>{[1, 2, 3, 4, 5].map((item) => <ChoiceChip key={item} active={value === item} label={`${item}`} onPress={() => onChange(item)} />)}</View>; }
 
 function SummaryItem({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {

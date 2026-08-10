@@ -8,17 +8,29 @@ export type PremiumFeatureDefinition = {
 };
 
 export const PREMIUM_FEATURES = {
+  advancedPumping: {
+    accessMode: "premium",
+    lifeStage: "postpartum",
+    source: "care_advanced_pumping",
+    title: "Gelişmiş iki taraflı sağım"
+  },
   babyMemoryGallery: {
     accessMode: "premium",
     lifeStage: "postpartum",
     source: "baby_memory_gallery",
     title: "Sınırsız anı galerisi"
   },
-  careFamily: {
+  careHistory: {
     accessMode: "premium",
     lifeStage: "postpartum",
-    source: "care_family",
-    title: "Aile desteği"
+    source: "care_history",
+    title: "Sınırsız bakım geçmişi"
+  },
+  careFamilyReminders: {
+    accessMode: "premium",
+    lifeStage: "postpartum",
+    source: "care_family_reminders",
+    title: "Aile senkronlu bakım alarmları"
   },
   careInsights: {
     accessMode: "premium",
@@ -26,17 +38,23 @@ export const PREMIUM_FEATURES = {
     source: "care_insights",
     title: "Bakım eğilimleri"
   },
-  carePlan: {
+  careMedicine: {
     accessMode: "premium",
     lifeStage: "postpartum",
-    source: "care_plan",
-    title: "Bakım planı"
+    source: "care_medicine",
+    title: "İlaç ve vitamin kaydı"
   },
-  dailyPlanInsights: {
+  careMultiBaby: {
     accessMode: "premium",
-    lifeStage: "shared",
-    source: "daily_plan_insights",
-    title: "Anne+ Günüm kişisel planı"
+    lifeStage: "postpartum",
+    source: "care_multi_baby",
+    title: "Çoklu bebek bakım günlüğü"
+  },
+  careSolidFood: {
+    accessMode: "premium",
+    lifeStage: "postpartum",
+    source: "care_solid_food",
+    title: "Ek gıda kaydı"
   },
   doctorVisitReport: {
     accessMode: "credits",
@@ -61,6 +79,11 @@ export const PREMIUM_FEATURES = {
     lifeStage: "postpartum",
     source: "sleep_prediction",
     title: "Akıllı uyku tahmini"
+  },
+  milkInventory: {
+    accessMode: "premium",
+    lifeStage: "postpartum",
+    source: "care_milk_inventory",
+    title: "Anne sütü stok yönetimi"
   }
 } as const satisfies Record<string, PremiumFeatureDefinition>;
-

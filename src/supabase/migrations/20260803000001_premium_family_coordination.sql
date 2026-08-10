@@ -1341,11 +1341,14 @@ begin
     raise exception 'Yeni alarm saati en az bir dakika ileride olmalı.' using errcode = '22023';
   end if;
 
-  select assignment, task into v_assignment, v_task
-  from public.care_task_assignments assignment
-  join public.care_tasks task on task.id = assignment.task_id
-  where assignment.id = p_assignment_id
-  for update of assignment;
+  select * into v_assignment
+  from public.care_task_assignments
+  where id = p_assignment_id
+  for update;
+
+  select * into v_task
+  from public.care_tasks
+  where id = v_assignment.task_id;
 
   if v_assignment.id is null
      or v_assignment.user_id <> auth.uid()
@@ -1383,11 +1386,14 @@ begin
     raise exception 'Oturum gerekli.' using errcode = '28000';
   end if;
 
-  select assignment, task into v_assignment, v_task
-  from public.care_task_assignments assignment
-  join public.care_tasks task on task.id = assignment.task_id
-  where assignment.id = p_assignment_id
-  for update of assignment;
+  select * into v_assignment
+  from public.care_task_assignments
+  where id = p_assignment_id
+  for update;
+
+  select * into v_task
+  from public.care_tasks
+  where id = v_assignment.task_id;
 
   if v_assignment.id is null
      or not public.can_coordinate_profile(v_task.profile_id)

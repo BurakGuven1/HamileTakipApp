@@ -27,8 +27,6 @@ export type AnalyticsEventName =
   | "care_reminder_scheduled"
   | "care_task_added"
   | "doctor_visit_report_created"
-  | "daily_plan_action_opened"
-  | "daily_plan_viewed"
   | "email_verification_required"
   | "first_open"
   | "forum_comment_created"

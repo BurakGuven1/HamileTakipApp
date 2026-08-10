@@ -232,7 +232,23 @@ export default function DoctorVisitScreen() {
   }
 
   async function createAndSharePdf() {
-    if (!snapshot || creatingPdf) return;
+    if (!snapshot || !context || creatingPdf) return;
+    if (
+      !context.feature_access.is_premium &&
+      context.feature_access.remaining === 0
+    ) {
+      try {
+        await showPaywallIfNeeded(PREMIUM_FEATURES.doctorVisitReport.source, {
+          feature: "doctor_visit_report",
+          life_stage: snapshot.subject === "pregnancy" ? "pregnancy" : "postpartum",
+          reason: "free_credits_exhausted",
+          remaining: 0
+        });
+      } catch (error) {
+        showError(error, "Premium ekranı açılamadı");
+      }
+      return;
+    }
     setCreatingPdf(true);
     let uri: string | null = null;
     let creditCommitted = false;

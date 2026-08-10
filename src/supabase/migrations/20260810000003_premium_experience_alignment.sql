@@ -2,28 +2,7 @@
 -- weekly pregnancy notification schedule.
 
 alter table public.profiles
-  add column if not exists primary_goal text;
-
-alter table public.profiles
   add column if not exists notify_premium_offers boolean not null default false;
-
-alter table public.profiles
-  drop constraint if exists profiles_primary_goal_check;
-
-alter table public.profiles
-  add constraint profiles_primary_goal_check check (
-    primary_goal is null or primary_goal in (
-      'pregnancy_prepare',
-      'pregnancy_wellbeing',
-      'partner_support',
-      'baby_sleep',
-      'baby_feeding',
-      'family_coordination'
-    )
-  );
-
-comment on column public.profiles.primary_goal is
-  'Non-medical onboarding goal used to personalize the daily experience and Premium messaging.';
 
 comment on column public.profiles.notify_premium_offers is
   'Explicit, default-off consent for occasional Anne+ Premium promotional push notifications.';
@@ -82,6 +61,7 @@ grant execute on function public.can_add_baby_photo(uuid) to authenticated;
 drop policy if exists "baby_photos_all_family" on public.baby_photos;
 drop policy if exists "baby_photos_select_family" on public.baby_photos;
 drop policy if exists "baby_photos_insert_family" on public.baby_photos;
+drop policy if exists "baby_photos_insert_metered_family" on public.baby_photos;
 drop policy if exists "baby_photos_update_family" on public.baby_photos;
 drop policy if exists "baby_photos_delete_family" on public.baby_photos;
 
@@ -103,6 +83,7 @@ create policy "baby_photos_delete_family"
   using (public.can_access_baby(baby_id));
 
 drop policy if exists "baby_photos_insert_family" on storage.objects;
+drop policy if exists "baby_photos_insert_metered_family" on storage.objects;
 create policy "baby_photos_insert_metered_family"
   on storage.objects for insert
   with check (

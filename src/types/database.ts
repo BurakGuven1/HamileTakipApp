@@ -23,7 +23,6 @@ export type Database = {
           due_date: string | null;
           onboarding_completed: boolean;
           onboarding_step: string;
-          primary_goal: "pregnancy_prepare" | "pregnancy_wellbeing" | "partner_support" | "baby_sleep" | "baby_feeding" | "family_coordination" | null;
           notify_forum_comments: boolean;
           notify_forum_likes: boolean;
           notify_vaccine_reminders: boolean;
@@ -51,7 +50,6 @@ export type Database = {
           due_date?: string | null;
           onboarding_completed?: boolean;
           onboarding_step?: string;
-          primary_goal?: "pregnancy_prepare" | "pregnancy_wellbeing" | "partner_support" | "baby_sleep" | "baby_feeding" | "family_coordination" | null;
           notify_forum_comments?: boolean;
           notify_forum_likes?: boolean;
           notify_vaccine_reminders?: boolean;
@@ -78,7 +76,6 @@ export type Database = {
           due_date?: string | null;
           onboarding_completed?: boolean;
           onboarding_step?: string;
-          primary_goal?: "pregnancy_prepare" | "pregnancy_wellbeing" | "partner_support" | "baby_sleep" | "baby_feeding" | "family_coordination" | null;
           notify_forum_comments?: boolean;
           notify_forum_likes?: boolean;
           notify_vaccine_reminders?: boolean;
