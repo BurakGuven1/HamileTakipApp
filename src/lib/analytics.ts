@@ -4,6 +4,7 @@ export {
   getAnalyticsContext,
   initializeAnalytics,
   linkAnalyticsIdentity,
+  trackAuthenticatedSessionStartedIfNeeded,
   trackProductEvent as trackEvent,
   trackSessionStartedIfNeeded,
   type AnalyticsEventName,

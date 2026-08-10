@@ -17,6 +17,12 @@ requires the signed-in user's UUID to exist in `public.analytics_admins`.
 - Normalized RevenueCat lifecycle events, price, currency and store environment
 - Aggregate funnel, subscription health, retention and data quality metrics
 
+The dashboard separates current state from period events. `subscriptions` is
+used to show active subscribers that predate normalized webhook storage, while
+new purchases and lifecycle changes come from `revenuecat_events`. Legacy
+`paywall_offering_loaded` events fill historical paywall gaps without creating
+fake raw `paywall_views` rows.
+
 Raw event properties must not contain names, free text, document contents, baby
 IDs, post IDs or other unnecessary personal data. Raw analytics events are kept
 for 15 months; daily aggregates are kept for 36 months.

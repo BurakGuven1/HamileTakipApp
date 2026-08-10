@@ -2170,11 +2170,38 @@ export type Database = {
         Args: { p_baby_id: string };
         Returns: boolean;
       };
-      is_analytics_admin: {
-        Args: Record<PropertyKey, never>;
-        Returns: boolean;
-      };
-      get_analytics_overview: {
+        is_analytics_admin: {
+          Args: Record<PropertyKey, never>;
+          Returns: boolean;
+        };
+        analytics_effective_paywall_impressions: {
+          Args: { p_from: string; p_to: string };
+          Returns: {
+            user_id: string | null;
+            paywall_view_id: string;
+            source: string;
+            offering_id: string | null;
+            viewed_at: string;
+            is_legacy_fallback: boolean;
+          }[];
+        };
+        analytics_effective_verified_purchases: {
+          Args: { p_from: string; p_to: string };
+          Returns: {
+            user_id: string;
+            purchased_at: string;
+            product_id: string | null;
+            is_subscription_cache_fallback: boolean;
+          }[];
+        };
+        analytics_effective_user_activity: {
+          Args: { p_from: string; p_to: string };
+          Returns: {
+            user_id: string;
+            activity_date: string;
+          }[];
+        };
+        get_analytics_overview: {
         Args: { p_from: string; p_to: string };
         Returns: Json;
       };
@@ -2226,11 +2253,11 @@ export type Database = {
       get_analytics_retention: {
         Args: { p_from: string; p_to: string };
         Returns: {
-          cohort_date: string;
-          cohort_users: number;
-          d1_users: number;
-          d7_users: number;
-          d30_users: number;
+            cohort_date: string;
+            cohort_users: number;
+            d1_users: number | null;
+            d7_users: number | null;
+            d30_users: number | null;
         }[];
       };
       get_analytics_data_quality: {

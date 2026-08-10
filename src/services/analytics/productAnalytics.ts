@@ -113,6 +113,7 @@ type StoredSession = {
 const INSTALLATION_ID_KEY = "analytics-installation-id-v1";
 const SESSION_KEY = "analytics-session-v1";
 const FIRST_OPEN_KEY = "analytics-first-open-recorded-v1";
+const AUTHENTICATED_SESSION_KEY = "analytics-authenticated-session-v1";
 const QUEUE_KEY = "analytics-event-queue-v2";
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 const MAX_QUEUED_EVENTS = 500;
@@ -175,6 +176,7 @@ export async function initializeAnalytics(): Promise<void> {
     }
 
     await enqueueEvent("session_started", {}, context);
+    await markAuthenticatedSession(context);
     await linkAnalyticsIdentity(context);
     await flushAnalyticsEvents();
   })();
@@ -190,10 +192,37 @@ export async function trackSessionStartedIfNeeded(): Promise<void> {
 
   if (shouldStart) {
     await enqueueEvent("session_started", {}, context);
+    await markAuthenticatedSession(context);
   }
 
   await linkAnalyticsIdentity(context);
   await flushAnalyticsEvents();
+}
+
+export async function trackAuthenticatedSessionStartedIfNeeded(): Promise<void> {
+  try {
+    const context = await getAnalyticsContext();
+    if (!context.userId) return;
+
+    const marker = await readAuthenticatedSessionMarker();
+
+    if (
+      marker?.sessionId !== context.sessionId ||
+      marker.userId !== context.userId
+    ) {
+      await enqueueEvent(
+        "session_started",
+        { identity_state: "authenticated" },
+        context
+      );
+      await markAuthenticatedSession(context);
+    }
+
+    await linkAnalyticsIdentity(context);
+    await flushAnalyticsEvents();
+  } catch (error) {
+    console.warn("Authenticated analytics session failed", error);
+  }
 }
 
 export async function linkAnalyticsIdentity(
@@ -376,6 +405,25 @@ async function readQueue(): Promise<QueuedAnalyticsEvent[]> {
     return Array.isArray(parsed) ? (parsed as QueuedAnalyticsEvent[]) : [];
   } catch {
     return [];
+  }
+}
+
+async function markAuthenticatedSession(context: AnalyticsContext) {
+  if (!context.userId) return;
+  await AsyncStorage.setItem(
+    AUTHENTICATED_SESSION_KEY,
+    JSON.stringify({ sessionId: context.sessionId, userId: context.userId })
+  );
+}
+
+async function readAuthenticatedSessionMarker() {
+  const rawMarker = await AsyncStorage.getItem(AUTHENTICATED_SESSION_KEY);
+  if (!rawMarker) return null;
+
+  try {
+    return JSON.parse(rawMarker) as { sessionId?: string; userId?: string };
+  } catch {
+    return null;
   }
 }
 

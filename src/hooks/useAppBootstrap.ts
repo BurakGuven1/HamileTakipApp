@@ -4,7 +4,7 @@ import { AppState } from "react-native";
 
 import {
   initializeAnalytics,
-  linkAnalyticsIdentity,
+  trackAuthenticatedSessionStartedIfNeeded,
   trackSessionStartedIfNeeded
 } from "@/lib/analytics";
 import {
@@ -28,6 +28,7 @@ export function useAppBootstrap() {
       configureRevenueCat();
       clearAppNotificationBadge();
       await initializeAnalytics();
+      await trackAuthenticatedSessionStartedIfNeeded();
       await bootstrapPushToken(false);
     }
 
@@ -37,8 +38,8 @@ export function useAppBootstrap() {
 
     const { data: authSubscription } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        if (event === "SIGNED_IN" && session) {
-          linkAnalyticsIdentity().catch(() => undefined);
+        if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session) {
+          trackAuthenticatedSessionStartedIfNeeded().catch(() => undefined);
           bootstrapPushToken(false).catch((error) => {
             console.warn("Push token registration after sign-in failed", error);
           });
@@ -51,7 +52,9 @@ export function useAppBootstrap() {
     const appStateSubscription = AppState.addEventListener("change", (state) => {
       if (state !== "active") return;
       clearAppNotificationBadge();
-      trackSessionStartedIfNeeded().catch(() => undefined);
+      trackSessionStartedIfNeeded()
+        .then(() => trackAuthenticatedSessionStartedIfNeeded())
+        .catch(() => undefined);
       bootstrapPushToken(false).catch((error) => {
         console.warn("Push token refresh failed", error);
       });

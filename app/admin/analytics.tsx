@@ -61,6 +61,14 @@ const funnelLabels: Record<string, string> = {
   purchase_started: "Satın almayı başlattı",
   verified_purchase: "Doğrulanmış satın alma"
 };
+const subscriptionEventLabels: Record<string, string> = {
+  BILLING_ISSUE: "Ödeme sorunu",
+  CANCELLATION: "İptal",
+  CURRENT_ACTIVE: "Güncel aktif abone",
+  EXPIRATION: "Süresi dolan",
+  INITIAL_PURCHASE: "İlk satın alma",
+  RENEWAL: "Yenileme"
+};
 
 export default function AnalyticsAdminScreen() {
   const { width } = useWindowDimensions();
@@ -240,13 +248,27 @@ function DashboardContent({ data, width }: { data: AnalyticsDashboardData; width
     { icon: <Users color={adminColors.primary} size={20} />, label: "Yeni hesap", value: formatCount(data.overview.accounts) },
     { icon: <Activity color={adminColors.success} size={20} />, label: "Aktive olan", value: formatCount(data.overview.activated) },
     { icon: <CreditCard color={adminColors.accent} size={20} />, label: "Paywall izleyicisi", value: formatCount(data.overview.paywall_viewers) },
-    { icon: <BadgeCheck color={adminColors.success} size={20} />, label: "Doğrulanmış müşteri", value: formatCount(data.overview.verified_customers) },
+    { icon: <BadgeCheck color={adminColors.success} size={20} />, label: "Dönemde satın alan", value: formatCount(data.overview.verified_customers) },
+    { icon: <CreditCard color={adminColors.success} size={20} />, label: "Güncel aktif abone", value: formatCount(data.overview.active_subscribers) },
     { icon: <TrendingUp color={adminColors.primary} size={20} />, label: "7 günlük dönüşüm", value: `%${formatDecimal(data.overview.paywall_conversion_7d)}` },
     { icon: <BarChart3 color={adminColors.muted} size={20} />, label: "Medyan satın alma", value: data.overview.median_hours_to_purchase === null ? "—" : `${formatDecimal(data.overview.median_hours_to_purchase)} sa` }
   ];
 
   return (
     <View style={styles.dashboard}>
+      {data.overview.first_opens === 0 && data.overview.accounts > 0 ? (
+        <View style={styles.coverageNotice}>
+          <CircleAlert color={adminColors.accent} size={20} />
+          <View style={styles.coverageCopy}>
+            <Text style={styles.coverageTitle}>Event takibi yeni başladı</Text>
+            <Text style={styles.coverageText}>
+              İlk açılış ve onboarding geçmişe dönük üretilemez. Aktif aboneler
+              mevcut subscription kaydından, yeni satın almalar RevenueCat
+              webhook’undan doğrulanır.
+            </Text>
+          </View>
+        </View>
+      ) : null}
       <View style={styles.kpiGrid}>
         {kpis.map((item) => (
           <KpiCard key={item.label} {...item} compact={compact} />
@@ -270,13 +292,13 @@ function DashboardContent({ data, width }: { data: AnalyticsDashboardData; width
         <Panel style={styles.primaryPanel} title="RevenueCat Offering karşılaştırması" subtitle="Deney varyantları gerçek offering kimliğiyle">
           <OfferingTable rows={data.offerings} />
         </Panel>
-        <Panel style={styles.secondaryPanel} title="Abonelik sağlığı" subtitle="Yalnız production webhook olayları">
+        <Panel style={styles.secondaryPanel} title="Abonelik sağlığı" subtitle="Güncel aktif durum ve production webhook olayları">
           <SubscriptionTable rows={data.subscriptionHealth} />
         </Panel>
       </View>
 
       <View style={[styles.twoColumn, compact && styles.singleColumn]}>
-        <Panel style={styles.primaryPanel} title="Retention kohortları" subtitle="Hesap oluşturma gününe göre D1 / D7 / D30">
+        <Panel style={styles.primaryPanel} title="Retention kohortları" subtitle="Tam 1., 7. ve 30. takvim gününde geri dönenler · — henüz ölçülmedi">
           <RetentionTable rows={data.retention.slice(-10).reverse()} />
         </Panel>
         <Panel style={styles.secondaryPanel} title="Veri kalitesi" subtitle="Funnel güvenilirliği için operasyonel kontroller">
@@ -298,13 +320,14 @@ function KpiCard({ compact, icon, label, value }: { compact: boolean; icon: Reac
 }
 
 function FunnelChart({ steps }: { steps: FunnelStep[] }) {
-  const first = Math.max(steps[0]?.users ?? 0, 1);
+  const maximum = Math.max(...steps.map((step) => step.users), 1);
   return (
     <View style={styles.funnelList}>
       {steps.map((step, index) => {
         const previous = steps[index - 1]?.users ?? step.users;
         const previousRate = previous > 0 ? (step.users / previous) * 100 : 0;
-        const totalRate = (step.users / first) * 100;
+        const relativeWidth = (step.users / maximum) * 100;
+        const comparableToPrevious = previous > 0 && step.users <= previous;
         return (
           <View key={step.step_key} style={styles.funnelRow}>
             <View style={styles.funnelMeta}>
@@ -312,10 +335,14 @@ function FunnelChart({ steps }: { steps: FunnelStep[] }) {
               <Text style={styles.rowValue}>{formatCount(step.users)}</Text>
             </View>
             <View style={styles.track}>
-              <View style={[styles.funnelFill, { width: `${Math.max(totalRate, step.users ? 3 : 0)}%` }]} />
+              <View style={[styles.funnelFill, { width: `${Math.max(relativeWidth, step.users ? 3 : 0)}%` }]} />
             </View>
             <Text style={styles.helperText}>
-              {index === 0 ? "%100 başlangıç" : `%${formatDecimal(previousRate)} önceki adımdan`}
+              {index === 0
+                ? "Seçili dönemde kaydedilen olay"
+                : comparableToPrevious
+                  ? `%${formatDecimal(previousRate)} önceki adımdan`
+                  : "Event kapsamları farklı; oran hesaplanmadı"}
             </Text>
           </View>
         );
@@ -395,7 +422,7 @@ function SubscriptionTable({ rows }: { rows: AnalyticsDashboardData["subscriptio
       {rows.map((row) => (
         <View key={row.event_type} style={styles.healthRow}>
           <View style={styles.healthCopy}>
-            <Text style={styles.rowLabel}>{humanize(row.event_type)}</Text>
+            <Text style={styles.rowLabel}>{subscriptionEventLabels[row.event_type] ?? humanize(row.event_type)}</Text>
             <Text style={styles.helperText}>{formatCount(row.customers)} müşteri</Text>
           </View>
           <Text style={styles.rowValue}>{formatCount(row.events)}</Text>
@@ -426,6 +453,8 @@ function DataQuality({ data }: { data: AnalyticsDashboardData["dataQuality"] }) 
   const rows = [
     ["İstemci satın alma tamamlaması", data.client_completions],
     ["Doğrulanmış ilk satın alma", data.verified_purchases],
+    ["Eski event’ten tamamlanan paywall", data.legacy_paywall_fallbacks],
+    ["Webhook öncesi subscription kaydı", data.subscription_cache_fallbacks],
     ["Kaynağı eksik paywall", data.missing_paywall_source],
     ["Offering kimliği eksik", data.missing_offering],
     ["Sandbox webhook", data.sandbox_webhooks]
@@ -531,7 +560,7 @@ function EmptyRows() {
 function formatCount(value: number) { return new Intl.NumberFormat("tr-TR").format(value); }
 function formatDecimal(value: number) { return new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 1 }).format(value); }
 function humanize(value: string) { return value.toLocaleLowerCase("tr-TR").replaceAll("_", " ").replace(/(^|\s)\S/g, (letter) => letter.toLocaleUpperCase("tr-TR")); }
-function retentionRate(users: number, cohort: number) { return cohort ? `%${formatDecimal(users / cohort * 100)}` : "—"; }
+function retentionRate(users: number | null, cohort: number) { return users === null || !cohort ? "—" : `%${formatDecimal(users / cohort * 100)}`; }
 function getErrorMessage(error: unknown) { return error instanceof Error ? error.message : "Beklenmeyen bir hata oluştu."; }
 
 const styles = StyleSheet.create({
@@ -551,6 +580,10 @@ const styles = StyleSheet.create({
   rangeTextActive: { color: adminColors.primary },
   iconButton: { alignItems: "center", backgroundColor: adminColors.surface, borderColor: adminColors.border, borderRadius: 10, borderWidth: 1, height: 44, justifyContent: "center", width: 44 },
   dashboard: { gap: 20 },
+  coverageNotice: { alignItems: "flex-start", backgroundColor: "#FFF7E6", borderColor: "#F5D08A", borderRadius: 12, borderWidth: 1, flexDirection: "row", gap: 12, padding: 16 },
+  coverageCopy: { flex: 1 },
+  coverageTitle: { color: adminColors.heading, fontFamily: fonts.bodyBold, fontSize: 14, lineHeight: 20 },
+  coverageText: { color: adminColors.muted, fontFamily: fonts.bodyRegular, fontSize: 13, lineHeight: 20, marginTop: 2 },
   kpiGrid: { flexDirection: "row", flexWrap: "wrap", gap: 14 },
   kpiCard: { backgroundColor: adminColors.surface, borderColor: adminColors.border, borderRadius: 14, borderWidth: 1, minWidth: 210, padding: 18 },
   kpiIcon: { alignItems: "center", backgroundColor: adminColors.surfaceMuted, borderRadius: 10, height: 38, justifyContent: "center", marginBottom: 14, width: 38 },

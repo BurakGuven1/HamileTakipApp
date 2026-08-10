@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 export type AnalyticsRangeDays = 7 | 30 | 90;
 
 export type AnalyticsOverview = {
+  active_subscribers: number;
   accounts: number;
   activated: number;
   first_opens: number;
@@ -51,16 +52,18 @@ export type AnalyticsTimeseriesPoint = {
 export type RetentionCohort = {
   cohort_date: string;
   cohort_users: number;
-  d1_users: number;
-  d7_users: number;
-  d30_users: number;
+  d1_users: number | null;
+  d7_users: number | null;
+  d30_users: number | null;
 };
 
 export type AnalyticsDataQuality = {
   client_completions: number;
+  legacy_paywall_fallbacks: number;
   missing_offering: number;
   missing_paywall_source: number;
   sandbox_webhooks: number;
+  subscription_cache_fallbacks: number;
   verified_purchases: number;
 };
 
@@ -140,6 +143,7 @@ export async function loadAnalyticsDashboard(
 function normalizeOverview(value: unknown): AnalyticsOverview {
   const row = isRecord(value) ? value : {};
   return {
+    active_subscribers: toNumber(row.active_subscribers),
     accounts: toNumber(row.accounts),
     activated: toNumber(row.activated),
     first_opens: toNumber(row.first_opens),
@@ -158,9 +162,11 @@ function normalizeDataQuality(value: unknown): AnalyticsDataQuality {
   const row = isRecord(value) ? value : {};
   return {
     client_completions: toNumber(row.client_completions),
+    legacy_paywall_fallbacks: toNumber(row.legacy_paywall_fallbacks),
     missing_offering: toNumber(row.missing_offering),
     missing_paywall_source: toNumber(row.missing_paywall_source),
     sandbox_webhooks: toNumber(row.sandbox_webhooks),
+    subscription_cache_fallbacks: toNumber(row.subscription_cache_fallbacks),
     verified_purchases: toNumber(row.verified_purchases)
   };
 }
