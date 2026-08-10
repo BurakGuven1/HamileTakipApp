@@ -7,6 +7,7 @@ import {
   ClipboardCheck,
   Dumbbell,
   Droplets,
+  FileHeart,
   HeartPulse,
   Minus,
   Plus,
@@ -217,6 +218,23 @@ export default function PregnancyToolsScreen() {
                 contentContainerStyle={styles.featureRail}
                 showsHorizontalScrollIndicator={false}
               >
+            <Card style={[styles.featureCardWide, { backgroundColor: appTheme.primarySoft }]}>
+              <View style={{ gap: spacing.md }}>
+                <View style={styles.cardHeader}>
+                  <View style={{ flex: 1, gap: spacing.xs }}>
+                    <Text style={typography.eyebrow}>Tek sağlık zaman çizelgesi</Text>
+                    <Text style={typography.heading2}>Sağlık Dosyam</Text>
+                    <Text numberOfLines={3} style={typography.body}>
+                      Kilo, ölçüm, aşı, randevu ve seçerek kaydettiğin tahlil değerlerini birlikte gör.
+                    </Text>
+                  </View>
+                  <FileHeart color={appTheme.primary} size={30} />
+                </View>
+                <Link href="/pregnancy-health-file" asChild>
+                  <Button label="Sağlık dosyamı aç" />
+                </Link>
+              </View>
+            </Card>
             <Card style={[styles.featureCardWide, { backgroundColor: appTheme.accentSoft }]}>
               <View style={{ gap: spacing.md }}>
                 <View style={styles.cardHeader}>

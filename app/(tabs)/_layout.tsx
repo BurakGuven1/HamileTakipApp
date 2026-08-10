@@ -159,6 +159,10 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="pregnancy-health-file"
+        options={{ href: null, title: "Sağlık Dosyam" }}
+      />
+      <Tabs.Screen
         name="pregnancy-nutrition"
         options={{ href: null, title: "Su ve Takviye Rehberi" }}
       />
@@ -197,6 +201,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="document-insight"
         options={{ href: null, title: "Belgeyi Anla" }}
+      />
+      <Tabs.Screen
+        name="sleep-rhythm"
+        options={{ href: null, title: "Uyku Ritmi", tabBarStyle: { display: "none" } }}
       />
     </Tabs>
   );

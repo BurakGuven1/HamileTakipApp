@@ -68,6 +68,7 @@ export type AnalyticsDataQuality = {
 };
 
 export type AnalyticsDashboardData = {
+  creditFunnel: FunnelStep[];
   dataQuality: AnalyticsDataQuality;
   from: string;
   funnel: FunnelStep[];
@@ -96,6 +97,7 @@ export async function loadAnalyticsDashboard(
   const [
     overview,
     funnel,
+    creditFunnel,
     paywallSources,
     offerings,
     subscriptionHealth,
@@ -105,6 +107,7 @@ export async function loadAnalyticsDashboard(
   ] = await Promise.all([
     supabase.rpc("get_analytics_overview", args),
     supabase.rpc("get_analytics_funnel", args),
+    supabase.rpc("get_credit_conversion_funnel", args),
     supabase.rpc("get_paywall_source_performance", args),
     supabase.rpc("get_offering_performance", args),
     supabase.rpc("get_subscription_health", args),
@@ -116,6 +119,7 @@ export async function loadAnalyticsDashboard(
   const firstError = [
     overview.error,
     funnel.error,
+    creditFunnel.error,
     paywallSources.error,
     offerings.error,
     subscriptionHealth.error,
@@ -127,6 +131,7 @@ export async function loadAnalyticsDashboard(
   if (firstError) throw firstError;
 
   return {
+    creditFunnel: creditFunnel.data ?? [],
     dataQuality: normalizeDataQuality(dataQuality.data),
     from: args.p_from,
     funnel: funnel.data ?? [],

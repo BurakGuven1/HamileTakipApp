@@ -1,4 +1,4 @@
-create table public.paywall_views (
+create table if not exists public.paywall_views (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   source text not null check (btrim(source) <> ''),
@@ -6,20 +6,22 @@ create table public.paywall_views (
   viewed_at timestamptz not null default now()
 );
 
-create index paywall_views_user_id_idx
+create index if not exists paywall_views_user_id_idx
   on public.paywall_views(user_id);
 
-create index paywall_views_viewed_at_idx
+create index if not exists paywall_views_viewed_at_idx
   on public.paywall_views(viewed_at desc);
 
 alter table public.paywall_views enable row level security;
 
+drop policy if exists "paywall_views_insert_own" on public.paywall_views;
 create policy "paywall_views_insert_own"
   on public.paywall_views
   for insert
   to authenticated
   with check ((select auth.uid()) = user_id);
 
+drop policy if exists "paywall_views_select_own" on public.paywall_views;
 create policy "paywall_views_select_own"
   on public.paywall_views
   for select

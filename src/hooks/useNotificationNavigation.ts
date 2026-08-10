@@ -86,6 +86,8 @@ export function useNotificationNavigation() {
         });
       } else if (data?.screen === "pregnancy-nutrition") {
         router.push("/pregnancy-nutrition");
+      } else if (data?.screen === "pregnancy-health-file") {
+        router.push("/pregnancy-health-file");
       }
     }
 

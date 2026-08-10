@@ -60,6 +60,7 @@ import { TextField } from "@/components/TextField";
 import { createCareUuid } from "@/features/care-journal/careSync";
 import { showPaywallIfNeeded } from "@/features/subscription/showPaywallIfNeeded";
 import { PREMIUM_FEATURES } from "@/features/subscription/premiumFeatures";
+import { showPostCreditPaywallIfNeeded } from "@/features/subscription/postCreditPaywall";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { colors, radii, spacing, typography } from "@/theme";
@@ -201,6 +202,9 @@ export default function FamilyPlannerScreen() {
       String(right.completed_at).localeCompare(String(left.completed_at))
     );
   const featureAccess = featureAccessQuery.data ?? context?.feature_access;
+  const smartCreditsExhausted = Boolean(
+    featureAccess && !featureAccess.is_premium && featureAccess.remaining === 0
+  );
   const presets =
     lifeStage === "pregnancy" ? PREGNANCY_PRESETS : POSTPARTUM_PRESETS;
   const selectedAssignees = useMemo(() => {
@@ -232,12 +236,11 @@ export default function FamilyPlannerScreen() {
     onSuccess: async (result) => {
       if (!result.allowed) {
         if (isPremiumRequiredReason(result.reason)) {
-          await showPaywallIfNeeded(PREMIUM_FEATURES.familyTaskAlarm.source, {
-            feature: "family_task_alarm",
-            life_stage: lifeStage,
-            reason: "free_credits_exhausted",
-            remaining: result.remaining ?? 0
-          });
+          await openCreditPaywall(
+            PREMIUM_FEATURES.familyTaskAlarm.source,
+            "family_task_alarm",
+            lifeStage
+          );
         } else {
           showError(
             new Error("Görev işlemi güvenle tamamlanamadı. Lütfen yeniden dene."),
@@ -267,6 +270,15 @@ export default function FamilyPlannerScreen() {
         queryClient.invalidateQueries({ queryKey: ["family-feature-access"] }),
         queryClient.invalidateQueries({ queryKey: ["family-coordination-context"] })
       ]);
+      if (alarmEnabled) {
+        await showPostCreditPaywallIfNeeded({
+          feature: "family_task_alarm",
+          isPremium: result.is_premium,
+          lifeStage,
+          remaining: result.remaining,
+          source: PREMIUM_FEATURES.familyTaskAlarm.source
+        });
+      }
     },
     onError: (error) => showError(error, "Görev eklenemedi")
   });
@@ -310,12 +322,11 @@ export default function FamilyPlannerScreen() {
     onSuccess: async (result) => {
       if (!result.allowed) {
         if (isPremiumRequiredReason(result.reason)) {
-          await showPaywallIfNeeded(PREMIUM_FEATURES.pregnancySupportHandover.source, {
-            feature: "pregnancy_support_handover",
-            life_stage: "pregnancy",
-            reason: "free_credits_exhausted",
-            remaining: result.remaining ?? 0
-          });
+          await openCreditPaywall(
+            PREMIUM_FEATURES.pregnancySupportHandover.source,
+            "pregnancy_support_handover",
+            "pregnancy"
+          );
         } else {
           showError(
             new Error("Devir işlemi güvenle tamamlanamadı. Lütfen yeniden dene."),
@@ -330,10 +341,23 @@ export default function FamilyPlannerScreen() {
           : `Destek devralındı. ${result.remaining} akıllı kullanım hakkın kaldı.`,
         "Devir tamamlandı"
       );
+      if (result.snapshot) {
+        queryClient.setQueryData(
+          ["pregnancy-support-snapshot", context?.owner_id],
+          result.snapshot
+        );
+      }
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["pregnancy-support-snapshot"] }),
         queryClient.invalidateQueries({ queryKey: ["family-feature-access"] })
       ]);
+      await showPostCreditPaywallIfNeeded({
+        feature: "pregnancy_support_handover",
+        isPremium: result.is_premium,
+        lifeStage: "pregnancy",
+        remaining: result.remaining,
+        source: PREMIUM_FEATURES.pregnancySupportHandover.source
+      });
     },
     onError: (error) => showError(error, "Destek devralınamadı")
   });
@@ -365,7 +389,63 @@ export default function FamilyPlannerScreen() {
       showInfo("Alarm saatini en az bir dakika ileri seç.", "Alarm saatini kontrol et");
       return;
     }
+    if (alarmEnabled && smartCreditsExhausted) {
+      void openCreditPaywall(
+        PREMIUM_FEATURES.familyTaskAlarm.source,
+        "family_task_alarm",
+        lifeStage
+      );
+      return;
+    }
     createTaskMutation.mutate();
+  }
+
+  function toggleAlarm() {
+    if (!alarmEnabled && smartCreditsExhausted) {
+      void openCreditPaywall(
+        PREMIUM_FEATURES.familyTaskAlarm.source,
+        "family_task_alarm",
+        lifeStage
+      );
+      return;
+    }
+    setAlarmEnabled((value) => !value);
+  }
+
+  function requestPregnancyTakeover() {
+    if (
+      pregnancySnapshotQuery.data?.active_session?.caregiver_id ===
+      context?.current_user_id
+    ) {
+      showInfo("Gebelik desteği şu anda zaten sende.", "Destek sende");
+      return;
+    }
+    if (smartCreditsExhausted) {
+      void openCreditPaywall(
+        PREMIUM_FEATURES.pregnancySupportHandover.source,
+        "pregnancy_support_handover",
+        "pregnancy"
+      );
+      return;
+    }
+    pregnancyTakeoverMutation.mutate();
+  }
+
+  async function openCreditPaywall(
+    source: string,
+    feature: string,
+    stage: FamilyLifeStage
+  ) {
+    try {
+      await showPaywallIfNeeded(source, {
+        feature,
+        life_stage: stage,
+        reason: "free_credits_exhausted",
+        remaining: 0
+      });
+    } catch (error) {
+      showError(error, "Premium ekranı açılamadı");
+    }
   }
 
   function choosePreset(preset: TaskPreset) {
@@ -669,7 +749,7 @@ export default function FamilyPlannerScreen() {
                 <Pressable
                   accessibilityRole="switch"
                   accessibilityState={{ checked: alarmEnabled }}
-                  onPress={() => setAlarmEnabled((value) => !value)}
+                  onPress={toggleAlarm}
                   style={({ pressed }) => [
                     styles.alarmToggle,
                     pressed && styles.pressed
@@ -786,14 +866,22 @@ export default function FamilyPlannerScreen() {
 
             {lifeStage === "pregnancy" ? (
               <PregnancyHandover
+                activeForCurrentUser={
+                  pregnancySnapshotQuery.data?.active_session?.caregiver_id ===
+                  context.current_user_id
+                }
                 loading={pregnancySnapshotQuery.isLoading}
                 onRetry={() => void pregnancySnapshotQuery.refetch()}
-                onTakeOver={() => pregnancyTakeoverMutation.mutate()}
+                onTakeOver={requestPregnancyTakeover}
                 snapshot={pregnancySnapshotQuery.data ?? null}
                 takingOver={pregnancyTakeoverMutation.isPending}
               />
             ) : (
               <PostpartumHandover
+                activeForCurrentUser={
+                  postpartumSnapshotQuery.data?.handover?.caregiver_id ===
+                  context.current_user_id
+                }
                 loading={postpartumSnapshotQuery.isLoading}
                 onRetry={() => void postpartumSnapshotQuery.refetch()}
                 onTakeOver={() => postpartumTakeoverMutation.mutate()}
@@ -938,12 +1026,14 @@ function TaskRow({
 }
 
 function PregnancyHandover({
+  activeForCurrentUser,
   loading,
   onRetry,
   onTakeOver,
   snapshot,
   takingOver
 }: {
+  activeForCurrentUser: boolean;
   loading: boolean;
   onRetry: () => void;
   onTakeOver: () => void;
@@ -991,8 +1081,14 @@ function PregnancyHandover({
         </Text>
       </View>
       <Button
-        disabled={takingOver}
-        label={takingOver ? "Devir eşitleniyor…" : "Desteği ben devralıyorum"}
+        disabled={takingOver || activeForCurrentUser}
+        label={
+          takingOver
+            ? "Devir eşitleniyor…"
+            : activeForCurrentUser
+              ? "Destek şu anda sende"
+              : "Desteği ben devralıyorum"
+        }
         onPress={onTakeOver}
       />
     </Card>
@@ -1000,12 +1096,14 @@ function PregnancyHandover({
 }
 
 function PostpartumHandover({
+  activeForCurrentUser,
   loading,
   onRetry,
   onTakeOver,
   snapshot,
   takingOver
 }: {
+  activeForCurrentUser: boolean;
   loading: boolean;
   onRetry: () => void;
   onTakeOver: () => void;
@@ -1041,8 +1139,14 @@ function PostpartumHandover({
         </Text>
       </View>
       <Button
-        disabled={takingOver}
-        label={takingOver ? "Devir eşitleniyor…" : "Bakımı ben devralıyorum"}
+        disabled={takingOver || activeForCurrentUser}
+        label={
+          takingOver
+            ? "Devir eşitleniyor…"
+            : activeForCurrentUser
+              ? "Bakım şu anda sende"
+              : "Bakımı ben devralıyorum"
+        }
         onPress={onTakeOver}
       />
     </Card>

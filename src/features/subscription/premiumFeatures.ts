@@ -8,17 +8,35 @@ export type PremiumFeatureDefinition = {
 };
 
 export const PREMIUM_FEATURES = {
+  documentInsight: {
+    accessMode: "credits",
+    lifeStage: "shared",
+    source: "document_insight",
+    title: "Belgeyi Anla"
+  },
+  advancedPumping: {
+    accessMode: "premium",
+    lifeStage: "postpartum",
+    source: "care_advanced_pumping",
+    title: "Gelişmiş iki taraflı sağım"
+  },
   babyMemoryGallery: {
     accessMode: "premium",
     lifeStage: "postpartum",
     source: "baby_memory_gallery",
     title: "Sınırsız anı galerisi"
   },
-  careFamily: {
+  careHistory: {
     accessMode: "premium",
     lifeStage: "postpartum",
-    source: "care_family",
-    title: "Aile desteği"
+    source: "care_history",
+    title: "Sınırsız bakım geçmişi"
+  },
+  careFamilyReminders: {
+    accessMode: "premium",
+    lifeStage: "postpartum",
+    source: "care_family_reminders",
+    title: "Aile senkronlu bakım alarmları"
   },
   careInsights: {
     accessMode: "premium",
@@ -26,17 +44,23 @@ export const PREMIUM_FEATURES = {
     source: "care_insights",
     title: "Bakım eğilimleri"
   },
-  carePlan: {
+  careMedicine: {
     accessMode: "premium",
     lifeStage: "postpartum",
-    source: "care_plan",
-    title: "Bakım planı"
+    source: "care_medicine",
+    title: "İlaç ve vitamin kaydı"
   },
-  dailyPlanInsights: {
+  careMultiBaby: {
     accessMode: "premium",
-    lifeStage: "shared",
-    source: "daily_plan_insights",
-    title: "Anne+ Günüm kişisel planı"
+    lifeStage: "postpartum",
+    source: "care_multi_baby",
+    title: "Çoklu bebek bakım günlüğü"
+  },
+  careSolidFood: {
+    accessMode: "premium",
+    lifeStage: "postpartum",
+    source: "care_solid_food",
+    title: "Ek gıda kaydı"
   },
   doctorVisitReport: {
     accessMode: "credits",
@@ -56,11 +80,34 @@ export const PREMIUM_FEATURES = {
     source: "pregnancy_support_handover",
     title: "Gebelik desteği devri"
   },
+  pregnancyHealthFileSave: {
+    accessMode: "premium",
+    lifeStage: "pregnancy",
+    source: "pregnancy_health_file_save",
+    title: "Tahlil değerlerini Sağlık Dosyam'a kaydet"
+  },
+  pregnancyHealthFileReminder: {
+    accessMode: "premium",
+    lifeStage: "pregnancy",
+    source: "pregnancy_health_file_reminder",
+    title: "Sağlık Dosyam hatırlatmaları"
+  },
+  pregnancyHealthFilePdf: {
+    accessMode: "premium",
+    lifeStage: "pregnancy",
+    source: "pregnancy_health_file_pdf",
+    title: "Sağlık Dosyam PDF arşivi"
+  },
   sleepPrediction: {
     accessMode: "premium",
     lifeStage: "postpartum",
     source: "sleep_prediction",
     title: "Akıllı uyku tahmini"
+  },
+  milkInventory: {
+    accessMode: "premium",
+    lifeStage: "postpartum",
+    source: "care_milk_inventory",
+    title: "Anne sütü stok yönetimi"
   }
 } as const satisfies Record<string, PremiumFeatureDefinition>;
-

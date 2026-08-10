@@ -49,6 +49,7 @@ type IntelligenceRow = {
 
 type BabyRow = { id: string; parent_id: string };
 type FamilyMemberRow = { member_id: string; owner_id: string };
+type FullFamilyMemberRow = FamilyMemberRow & { access_scope: "full_family" | "baby_care_only" };
 type FamilyPremiumTrialRow = { expires_at: string; owner_id: string };
 type PushTokenRow = { id: string; expo_push_token: string; user_id: string };
 type NotificationPreferenceRow = {
@@ -66,6 +67,14 @@ type SubscriptionRow = {
   user_id: string;
 };
 
+type PregnancyHealthReminderRow = {
+  created_by: string;
+  entry_id: string;
+  id: string;
+  profile_id: string;
+  recipient_scope: "self" | "full_family";
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return json({ ok: true });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
@@ -81,7 +90,7 @@ Deno.serve(async (req) => {
 
     const now = new Date().toISOString();
 
-    const [reminderResult, intelligenceResult, taskAssignmentResult] = await Promise.all([
+    const [reminderResult, intelligenceResult, taskAssignmentResult, healthReminderResult] = await Promise.all([
       supabase
         .from("care_reminders")
         .select("id,baby_id,created_by,creator_push_token,entry_type,alarm_kind,snooze_minutes,target_user_id,title,body")
@@ -104,6 +113,13 @@ Deno.serve(async (req) => {
         .lte("alarm_at", now)
         .order("alarm_at", { ascending: true })
         .limit(100),
+      supabase
+        .from("pregnancy_health_reminders")
+        .select("id,entry_id,profile_id,created_by,recipient_scope")
+        .eq("status", "scheduled")
+        .lte("scheduled_for", now)
+        .order("scheduled_for", { ascending: true })
+        .limit(100),
     ]);
 
     if (reminderResult.error) {
@@ -115,14 +131,19 @@ Deno.serve(async (req) => {
     if (taskAssignmentResult.error) {
       return json({ error: taskAssignmentResult.error.message }, 500);
     }
+    if (healthReminderResult.error) {
+      return json({ error: healthReminderResult.error.message }, 500);
+    }
 
     const reminders = (reminderResult.data ?? []) as ReminderRow[];
     const intelligence = (intelligenceResult.data ?? []) as IntelligenceRow[];
     const taskAssignments = (taskAssignmentResult.data ?? []) as FamilyTaskAssignmentRow[];
+    const healthReminders = (healthReminderResult.data ?? []) as PregnancyHealthReminderRow[];
     if (
       reminders.length === 0 &&
       intelligence.length === 0 &&
-      taskAssignments.length === 0
+      taskAssignments.length === 0 &&
+      healthReminders.length === 0
     ) {
       return json({ success: true, sent: 0 });
     }
@@ -155,6 +176,7 @@ Deno.serve(async (req) => {
     const ownerIds = [...new Set([
       ...babies.map((baby) => baby.parent_id),
       ...taskAssignments.map((assignment) => assignment.profile_id),
+      ...healthReminders.map((reminder) => reminder.profile_id),
     ])];
 
     const { data: preferenceData, error: preferenceError } = await supabase
@@ -183,10 +205,10 @@ Deno.serve(async (req) => {
 
     const { data: memberData, error: memberError } = await supabase
       .from("family_members")
-      .select("owner_id,member_id")
+      .select("owner_id,member_id,access_scope")
       .in("owner_id", ownerIds);
     if (memberError) return json({ error: memberError.message }, 500);
-    const members = (memberData ?? []) as FamilyMemberRow[];
+    const members = (memberData ?? []) as FullFamilyMemberRow[];
     const memberIds = [...new Set(members.map((member) => member.member_id))];
 
     const memberSubscriptionResult = memberIds.length > 0
@@ -214,9 +236,11 @@ Deno.serve(async (req) => {
     );
 
     const allFamilyRecipientsByOwner = new Map<string, Set<string>>();
+    const healthRecipientsByOwner = new Map<string, Set<string>>();
     const premiumRecipientsByOwner = new Map<string, Set<string>>();
     for (const ownerId of ownerIds) {
       allFamilyRecipientsByOwner.set(ownerId, new Set([ownerId]));
+      healthRecipientsByOwner.set(ownerId, new Set([ownerId]));
       premiumRecipientsByOwner.set(
         ownerId,
         premiumOwners.has(ownerId) ? new Set([ownerId]) : new Set(),
@@ -227,6 +251,12 @@ Deno.serve(async (req) => {
       const allFamily = allFamilyRecipientsByOwner.get(member.owner_id) ?? new Set();
       allFamily.add(member.member_id);
       allFamilyRecipientsByOwner.set(member.owner_id, allFamily);
+
+      if (member.access_scope === "full_family") {
+        const healthFamily = healthRecipientsByOwner.get(member.owner_id) ?? new Set();
+        healthFamily.add(member.member_id);
+        healthRecipientsByOwner.set(member.owner_id, healthFamily);
+      }
 
       const premiumFamily = premiumRecipientsByOwner.get(member.owner_id) ?? new Set();
       if (
@@ -261,6 +291,8 @@ Deno.serve(async (req) => {
 
     const messages: PushCandidate[] = [];
     const dispatchedTaskAssignmentIds = new Set<string>();
+    const sentHealthReminderIds = new Set<string>();
+    const cancelledHealthReminderIds = new Set<string>();
     for (const reminder of reminders) {
       const ownerId = ownerByBaby.get(reminder.baby_id);
       if (ownerId && preferencesByOwner.get(ownerId)?.is_pregnant) continue;
@@ -414,6 +446,48 @@ Deno.serve(async (req) => {
       }
     }
 
+    const premiumUsers = new Set([...premiumOwners, ...premiumMembers]);
+    for (const reminder of healthReminders) {
+      const creatorHasPremium = premiumUsers.has(reminder.created_by) ||
+        (activeTrialOwners.has(reminder.profile_id) && reminder.created_by !== reminder.profile_id);
+      if (!creatorHasPremium) {
+        cancelledHealthReminderIds.add(reminder.id);
+        continue;
+      }
+
+      const allowedFamily = healthRecipientsByOwner.get(reminder.profile_id) ?? new Set<string>();
+      const recipients = reminder.recipient_scope === "full_family"
+        ? [...allowedFamily]
+        : allowedFamily.has(reminder.created_by)
+          ? [reminder.created_by]
+          : [];
+      sentHealthReminderIds.add(reminder.id);
+      for (const userId of recipients) {
+        for (const token of tokensByUser.get(userId) ?? []) {
+          messages.push({
+            dedupeKey: `pregnancy-health-reminder:${reminder.id}`,
+            kind: "pregnancy_health_reminder",
+            tokenId: token.id,
+            token: token.expo_push_token,
+            userId,
+            message: {
+              title: "Randevu hatırlatması",
+              body: "Sağlık Dosyam'a eklediğin randevunun zamanı yaklaşıyor.",
+              sound: "default",
+              channelId: "health-reminders",
+              priority: "high",
+              data: {
+                screen: "pregnancy-health-file",
+                type: "pregnancy_health_reminder",
+                entry_id: reminder.entry_id,
+                reminder_id: reminder.id,
+              },
+            },
+          });
+        }
+      }
+    }
+
     const delivery = await dispatchPushes(supabase, messages);
     if (delivery.failed > 0) {
       return json({ error: "push_delivery_failed", ...delivery }, 502);
@@ -448,11 +522,31 @@ Deno.serve(async (req) => {
       }
     }
 
+
+    if (sentHealthReminderIds.size > 0) {
+      const { error: healthUpdateError } = await supabase
+        .from("pregnancy_health_reminders")
+        .update({ status: "sent", sent_at: now })
+        .in("id", [...sentHealthReminderIds])
+        .eq("status", "scheduled");
+      if (healthUpdateError) return json({ error: healthUpdateError.message }, 500);
+    }
+
+    if (cancelledHealthReminderIds.size > 0) {
+      const { error: healthCancelError } = await supabase
+        .from("pregnancy_health_reminders")
+        .update({ status: "cancelled", cancelled_at: now })
+        .in("id", [...cancelledHealthReminderIds])
+        .eq("status", "scheduled");
+      if (healthCancelError) return json({ error: healthCancelError.message }, 500);
+    }
+
     return json({
       success: true,
       reminders: reminders.length,
       intelligence: intelligence.length,
       family_tasks: dispatchedTaskAssignmentIds.size,
+      pregnancy_health_reminders: sentHealthReminderIds.size,
       sent: delivery.ticketed,
       delivery,
     });
