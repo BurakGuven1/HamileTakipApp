@@ -65,6 +65,7 @@ import {
 } from "@/features/doctor-visit/report";
 import { showPaywallIfNeeded } from "@/features/subscription/showPaywallIfNeeded";
 import { PREMIUM_FEATURES } from "@/features/subscription/premiumFeatures";
+import { showPostCreditPaywallIfNeeded } from "@/features/subscription/postCreditPaywall";
 import { trackEvent } from "@/lib/analytics";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { useFeedback } from "@/providers/FeedbackProvider";
@@ -310,6 +311,13 @@ export default function DoctorVisitScreen() {
           ? "PDF başarıyla oluşturuldu."
           : `${finalCredit.remaining} ortak akıllı kullanım hakkınız kaldı.`;
       showSuccess(creditCopy, "Doktor özeti hazır");
+      await showPostCreditPaywallIfNeeded({
+        feature: "doctor_visit_report",
+        isPremium: finalCredit.isPremium,
+        lifeStage: snapshot.subject === "pregnancy" ? "pregnancy" : "postpartum",
+        remaining: finalCredit.remaining,
+        source: PREMIUM_FEATURES.doctorVisitReport.source
+      });
     } catch (error) {
       if (uri) cleanupDoctorVisitPdf(uri);
       showError(

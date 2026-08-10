@@ -49,11 +49,24 @@ export async function showPaywallIfNeeded(
     source
   });
 
-  router.push({ pathname: "/paywall", params: { source } });
+  router.push({
+    pathname: "/paywall",
+    params: {
+      source,
+      feature: toRouteParam(properties.feature),
+      life_stage: toRouteParam(properties.life_stage),
+      reason: toRouteParam(properties.reason),
+      remaining: toRouteParam(properties.remaining)
+    }
+  });
 
   return {
     didBecomePremium: false,
     presented: true,
     result: "opened"
   };
+}
+
+function toRouteParam(value: string | number | boolean | null | undefined) {
+  return value === null || value === undefined ? undefined : String(value);
 }

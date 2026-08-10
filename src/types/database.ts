@@ -99,6 +99,8 @@ export type Database = {
           app_version: string | null;
           installation_id: string | null;
           session_id: string | null;
+          feature_key: string | null;
+          trigger_reason: string | null;
           viewed_at: string;
         };
         Insert: {
@@ -108,6 +110,8 @@ export type Database = {
           app_version?: string | null;
           installation_id?: string | null;
           session_id?: string | null;
+          feature_key?: string | null;
+          trigger_reason?: string | null;
           viewed_at?: string;
         };
         Update: {
@@ -117,7 +121,28 @@ export type Database = {
           app_version?: string | null;
           installation_id?: string | null;
           session_id?: string | null;
+          feature_key?: string | null;
+          trigger_reason?: string | null;
           viewed_at?: string;
+        };
+        Relationships: [];
+      };
+      premium_prompt_states: {
+        Row: {
+          user_id: string;
+          prompt_key: string;
+          source: string;
+          claimed_at: string;
+        };
+        Insert: {
+          user_id: string;
+          prompt_key: string;
+          source: string;
+          claimed_at?: string;
+        };
+        Update: {
+          source?: string;
+          claimed_at?: string;
         };
         Relationships: [];
       };
@@ -313,6 +338,138 @@ export type Database = {
             referencedColumns: ["id"];
           }
         ];
+      };
+      pregnancy_health_entries: {
+        Row: {
+          id: string;
+          profile_id: string;
+          created_by: string;
+          kind: "appointment" | "note" | "lab_report";
+          title: string;
+          occurred_at: string;
+          notes: string | null;
+          source: "manual" | "document_insight";
+          consent_version: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          created_by?: string;
+          kind: "appointment" | "note" | "lab_report";
+          title: string;
+          occurred_at: string;
+          notes?: string | null;
+          source?: "manual" | "document_insight";
+          consent_version?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          title?: string;
+          occurred_at?: string;
+          notes?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      pregnancy_health_lab_values: {
+        Row: {
+          id: string;
+          entry_id: string;
+          ordinal: number;
+          test_name: string;
+          result_text: string;
+          unit: string | null;
+          reference_range: string | null;
+          reference_status: "below" | "within" | "above" | "document_marked" | "unclassified";
+          document_marker: "high" | "low" | "normal" | "abnormal" | "none";
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          entry_id: string;
+          ordinal: number;
+          test_name: string;
+          result_text: string;
+          unit?: string | null;
+          reference_range?: string | null;
+          reference_status: "below" | "within" | "above" | "document_marked" | "unclassified";
+          document_marker: "high" | "low" | "normal" | "abnormal" | "none";
+          created_at?: string;
+        };
+        Update: Record<PropertyKey, never>;
+        Relationships: [];
+      };
+      pregnancy_health_reminders: {
+        Row: {
+          id: string;
+          entry_id: string;
+          profile_id: string;
+          created_by: string;
+          recipient_scope: "self" | "full_family";
+          scheduled_for: string;
+          status: "scheduled" | "sent" | "cancelled";
+          sent_at: string | null;
+          cancelled_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          entry_id: string;
+          profile_id: string;
+          created_by?: string;
+          recipient_scope?: "self" | "full_family";
+          scheduled_for: string;
+          status?: "scheduled" | "sent" | "cancelled";
+          sent_at?: string | null;
+          cancelled_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          recipient_scope?: "self" | "full_family";
+          scheduled_for?: string;
+          status?: "scheduled" | "sent" | "cancelled";
+          sent_at?: string | null;
+          cancelled_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      baby_sleep_events: {
+        Row: {
+          id: string;
+          baby_id: string;
+          created_by: string;
+          event_type: "sleep" | "wake";
+          occurred_at: string;
+          timezone_offset_minutes: number;
+          source: "quick" | "manual" | "care_journal";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          baby_id: string;
+          created_by?: string;
+          event_type: "sleep" | "wake";
+          occurred_at: string;
+          timezone_offset_minutes: number;
+          source?: "quick" | "manual" | "care_journal";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          event_type?: "sleep" | "wake";
+          occurred_at?: string;
+          timezone_offset_minutes?: number;
+          source?: "quick" | "manual" | "care_journal";
+          updated_at?: string;
+        };
+        Relationships: [];
       };
       pregnancy_daily_counters: {
         Row: {
@@ -1901,6 +2058,54 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: Json;
       };
+      claim_premium_prompt: {
+        Args: { p_prompt_key: string; p_source: string };
+        Returns: boolean;
+      };
+      save_pregnancy_health_lab_results: {
+        Args: {
+          p_title: string;
+          p_recorded_at: string;
+          p_values: Json;
+          p_consent_version: string;
+        };
+        Returns: Json;
+      };
+      set_pregnancy_health_reminder: {
+        Args: {
+          p_entry_id: string;
+          p_scheduled_for: string;
+          p_recipient_scope?: "self" | "full_family";
+        };
+        Returns: Database["public"]["Tables"]["pregnancy_health_reminders"]["Row"];
+      };
+      cancel_pregnancy_health_reminder: {
+        Args: { p_reminder_id: string };
+        Returns: Database["public"]["Tables"]["pregnancy_health_reminders"]["Row"];
+      };
+      create_baby_sleep_event: {
+        Args: {
+          p_baby_id: string;
+          p_event_type: "sleep" | "wake";
+          p_occurred_at: string;
+          p_timezone_offset_minutes: number;
+          p_source?: "quick" | "manual";
+        };
+        Returns: Database["public"]["Tables"]["baby_sleep_events"]["Row"];
+      };
+      update_baby_sleep_event: {
+        Args: {
+          p_event_id: string;
+          p_event_type: "sleep" | "wake";
+          p_occurred_at: string;
+          p_timezone_offset_minutes: number;
+        };
+        Returns: Database["public"]["Tables"]["baby_sleep_events"]["Row"];
+      };
+      delete_baby_sleep_event: {
+        Args: { p_event_id: string };
+        Returns: Database["public"]["Tables"]["baby_sleep_events"]["Row"];
+      };
       consume_family_code_login_attempt: {
         Args: {
           p_key_hash: string;
@@ -2213,6 +2418,14 @@ export type Database = {
         Returns: Json;
       };
       get_analytics_funnel: {
+        Args: { p_from: string; p_to: string };
+        Returns: {
+          step_key: string;
+          step_order: number;
+          users: number;
+        }[];
+      };
+      get_credit_conversion_funnel: {
         Args: { p_from: string; p_to: string };
         Returns: {
           step_key: string;

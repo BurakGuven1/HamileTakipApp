@@ -8,6 +8,12 @@ export type PremiumFeatureDefinition = {
 };
 
 export const PREMIUM_FEATURES = {
+  documentInsight: {
+    accessMode: "credits",
+    lifeStage: "shared",
+    source: "document_insight",
+    title: "Belgeyi Anla"
+  },
   advancedPumping: {
     accessMode: "premium",
     lifeStage: "postpartum",
@@ -73,6 +79,24 @@ export const PREMIUM_FEATURES = {
     lifeStage: "pregnancy",
     source: "pregnancy_support_handover",
     title: "Gebelik desteği devri"
+  },
+  pregnancyHealthFileSave: {
+    accessMode: "premium",
+    lifeStage: "pregnancy",
+    source: "pregnancy_health_file_save",
+    title: "Tahlil değerlerini Sağlık Dosyam'a kaydet"
+  },
+  pregnancyHealthFileReminder: {
+    accessMode: "premium",
+    lifeStage: "pregnancy",
+    source: "pregnancy_health_file_reminder",
+    title: "Sağlık Dosyam hatırlatmaları"
+  },
+  pregnancyHealthFilePdf: {
+    accessMode: "premium",
+    lifeStage: "pregnancy",
+    source: "pregnancy_health_file_pdf",
+    title: "Sağlık Dosyam PDF arşivi"
   },
   sleepPrediction: {
     accessMode: "premium",

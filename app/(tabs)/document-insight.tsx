@@ -2,6 +2,7 @@ import * as DocumentPicker from "expo-document-picker";
 import { File, Paths } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowDown,
   ArrowLeft,
@@ -26,9 +27,22 @@ import {
   type DocumentInsightResult,
   type DocumentInsightValue
 } from "@/api/documentInsight";
+import {
+  commitFamilyFeatureCredit,
+  getFamilyFeatureAccess,
+  releaseFamilyFeatureCredit,
+  reserveFamilyFeatureCredit
+} from "@/api/familyCoordination";
+import { savePregnancyHealthLabResults } from "@/api/pregnancyHealthFile";
+import { getCurrentProfile } from "@/api/profiles";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Screen } from "@/components/Screen";
+import { createCareUuid } from "@/features/care-journal/careSync";
+import { PREMIUM_FEATURES } from "@/features/subscription/premiumFeatures";
+import { showPostCreditPaywallIfNeeded } from "@/features/subscription/postCreditPaywall";
+import { showPaywallIfNeeded } from "@/features/subscription/showPaywallIfNeeded";
+import { trackEvent } from "@/lib/analytics";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { colors, fonts, radii, spacing, typography } from "@/theme";
@@ -51,7 +65,37 @@ export default function DocumentInsightScreen() {
   const selectedRef = useRef<TemporaryDocument | null>(null);
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isSavingToHealthFile, setIsSavingToHealthFile] = useState(false);
   const [result, setResult] = useState<DocumentInsightResult | null>(null);
+  const featureAccessQuery = useQuery({
+    queryKey: ["family-feature-access"],
+    queryFn: getFamilyFeatureAccess
+  });
+  const profileQuery = useQuery({
+    queryKey: ["profile"],
+    queryFn: getCurrentProfile
+  });
+  const featureAccess = featureAccessQuery.data;
+  const lifeStage = profileQuery.data?.is_pregnant ? "pregnancy" : "postpartum";
+  const creditsExhausted = Boolean(
+    featureAccess && !featureAccess.is_premium && featureAccess.remaining === 0
+  );
+
+  async function ensureDocumentAccess() {
+    if (featureAccessQuery.isLoading) return false;
+    if (featureAccessQuery.isError) {
+      showError(featureAccessQuery.error, "Akıllı hak kontrol edilemedi");
+      return false;
+    }
+    if (!creditsExhausted) return true;
+    await showPaywallIfNeeded(PREMIUM_FEATURES.documentInsight.source, {
+      feature: "document_insight",
+      life_stage: lifeStage,
+      reason: "free_credits_exhausted",
+      remaining: 0
+    });
+    return false;
+  }
 
   const setTemporaryDocument = useCallback(async (next: TemporaryDocument | null) => {
     const previous = selectedRef.current;
@@ -71,6 +115,7 @@ export default function DocumentInsightScreen() {
 
   const choosePdf = async () => {
     try {
+      if (!await ensureDocumentAccess()) return;
       const pick = await DocumentPicker.getDocumentAsync({
         copyToCacheDirectory: true,
         multiple: false,
@@ -91,6 +136,7 @@ export default function DocumentInsightScreen() {
 
   const chooseImage = async (source: "camera" | "library") => {
     try {
+      if (!await ensureDocumentAccess()) return;
       const permission =
         source === "camera"
           ? await ImagePicker.requestCameraPermissionsAsync()
@@ -155,7 +201,26 @@ export default function DocumentInsightScreen() {
     setIsAnalyzing(true);
     setResult(null);
     let ocrCopy: File | null = null;
+    const operationId = createCareUuid();
+    let creditReserved = false;
+    let creditCommitted = false;
     try {
+      const reservation = await reserveFamilyFeatureCredit({
+        featureKey: "document_insight",
+        lifeStage,
+        operationId
+      });
+      if (!reservation.allowed) {
+        await showPaywallIfNeeded(PREMIUM_FEATURES.documentInsight.source, {
+          feature: "document_insight",
+          life_stage: lifeStage,
+          reason: "free_credits_exhausted",
+          remaining: 0
+        });
+        return;
+      }
+      creditReserved = !reservation.is_premium;
+
       const file = new File(document.uri);
       if (!file.exists) throw new Error("Geçici belge artık cihazda bulunmuyor.");
       ocrCopy = createPrivateOcrCopy(document);
@@ -163,9 +228,37 @@ export default function DocumentInsightScreen() {
         uri: ocrCopy.uri,
         mimeType: document.mimeType
       });
+      const hasUsefulResult = analysis.readability !== "unreadable" && analysis.values.length > 0;
+      const finalCredit = hasUsefulResult && creditReserved
+        ? await commitFamilyFeatureCredit(operationId)
+        : reservation;
+      creditCommitted = hasUsefulResult && creditReserved;
+      if (!hasUsefulResult && creditReserved) {
+        await releaseFamilyFeatureCredit(operationId);
+        creditReserved = false;
+      }
       setResult(analysis);
+      await trackEvent("document_insight_completed", {
+        credit_consumed: creditCommitted,
+        life_stage: lifeStage,
+        readability: analysis.readability,
+        result_count: analysis.values.length
+      });
       showSuccess("Belge düzenlendi. Geçici dosya silindi.", "İşlem tamamlandı");
+      if (hasUsefulResult) {
+        await featureAccessQuery.refetch();
+        await showPostCreditPaywallIfNeeded({
+          feature: "document_insight",
+          isPremium: finalCredit.is_premium,
+          lifeStage,
+          remaining: finalCredit.remaining,
+          source: PREMIUM_FEATURES.documentInsight.source
+        });
+      }
     } catch (error) {
+      if (creditReserved && !creditCommitted) {
+        await releaseFamilyFeatureCredit(operationId).catch(() => undefined);
+      }
       showError(error, "Belge işlenemedi");
     } finally {
       if (ocrCopy?.exists) ocrCopy.delete();
@@ -183,6 +276,46 @@ export default function DocumentInsightScreen() {
     setConsentAccepted(false);
     await setTemporaryDocument(null);
     showSuccess("Geçici belge ve ekrandaki sonuç temizlendi.", "Silindi");
+  };
+
+  const saveToHealthFile = async (
+    values: DocumentInsightValue[],
+    storageConsentAccepted: boolean
+  ) => {
+    if (!featureAccess?.is_premium) {
+      await showPaywallIfNeeded(PREMIUM_FEATURES.pregnancyHealthFileSave.source, {
+        feature: "pregnancy_health_file_save",
+        life_stage: "pregnancy",
+        reason: "premium_feature_selected"
+      });
+      return;
+    }
+    if (!storageConsentAccepted) {
+      showInfo("Seçtiğin değerleri saklamadan önce sağlık dosyası onayını işaretle.", "Onay gerekli");
+      return;
+    }
+    if (!values.length) {
+      showInfo("Sağlık dosyana kaydetmek için en az bir değer seç.");
+      return;
+    }
+
+    setIsSavingToHealthFile(true);
+    try {
+      await savePregnancyHealthLabResults({
+        recordedAt: new Date().toISOString(),
+        title: "Tahlil sonuçları",
+        values
+      });
+      await trackEvent("pregnancy_health_lab_saved", {
+        source: "document_insight",
+        value_count: values.length
+      });
+      showSuccess(`${values.length} değer Sağlık Dosyam'a kaydedildi.`, "Sağlık dosyan güncellendi");
+    } catch (error) {
+      showError(error, "Tahlil değerleri kaydedilemedi");
+    } finally {
+      setIsSavingToHealthFile(false);
+    }
   };
 
   return (
@@ -219,6 +352,11 @@ export default function DocumentInsightScreen() {
                 <Text style={typography.heading2}>Belge ekle</Text>
               </View>
               <Text style={typography.body}>PDF ya da okunaklı bir belge fotoğrafı seçin. En fazla 8 MB.</Text>
+              <Text style={styles.smallText}>
+                {featureAccess?.is_premium
+                  ? "Premium · sınırsız belge analizi"
+                  : `${featureAccess?.remaining ?? 0}/3 ortak akıllı hakkın kaldı`}
+              </Text>
               <View style={styles.pickerRow}>
                 <PickerButton icon={<Upload color={appTheme.primary} size={21} />} label="PDF" onPress={choosePdf} />
                 <PickerButton icon={<Camera color={appTheme.primary} size={21} />} label="Kamera" onPress={() => chooseImage("camera")} />
@@ -256,7 +394,14 @@ export default function DocumentInsightScreen() {
             </View>
           </Card>
         ) : (
-          <ResultView result={result} />
+          <ResultView
+            isPremium={Boolean(featureAccess?.is_premium)}
+            isSaving={isSavingToHealthFile}
+            onSave={(values, storageConsentAccepted) =>
+              void saveToHealthFile(values, storageConsentAccepted)
+            }
+            result={result}
+          />
         )}
 
         {(selected || result) && !isAnalyzing ? <Button label="Belgeyi ve sonucu sil" onPress={clearAll} variant="ghost" /> : null}
@@ -265,10 +410,32 @@ export default function DocumentInsightScreen() {
   );
 }
 
-function ResultView({ result }: { result: DocumentInsightResult }) {
+function ResultView({
+  isPremium,
+  isSaving,
+  onSave,
+  result
+}: {
+  isPremium: boolean;
+  isSaving: boolean;
+  onSave: (values: DocumentInsightValue[], storageConsentAccepted: boolean) => void;
+  result: DocumentInsightResult;
+}) {
   const appTheme = useAppTheme();
+  const [selectedIndexes, setSelectedIndexes] = useState<Set<number>>(() => new Set());
+  const [storageConsentAccepted, setStorageConsentAccepted] = useState(false);
   const groupedValues = useMemo(() => groupDocumentValues(result.values), [result.values]);
   const categorizedCount = groupedValues.low.length + groupedValues.high.length + groupedValues.normal.length;
+  const selectedValues = result.values.filter((_, index) => selectedIndexes.has(index));
+
+  function toggleSelected(index: number) {
+    setSelectedIndexes((current) => {
+      const next = new Set(current);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  }
 
   return (
     <View style={styles.stackLarge}>
@@ -305,6 +472,51 @@ function ResultView({ result }: { result: DocumentInsightResult }) {
             <ResultCategorySection category="high" values={groupedValues.high} />
             <ResultCategorySection category="normal" values={groupedValues.normal} />
             <ResultCategorySection category="other" values={groupedValues.other} />
+          </View>
+        </Card>
+      ) : null}
+
+      {result.values.length ? (
+        <Card>
+          <View style={styles.stack}>
+            <Text style={typography.eyebrow}>{isPremium ? "PREMIUM · KALICI DOSYA" : "PREMIUM"}</Text>
+            <Text style={typography.heading2}>Sağlık Dosyam'a kaydet</Text>
+            <Text style={typography.body}>Yalnızca seçtiğin test adı, değer, birim ve belgedeki referans aralığı saklanır. Belgenin kendisi ve OCR metni saklanmaz.</Text>
+            {result.values.map((value, index) => {
+              const selected = selectedIndexes.has(index);
+              return (
+                <Pressable
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: selected }}
+                  key={`${value.testName}-${index}`}
+                  onPress={() => toggleSelected(index)}
+                  style={styles.consentRow}
+                >
+                  <View style={[styles.checkbox, selected && { backgroundColor: appTheme.primary, borderColor: appTheme.primary }]}>
+                    {selected ? <Check color={colors.onPrimary} size={16} /> : null}
+                  </View>
+                  <Text style={styles.consentText}>{value.testName}: {value.result}{value.unit ? ` ${value.unit}` : ""}</Text>
+                </Pressable>
+              );
+            })}
+            {isPremium ? (
+              <Pressable
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: storageConsentAccepted }}
+                onPress={() => setStorageConsentAccepted((value) => !value)}
+                style={styles.consentRow}
+              >
+                <View style={[styles.checkbox, storageConsentAccepted && { backgroundColor: appTheme.primary, borderColor: appTheme.primary }]}>
+                  {storageConsentAccepted ? <Check color={colors.onPrimary} size={16} /> : null}
+                </View>
+                <Text style={styles.consentText}>Seçtiğim değerlerin Anne+ Sağlık Dosyam'da saklanacağını ve yalnızca tam aile erişimi verdiğim kişilerle paylaşılabileceğini kabul ediyorum.</Text>
+              </Pressable>
+            ) : null}
+            <Button
+              disabled={isSaving || selectedValues.length === 0 || (isPremium && !storageConsentAccepted)}
+              label={isSaving ? "Kaydediliyor..." : isPremium ? `${selectedValues.length} değeri kaydet` : "Sağlık Dosyam'a kaydet · Premium"}
+              onPress={() => onSave(selectedValues, storageConsentAccepted)}
+            />
           </View>
         </Card>
       ) : null}

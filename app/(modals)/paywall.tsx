@@ -25,9 +25,16 @@ import { trackPaywallView } from "@/services/analytics/paywallAnalytics";
 import { colors, spacing } from "@/theme";
 
 type PaywallErrorSource = "load" | "purchase" | "restore" | "sync";
+type PaywallRouteParams = {
+  feature?: string | string[];
+  life_stage?: string | string[];
+  reason?: string | string[];
+  remaining?: string | string[];
+  source?: string | string[];
+};
 
 export default function PaywallScreen() {
-  const params = useLocalSearchParams<{ source?: string | string[] }>();
+  const params = useLocalSearchParams<PaywallRouteParams>();
   const queryClient = useQueryClient();
   const { showError, showSuccess } = useFeedback();
   const dismissedRef = useRef(false);
@@ -50,9 +57,11 @@ export default function PaywallScreen() {
     const source = sourceParam?.trim() || "direct_navigation";
 
     void trackPaywallView(source, {
-      paywallViewId: paywallViewIdRef.current
+      featureKey: getRouteParam(params.feature),
+      paywallViewId: paywallViewIdRef.current,
+      triggerReason: getRouteParam(params.reason)
     });
-  }, [params.source]);
+  }, [params.feature, params.reason, params.source]);
 
   function closePaywall() {
     if (dismissedRef.current) return;
@@ -60,8 +69,8 @@ export default function PaywallScreen() {
     void trackEvent(
       "paywall_dismissed",
       {
-        duration_ms: Date.now() - viewedAtRef.current,
-        source: getPaywallSource(params.source)
+        ...getPaywallEventProperties(params),
+        duration_ms: Date.now() - viewedAtRef.current
       },
       { paywallViewId: paywallViewIdRef.current }
     );
@@ -79,9 +88,9 @@ export default function PaywallScreen() {
 
       setOffering(currentOffering);
       void trackEvent("paywall_offering_loaded", {
+        ...getPaywallEventProperties(params),
         offering_id: currentOffering.identifier,
-        package_count: currentOffering.availablePackages.length,
-        source: getPaywallSource(params.source)
+        package_count: currentOffering.availablePackages.length
       }, { paywallViewId: paywallViewIdRef.current });
     } catch (error) {
       if (generation !== loadGenerationRef.current) return;
@@ -167,19 +176,19 @@ export default function PaywallScreen() {
         onPurchaseStarted={({ packageBeingPurchased }) => {
           purchasingPackageRef.current = packageBeingPurchased;
           void trackEvent("purchase_started", {
+            ...getPaywallEventProperties(params),
             currency: packageBeingPurchased.product.currencyCode,
             offering_id: packageBeingPurchased.offeringIdentifier,
             package_id: packageBeingPurchased.identifier,
-            product_id: packageBeingPurchased.product.identifier,
-            source: getPaywallSource(params.source)
+            product_id: packageBeingPurchased.product.identifier
           }, { paywallViewId: paywallViewIdRef.current });
         }}
         onPurchaseCompleted={({ customerInfo, storeTransaction }) => {
           void (async () => {
             const status = await syncPremiumState(customerInfo);
             await trackEvent("purchase_client_completed", {
+              ...getPaywallEventProperties(params),
               product_id: storeTransaction.productIdentifier,
-              source: getPaywallSource(params.source),
               transaction_id: storeTransaction.transactionIdentifier
             }, { paywallViewId: paywallViewIdRef.current });
             showSuccess("Premium avantajların aktif edildi.", "Premium aktif");
@@ -187,8 +196,8 @@ export default function PaywallScreen() {
         }}
         onPurchaseCancelled={() => {
           void trackEvent("purchase_cancelled", {
-            product_id: purchasingPackageRef.current?.product.identifier ?? null,
-            source: getPaywallSource(params.source)
+            ...getPaywallEventProperties(params),
+            product_id: purchasingPackageRef.current?.product.identifier ?? null
           }, { paywallViewId: paywallViewIdRef.current });
           purchasingPackageRef.current = null;
         }}
@@ -198,23 +207,23 @@ export default function PaywallScreen() {
             paywallSource: getPaywallSource(params.source)
           });
           void trackEvent("purchase_failed", {
-            product_id: purchasingPackageRef.current?.product.identifier ?? null,
-            source: getPaywallSource(params.source)
+            ...getPaywallEventProperties(params),
+            product_id: purchasingPackageRef.current?.product.identifier ?? null
           }, { paywallViewId: paywallViewIdRef.current });
           purchasingPackageRef.current = null;
           showError(error, "Satın alma tamamlanamadı");
         }}
         onRestoreStarted={() => {
           void trackEvent("restore_purchases_attempted", {
-            source: getPaywallSource(params.source)
+            ...getPaywallEventProperties(params)
           }, { paywallViewId: paywallViewIdRef.current });
         }}
         onRestoreCompleted={({ customerInfo }) => {
           void (async () => {
             const status = await syncPremiumState(customerInfo);
             await trackEvent("restore_purchases_succeeded", {
-              premium_active: status.isPremium,
-              source: getPaywallSource(params.source)
+              ...getPaywallEventProperties(params),
+              premium_active: status.isPremium
             }, { paywallViewId: paywallViewIdRef.current });
             showSuccess("Satın alımlar kontrol edildi.", "Geri yükleme tamamlandı");
           })();
@@ -251,8 +260,24 @@ async function logPaywallError(
 }
 
 function getPaywallSource(source?: string | string[]) {
-  const sourceParam = Array.isArray(source) ? source[0] : source;
+  const sourceParam = getRouteParam(source);
   return sourceParam?.trim() || "direct_navigation";
+}
+
+function getRouteParam(value?: string | string[]) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function getPaywallEventProperties(params: PaywallRouteParams) {
+  const remainingParam = getRouteParam(params.remaining);
+  const remaining = remainingParam === undefined ? null : Number(remainingParam);
+  return {
+    feature: getRouteParam(params.feature)?.trim() || null,
+    life_stage: getRouteParam(params.life_stage)?.trim() || null,
+    reason: getRouteParam(params.reason)?.trim() || null,
+    remaining: Number.isFinite(remaining) ? remaining : null,
+    source: getPaywallSource(params.source)
+  };
 }
 
 function getPaywallErrorDetails(error: unknown) {

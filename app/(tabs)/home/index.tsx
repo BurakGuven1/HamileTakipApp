@@ -14,6 +14,7 @@ import {
   Clock3,
   Droplets,
   FileSearch,
+  FileHeart,
   HandHeart,
   HeartPulse,
   Images,
@@ -535,6 +536,14 @@ export default function HomeScreen() {
                     <ShortcutCard
                       accent={vibrantColors.primary}
                       featured
+                      href="/pregnancy-health-file"
+                      icon={<FileHeart color={vibrantColors.primary} fill={vibrantColors.primaryLight} size={25} strokeWidth={2.6} />}
+                      subtitle="Kayıt, tahlil ve randevular tek yerde"
+                      title="Sağlık Dosyam"
+                      tint={vibrantColors.primaryLight}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.primary}
                       href="/pregnancy-tools"
                       icon={<Wrench color={vibrantColors.primary} fill={vibrantColors.primaryLight} size={25} strokeWidth={2.6} />}
                       subtitle="Tekme, su ve ölçümler"
@@ -593,8 +602,16 @@ export default function HomeScreen() {
                 ) : isMotherhoodMode ? (
                   <>
                     <ShortcutCard
-                      accent={vibrantColors.primary}
+                      accent={vibrantColors.secondary}
                       featured
+                      href={{ pathname: "/sleep-rhythm", params: firstBaby?.id ? { babyId: firstBaby.id } : undefined }}
+                      icon={<Moon color={vibrantColors.secondary} fill={vibrantColors.secondarySoft} size={25} strokeWidth={2.6} />}
+                      subtitle="Tek dokunuşla kaydet, ritmini gör"
+                      title="Uyku Ritmi"
+                      tint={vibrantColors.secondarySoft}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.primary}
                       href={{ pathname: "/care-journal", params: { section: "record" } }}
                       icon={<CalendarHeart color={vibrantColors.primary} fill={vibrantColors.primaryLight} size={25} strokeWidth={2.6} />}
                       subtitle="Beslenme, uyku veya bez kaydını hemen ekle"

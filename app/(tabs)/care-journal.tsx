@@ -21,7 +21,6 @@ import {
   getCareSyncConflicts,
   getCareHandoverSnapshot,
   getRecentMedicineDose,
-  getSleepPrediction,
   listCareJournalActivity,
   listCareJournalEntries,
   listCareJournalEntriesSince,
@@ -44,7 +43,6 @@ import {
   type CareReminder,
   type CareSyncResult,
   type RecentMedicineDose,
-  type SleepPrediction,
   RecentMedicineDoseError
 } from "@/api/careJournal";
 import { Button } from "@/components/Button";
@@ -580,15 +578,9 @@ function AdvancedCareJournalContent() {
   const [rest, setRest] = useState(3);
   const [selfCare, setSelfCare] = useState("");
   const [timerNow, setTimerNow] = useState(Date.now());
-  const [predictionNow, setPredictionNow] = useState(Date.now());
   const [undoAction, setUndoAction] = useState<{ expiresAt: number; label: string; operationId: string } | null>(null);
   const [MilkInventoryComponent, setMilkInventoryComponent] = useState<ComponentType<MilkInventoryProps> | null>(null);
   const [milkInventoryLoading, setMilkInventoryLoading] = useState(false);
-
-  useEffect(() => {
-    const interval = setInterval(() => setPredictionNow(Date.now()), 60_000);
-    return () => clearInterval(interval);
-  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setMedicineLookupName(medicineName.trim()), 450);
@@ -625,12 +617,18 @@ function AdvancedCareJournalContent() {
     if (
       params.entry &&
       isCareEntryType(params.entry) &&
+      params.entry !== "sleep" &&
       (isPremium || isFreeType(params.entry))
     ) {
       setEntryType(params.entry);
       if (!isCareJournalSection(params.section)) setActiveSection("record");
     }
   }, [isPremium, params.entry, params.section]);
+
+  useEffect(() => {
+    if (params.entry !== "sleep" || !selectedBaby?.id) return;
+    router.replace({ pathname: "/sleep-rhythm", params: { babyId: selectedBaby.id } });
+  }, [params.entry, router, selectedBaby?.id]);
 
   const entriesQuery = useQuery({
     queryKey: ["care-journal", selectedBaby?.id, isPremium, historyLimit],
@@ -641,7 +639,6 @@ function AdvancedCareJournalContent() {
   const reportQuery = useQuery({ queryKey: ["care-journal-report", selectedBaby?.id], queryFn: () => listCareJournalEntriesSince(selectedBaby?.id as string, 30), enabled: Boolean(selectedBaby?.id) });
   const reportEntries = normalizeCareEntries(reportQuery.data);
   const remindersQuery = useQuery({ queryKey: ["care-reminders", selectedBaby?.id], queryFn: () => listCareReminders(selectedBaby?.id as string), enabled: Boolean(selectedBaby?.id) });
-  const sleepPredictionQuery = useQuery({ queryKey: ["sleep-prediction", selectedBaby?.id], queryFn: () => getSleepPrediction(selectedBaby?.id as string), enabled: Boolean(isPremium && selectedBaby?.id) });
   const recentMedicineQuery = useQuery({ queryKey: ["recent-medicine-dose", selectedBaby?.id, medicineLookupName.toLocaleLowerCase("tr-TR")], queryFn: () => getRecentMedicineDose(selectedBaby?.id as string, medicineLookupName), enabled: Boolean(isPremium && selectedBaby?.id && entryType === "medicine" && medicineLookupName.length >= 2), staleTime: 15_000 });
   const handoverQuery = useQuery({ queryKey: ["care-handover", selectedBaby?.id], queryFn: () => getCareHandoverSnapshot(selectedBaby?.id as string), enabled: Boolean(selectedBaby?.id), refetchInterval: 30_000 });
   const activityQuery = useQuery({ queryKey: ["care-activity", selectedBaby?.id], queryFn: () => listCareJournalActivity(selectedBaby?.id as string, 8), enabled: Boolean(selectedBaby?.id) });
@@ -654,19 +651,6 @@ function AdvancedCareJournalContent() {
   const visibleEntryTypes = useMemo(() => orderEntryTypesForFeedingMode(feedingMode), [feedingMode]);
   const todayEntries = useMemo(
     () => entries.filter((entry) => isToday(entry.occurred_at)),
-    [entries]
-  );
-  const completedSleepCount = useMemo(
-    () =>
-      entries.filter((entry) => {
-        if (entry.entry_type !== "sleep" || !entry.ended_at) return false;
-        const durationMs = Date.parse(entry.ended_at) - Date.parse(entry.occurred_at);
-        return (
-          durationMs > 5 * 60_000 &&
-          durationMs <= 16 * 60 * 60_000 &&
-          Date.parse(entry.occurred_at) >= Date.now() - 21 * 86_400_000
-        );
-      }).length,
     [entries]
   );
 
@@ -1108,21 +1092,19 @@ function AdvancedCareJournalContent() {
             {activeSection === "plan" ? (
               <CareSectionBoundary title="Uyku ve sağım">
                 <View style={{ gap: spacing.lg }}>
-                {sleepPredictionQuery.isError ? (
-                  <QueryState
-                    compact
-                    description="Uyku öngörüsü şu anda alınamadı."
-                    onRetry={() => void sleepPredictionQuery.refetch()}
-                    retrying={sleepPredictionQuery.isFetching}
-                  />
-                ) : <SleepPredictionCard
-                  completedSleepCount={completedSleepCount}
-                  isPremium={isPremium}
-                  loading={sleepPredictionQuery.isLoading}
-                  now={predictionNow}
-                  onOpenPremium={() => void openPremium(PREMIUM_FEATURES.sleepPrediction.source)}
-                  prediction={sleepPredictionQuery.data ?? null}
-                />}
+                <Card style={styles.sleepPredictionCard}>
+                  <View style={{ gap: spacing.md }}>
+                    <View style={styles.cardTitleRow}>
+                      <View style={{ flex: 1, gap: spacing.xs }}>
+                        <Text style={typography.eyebrow}>YENİ · UYKU RİTMİ</Text>
+                        <Text style={typography.heading2}>Uyudu ve Uyandı'yı tek dokunuşla kaydet</Text>
+                      </View>
+                      <Moon color={colors.nightPlum} size={27} />
+                    </View>
+                    <Text style={typography.body}>Süreyi dakika olarak tahmin etme; gerçek saatleri kaydet, 24 saatlik ritmi gör. 7 uyku kaydından sonra sonraki uyku ve uyanma tahminleri Premium ile açılır.</Text>
+                    <Button label="Uyku Ritmi'ni aç" variant="secondary" onPress={() => router.push({ pathname: "/sleep-rhythm", params: selectedBaby?.id ? { babyId: selectedBaby.id } : undefined })} />
+                  </View>
+                </Card>
 
                 {feedingMode === "pumping" || feedingMode === "mixed" ? (
                   isPremium ? (
@@ -1167,7 +1149,7 @@ function AdvancedCareJournalContent() {
                 </View>
                 <View style={styles.chips}>
                   {visibleEntryTypes.map((item) => (
-                    <ChoiceChip key={item.type} active={entryType === item.type} label={`${item.label}${!isPremium && !isFreeType(item.type) ? " · Premium" : ""}`} onPress={() => { if (!isPremium && !isFreeType(item.type)) { void openPremium(item.type === "medicine" ? PREMIUM_FEATURES.careMedicine.source : PREMIUM_FEATURES.careSolidFood.source); return; } setEntryType(item.type); }} />
+                    <ChoiceChip key={item.type} active={entryType === item.type} label={`${item.label}${item.type === "sleep" ? " · yeni" : !isPremium && !isFreeType(item.type) ? " · Premium" : ""}`} onPress={() => { if (item.type === "sleep") { router.push({ pathname: "/sleep-rhythm", params: selectedBaby?.id ? { babyId: selectedBaby.id } : undefined }); return; } if (!isPremium && !isFreeType(item.type)) { void openPremium(item.type === "medicine" ? PREMIUM_FEATURES.careMedicine.source : PREMIUM_FEATURES.careSolidFood.source); return; } setEntryType(item.type); }} />
                   ))}
                 </View>
                 {entryType === "breastfeeding" ? (
@@ -1487,133 +1469,6 @@ function activityActionLabel(action: CareJournalActivity["action"]) {
 }
 
 function NowItem({ label, value }: { label: string; value: string }) { return <View style={styles.nowItem}><Text style={styles.summaryLabel}>{label}</Text><Text style={styles.nowValue}>{value}</Text></View>; }
-
-function SleepPredictionCard({
-  completedSleepCount,
-  isPremium,
-  loading,
-  now,
-  onOpenPremium,
-  prediction
-}: {
-  completedSleepCount: number;
-  isPremium: boolean;
-  loading: boolean;
-  now: number;
-  onOpenPremium: () => void;
-  prediction: SleepPrediction | null;
-}) {
-  if (!isPremium) {
-    return (
-      <Card style={styles.sleepPredictionCard}>
-        <View style={{ gap: spacing.md }}>
-          <View style={styles.cardTitleRow}>
-            <View style={{ flex: 1, gap: spacing.xs }}>
-              <Text style={typography.eyebrow}>Premium · Bakım zekâsı</Text>
-              <Text style={typography.heading2}>Bir sonraki uyku tahmini</Text>
-            </View>
-            <View style={styles.predictionIcon}>
-              <Moon color={colors.nightPlum} size={23} />
-            </View>
-          </View>
-          <Text style={typography.body}>
-            7 tamamlanmış uyku kaydından sonra bebeğinin kendi örüntüsüne göre
-            yaklaşan uyku penceresini gör.
-          </Text>
-          <Button label="Uyku tahminini aç" variant="secondary" onPress={onOpenPremium} />
-        </View>
-      </Card>
-    );
-  }
-
-  if (loading) {
-    return (
-      <Card style={styles.sleepPredictionCard}>
-        <Text style={typography.body}>Uyku örüntüsü hesaplanıyor...</Text>
-      </Card>
-    );
-  }
-
-  const sampleCount = Math.max(prediction?.sample_count ?? 0, completedSleepCount);
-  const hasCurrentPrediction = Boolean(
-    prediction?.status === "active" &&
-      prediction.window_end &&
-      Date.parse(prediction.window_end) >= now
-  );
-
-  if (!hasCurrentPrediction || !prediction?.predicted_sleep_at) {
-    const needed = Math.max(0, 7 - sampleCount);
-    return (
-      <Card style={styles.sleepPredictionCard}>
-        <View style={{ gap: spacing.md }}>
-          <View style={styles.cardTitleRow}>
-            <View style={{ flex: 1, gap: spacing.xs }}>
-              <Text style={typography.eyebrow}>Premium · Öğreniyor</Text>
-              <Text style={typography.heading2}>Uyku tahmini hazırlanıyor</Text>
-            </View>
-            <Moon color={colors.nightPlum} size={26} />
-          </View>
-          <Text style={typography.body}>
-            {needed > 0
-              ? `Saat vermek için ${needed} tamamlanmış uyku kaydı daha gerekli.`
-              : "Son uyku penceresi geçti. Bir sonraki tamamlanmış uykudan sonra tahmin yenilenecek."}
-          </Text>
-          <View style={styles.learningTrack}>
-            <View
-              style={[
-                styles.learningFill,
-                { width: `${Math.min(100, (sampleCount / 7) * 100)}%` }
-              ]}
-            />
-          </View>
-          <Text style={styles.entryMeta}>{Math.min(sampleCount, 7)}/7 uyku kaydı</Text>
-        </View>
-      </Card>
-    );
-  }
-
-  const minutesUntil = Math.round(
-    (Date.parse(prediction.predicted_sleep_at) - now) / 60_000
-  );
-  const timingText = minutesUntil <= 0
-    ? "Uyku penceresi şu anda"
-    : minutesUntil <= 60
-      ? `Yaklaşık ${minutesUntil} dakika içinde`
-      : `Tahmini saat ${formatClock(prediction.predicted_sleep_at)}`;
-  const confidenceLabel = prediction.confidence_score && prediction.confidence_score >= 78
-    ? "Güçlü örüntü"
-    : prediction.confidence_score && prediction.confidence_score >= 60
-      ? "Dengeli örüntü"
-      : "Gelişen örüntü";
-
-  return (
-    <Card style={styles.sleepPredictionActiveCard}>
-      <View style={{ gap: spacing.md }}>
-        <View style={styles.cardTitleRow}>
-          <View style={{ flex: 1, gap: spacing.xs }}>
-            <Text style={typography.eyebrow}>Premium · Akıllı uyku</Text>
-            <Text style={typography.heading2}>Uyku penceresi yaklaşıyor</Text>
-          </View>
-          <BellRing color={colors.nightPlum} size={26} />
-        </View>
-        <Text style={styles.predictionTime}>{timingText}</Text>
-        {prediction.window_start && prediction.window_end ? (
-          <Text style={typography.body}>
-            Tahmini aralık: {formatClock(prediction.window_start)}–{formatClock(prediction.window_end)}
-          </Text>
-        ) : null}
-        <View style={styles.predictionMetaRow}>
-          <Text style={styles.predictionMeta}>{confidenceLabel}</Text>
-          <Text style={styles.predictionMeta}>{sampleCount} benzer aralık</Text>
-        </View>
-        <Text style={styles.safetyNote}>
-          Bu saat kayıt örüntüsünden üretilen yaklaşık bir tahmindir. Bebeğinin
-          esneme, bakışını kaçırma ve sakinleşme ihtiyacı gibi uyku işaretlerini de izle.
-        </Text>
-      </View>
-    </Card>
-  );
-}
 
 function MedicineSafetyNotice({ dose }: { dose: RecentMedicineDose }) {
   return (

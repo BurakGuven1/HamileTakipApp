@@ -40,6 +40,7 @@ export type AnalyticsEventName =
   | "forum_user_blocked"
   | "forum_user_unblocked"
   | "forum_viewed"
+  | "family_credit_exhausted"
   | "growth_record_added"
   | "home_photo_removed"
   | "home_photo_updated"
@@ -61,7 +62,17 @@ export type AnalyticsEventName =
   | "photo_deleted"
   | "photo_uploaded"
   | "pregnancy_completed_with_birth"
+  | "pregnancy_health_entry_created"
+  | "pregnancy_health_file_viewed"
+  | "pregnancy_health_lab_saved"
+  | "pregnancy_health_pdf_shared"
+  | "pregnancy_health_reminder_created"
+  | "sleep_rhythm_event_created"
+  | "sleep_rhythm_event_updated"
+  | "sleep_rhythm_opened"
+  | "sleep_rhythm_prediction_locked_tapped"
   | "pregnancy_timeline_viewed"
+  | "document_insight_completed"
   | "premium_gate_hit"
   | "purchase_cancelled"
   | "purchase_client_completed"
@@ -121,9 +132,11 @@ const CORE_ACTIVATION_EVENTS = new Set<AnalyticsEventName>([
   "baby_profile_created",
   "birth_preparation_item_completed",
   "care_journal_entry_added",
+  "document_insight_completed",
   "doctor_visit_report_created",
   "growth_record_added",
   "lullaby_played",
+  "pregnancy_health_entry_created",
   "pregnancy_timeline_viewed",
   "vaccination_marked_done"
 ]);

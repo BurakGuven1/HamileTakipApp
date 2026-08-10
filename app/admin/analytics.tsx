@@ -61,6 +61,12 @@ const funnelLabels: Record<string, string> = {
   purchase_started: "Satın almayı başlattı",
   verified_purchase: "Doğrulanmış satın alma"
 };
+const creditFunnelLabels: Record<string, string> = {
+  credit_exhausted: "Son ücretsiz hakkı kullandı",
+  last_credit_paywall: "Değer sonrası paywall gördü",
+  purchase_started: "Satın almayı başlattı",
+  verified_purchase: "Doğrulanmış satın alma"
+};
 const subscriptionEventLabels: Record<string, string> = {
   BILLING_ISSUE: "Ödeme sorunu",
   CANCELLATION: "İptal",
@@ -288,6 +294,10 @@ function DashboardContent({ data, width }: { data: AnalyticsDashboardData; width
         <SourceTable rows={data.paywallSources} />
       </Panel>
 
+      <Panel title="Ücretsiz haktan Premium'a dönüşüm" subtitle="Son ortak hakkın başarıyla kullanılmasından sonraki sıkı funnel">
+        <FunnelChart labels={creditFunnelLabels} steps={data.creditFunnel} />
+      </Panel>
+
       <View style={[styles.twoColumn, compact && styles.singleColumn]}>
         <Panel style={styles.primaryPanel} title="RevenueCat Offering karşılaştırması" subtitle="Deney varyantları gerçek offering kimliğiyle">
           <OfferingTable rows={data.offerings} />
@@ -319,7 +329,7 @@ function KpiCard({ compact, icon, label, value }: { compact: boolean; icon: Reac
   );
 }
 
-function FunnelChart({ steps }: { steps: FunnelStep[] }) {
+function FunnelChart({ labels = funnelLabels, steps }: { labels?: Record<string, string>; steps: FunnelStep[] }) {
   const maximum = Math.max(...steps.map((step) => step.users), 1);
   return (
     <View style={styles.funnelList}>
@@ -331,7 +341,7 @@ function FunnelChart({ steps }: { steps: FunnelStep[] }) {
         return (
           <View key={step.step_key} style={styles.funnelRow}>
             <View style={styles.funnelMeta}>
-              <Text style={styles.rowLabel}>{funnelLabels[step.step_key] ?? step.step_key}</Text>
+              <Text style={styles.rowLabel}>{labels[step.step_key] ?? step.step_key}</Text>
               <Text style={styles.rowValue}>{formatCount(step.users)}</Text>
             </View>
             <View style={styles.track}>

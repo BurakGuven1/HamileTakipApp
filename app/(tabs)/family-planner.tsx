@@ -60,6 +60,7 @@ import { TextField } from "@/components/TextField";
 import { createCareUuid } from "@/features/care-journal/careSync";
 import { showPaywallIfNeeded } from "@/features/subscription/showPaywallIfNeeded";
 import { PREMIUM_FEATURES } from "@/features/subscription/premiumFeatures";
+import { showPostCreditPaywallIfNeeded } from "@/features/subscription/postCreditPaywall";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { colors, radii, spacing, typography } from "@/theme";
@@ -269,6 +270,15 @@ export default function FamilyPlannerScreen() {
         queryClient.invalidateQueries({ queryKey: ["family-feature-access"] }),
         queryClient.invalidateQueries({ queryKey: ["family-coordination-context"] })
       ]);
+      if (alarmEnabled) {
+        await showPostCreditPaywallIfNeeded({
+          feature: "family_task_alarm",
+          isPremium: result.is_premium,
+          lifeStage,
+          remaining: result.remaining,
+          source: PREMIUM_FEATURES.familyTaskAlarm.source
+        });
+      }
     },
     onError: (error) => showError(error, "Görev eklenemedi")
   });
@@ -341,6 +351,13 @@ export default function FamilyPlannerScreen() {
         queryClient.invalidateQueries({ queryKey: ["pregnancy-support-snapshot"] }),
         queryClient.invalidateQueries({ queryKey: ["family-feature-access"] })
       ]);
+      await showPostCreditPaywallIfNeeded({
+        feature: "pregnancy_support_handover",
+        isPremium: result.is_premium,
+        lifeStage: "pregnancy",
+        remaining: result.remaining,
+        source: PREMIUM_FEATURES.pregnancySupportHandover.source
+      });
     },
     onError: (error) => showError(error, "Destek devralınamadı")
   });
