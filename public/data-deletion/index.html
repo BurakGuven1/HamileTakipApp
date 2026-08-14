@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#fbf6ef" />
+    <title>Veri ve Hesap Silme | Anne+</title>
+    <meta
+      name="description"
+      content="Anne+ hesabınızı ve hesabınıza bağlı verileri kalıcı olarak silme seçenekleri."
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <style>
+      .deletion-hero {
+        overflow: hidden;
+        position: relative;
+      }
+
+      .deletion-hero::after {
+        background: linear-gradient(145deg, rgba(110, 143, 124, 0.22), rgba(201, 138, 147, 0.18));
+        border-radius: 50%;
+        content: "";
+        height: 250px;
+        position: absolute;
+        right: -100px;
+        top: -120px;
+        width: 250px;
+      }
+
+      .deletion-hero > * {
+        position: relative;
+        z-index: 1;
+      }
+
+      .deletion-hero h1 {
+        font-size: clamp(38px, 7vw, 66px);
+        max-width: 720px;
+      }
+
+      .deletion-hero .lead {
+        color: var(--muted);
+        font-size: 18px;
+        max-width: 680px;
+      }
+
+      .deletion-grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        margin-top: 16px;
+      }
+
+      .deletion-option {
+        display: flex;
+        flex-direction: column;
+        min-height: 290px;
+      }
+
+      .option-icon {
+        align-items: center;
+        background: var(--primary-soft);
+        border: 1px solid rgba(110, 143, 124, 0.18);
+        border-radius: 18px;
+        display: inline-flex;
+        font-size: 25px;
+        height: 52px;
+        justify-content: center;
+        margin-bottom: 20px;
+        width: 52px;
+      }
+
+      .option-number {
+        color: var(--primary);
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: 0.1em;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+      }
+
+      .deletion-option .button {
+        justify-content: center;
+        margin-top: auto;
+        width: fit-content;
+      }
+
+      .privacy-note {
+        align-items: flex-start;
+        display: flex;
+        gap: 14px;
+      }
+
+      .privacy-note strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      @media (max-width: 680px) {
+        .deletion-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .deletion-option {
+          min-height: 0;
+        }
+
+        .deletion-option .button {
+          margin-top: 10px;
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="legal-shell">
+      <header class="topbar">
+        <a class="wordmark" href="/" aria-label="Anne+ ana sayfa">
+          <span class="mark">♡</span>
+          Anne+
+        </a>
+        <a class="pill" href="/gizlilik-politikasi/">Gizlilik Politikası</a>
+      </header>
+
+      <section class="legal-hero deletion-hero">
+        <p class="eyebrow">Gizlilik ve güvenlik</p>
+        <h1>Veri ve hesap silme</h1>
+        <p class="lead">
+          Anne+ hesabınızı ve hesabınıza bağlı kişisel verileri dilediğiniz zaman
+          kalıcı olarak silebilirsiniz.
+        </p>
+      </section>
+
+      <section class="deletion-grid" aria-label="Hesap silme seçenekleri">
+        <article class="legal-card deletion-option">
+          <span class="option-icon" aria-hidden="true">✉</span>
+          <p class="option-number">Seçenek 1</p>
+          <h2>E-posta ile silme</h2>
+          <p>
+            Hesabınızla ilişkili e-posta adresinden
+            <strong>anneplusapp@gmail.com</strong> adresine bir hesap silme talebi
+            göndererek hesabınızı kalıcı olarak silebilirsiniz.
+          </p>
+          <a
+            class="button"
+            href="mailto:anneplusapp@gmail.com?subject=Anne%2B%20Hesap%20Silme%20Talebi"
+          >E-posta gönder</a>
+        </article>
+
+        <article class="legal-card deletion-option">
+          <span class="option-icon" aria-hidden="true">◉</span>
+          <p class="option-number">Seçenek 2</p>
+          <h2>Uygulama içinden silme</h2>
+          <p>
+            Anne+ uygulamasında <strong>Profil</strong> bölümüne giderek hesabınızı
+            kalıcı olarak silebilirsiniz. Ekrandaki hesap silme seçeneğine dokunun
+            ve işlemi onaylayın.
+          </p>
+        </article>
+      </section>
+
+      <section class="legal-card privacy-note">
+        <span aria-hidden="true">🔒</span>
+        <div>
+          <strong>Silme işlemi kalıcıdır</strong>
+          Hesabınız silindiğinde hesabınıza bağlı kişisel veriler de kalıcı olarak
+          silinir. Bu işlem geri alınamaz.
+        </div>
+      </section>
+
+      <footer class="footer">© 2026 Anne+ · Gizliliğiniz bizim için önemli.</footer>
+    </main>
+  </body>
+</html>
