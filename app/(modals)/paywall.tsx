@@ -22,6 +22,7 @@ import {
 } from "@/lib/revenuecat";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { trackPaywallView } from "@/services/analytics/paywallAnalytics";
+import { trackMetaVerifiedRevenueCatPurchase } from "@/services/meta/metaAppEvents";
 import { colors, spacing } from "@/theme";
 
 type PaywallErrorSource = "load" | "purchase" | "restore" | "sync";
@@ -185,12 +186,29 @@ export default function PaywallScreen() {
         }}
         onPurchaseCompleted={({ customerInfo, storeTransaction }) => {
           void (async () => {
-            const status = await syncPremiumState(customerInfo);
+            await syncPremiumState(customerInfo);
+            const purchasedPackage =
+              purchasingPackageRef.current?.product.identifier ===
+              storeTransaction.productIdentifier
+                ? purchasingPackageRef.current
+                : offering.availablePackages.find(
+                    (candidatePackage) =>
+                      candidatePackage.product.identifier ===
+                      storeTransaction.productIdentifier
+                  ) ?? null;
+            await trackMetaVerifiedRevenueCatPurchase({
+              customerInfo,
+              purchasedPackage,
+              storeTransaction
+            }).catch((metaError) => {
+              console.warn("Meta purchase event logging failed", metaError);
+            });
             await trackEvent("purchase_client_completed", {
               ...getPaywallEventProperties(params),
               product_id: storeTransaction.productIdentifier,
               transaction_id: storeTransaction.transactionIdentifier
             }, { paywallViewId: paywallViewIdRef.current });
+            purchasingPackageRef.current = null;
             showSuccess("Premium avantajların aktif edildi.", "Premium aktif");
           })();
         }}

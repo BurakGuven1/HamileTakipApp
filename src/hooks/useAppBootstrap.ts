@@ -13,6 +13,12 @@ import {
 } from "@/lib/notifications";
 import { configureRevenueCat } from "@/lib/revenuecat";
 import { supabase } from "@/lib/supabase";
+import {
+  initializeMetaAppEvents,
+  logMetaDevelopmentTestEventIfEnabled,
+  refreshMetaTrackingPermission,
+  requestMetaTrackingPermissionIfNeeded
+} from "@/services/meta/metaAppEvents";
 
 export function useAppBootstrap() {
   useEffect(() => {
@@ -27,6 +33,15 @@ export function useAppBootstrap() {
     async function bootstrap() {
       configureRevenueCat();
       clearAppNotificationBadge();
+      void initializeMetaAppEvents()
+        .then(async (initialized) => {
+          if (!initialized) return;
+          await requestMetaTrackingPermissionIfNeeded();
+          await logMetaDevelopmentTestEventIfEnabled();
+        })
+        .catch((error) => {
+          console.warn("Meta App Events bootstrap failed", error);
+        });
       await initializeAnalytics();
       await trackAuthenticatedSessionStartedIfNeeded();
       await bootstrapPushToken(false);
@@ -55,6 +70,9 @@ export function useAppBootstrap() {
       trackSessionStartedIfNeeded()
         .then(() => trackAuthenticatedSessionStartedIfNeeded())
         .catch(() => undefined);
+      refreshMetaTrackingPermission().catch((error) => {
+        console.warn("Meta tracking permission refresh failed", error);
+      });
       bootstrapPushToken(false).catch((error) => {
         console.warn("Push token refresh failed", error);
       });

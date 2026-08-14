@@ -4,6 +4,34 @@ const isDevelopment = process.env.APP_VARIANT === "development";
 const expoOwner = process.env.EXPO_OWNER || "burakguven351999";
 const easProjectId =
   process.env.EAS_PROJECT_ID || "710c02c1-ddbb-4433-818f-00dadd19a758";
+const metaAppId = process.env.META_APP_ID?.trim();
+const metaClientToken = process.env.META_CLIENT_TOKEN?.trim();
+const metaTrackingPermission =
+  "Reklamların etkinliğini ölçmek ve sana daha ilgili reklamlar sunmak için cihaz tanımlayıcının kullanılmasına izin ver.";
+const metaPlugins: NonNullable<ExpoConfig["plugins"]> =
+  metaAppId && metaClientToken
+    ? [
+        [
+          "expo-tracking-transparency",
+          {
+            userTrackingPermission: metaTrackingPermission
+          }
+        ],
+        [
+          "react-native-fbsdk-next",
+          {
+            appID: metaAppId,
+            clientToken: metaClientToken,
+            displayName: "Anne+",
+            scheme: `fb${metaAppId}`,
+            advertiserIDCollectionEnabled: false,
+            autoLogAppEventsEnabled: true,
+            isAutoInitEnabled: false,
+            iosUserTrackingPermission: metaTrackingPermission
+          }
+        ]
+      ]
+    : [];
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -11,7 +39,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   name: isDevelopment ? "Anne+ Dev" : "Anne+",
   slug: "hamileliktakipapp",
   scheme: "hamiletakip",
-  version: "1.0.2",
+  version: "1.2.0",
   icon: "./assets/branding/app-icon.png",
   orientation: "portrait",
   userInterfaceStyle: "light",
@@ -24,7 +52,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supportsTablet: false,
     // TestFlight requires a new, monotonically increasing build number for
     // every upload. The GitHub Actions workflow supplies a Unix timestamp.
-    buildNumber: process.env.IOS_BUILD_NUMBER ?? "1",
+    buildNumber: process.env.IOS_BUILD_NUMBER ?? "2",
     bundleIdentifier:
       process.env.EXPO_PUBLIC_IOS_BUNDLE_IDENTIFIER ||
       "com.burakguven.hamiletakip",
@@ -134,7 +162,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       }
     ],
     "expo-apple-authentication",
-    "@react-native-community/datetimepicker"
+    "@react-native-community/datetimepicker",
+    ...metaPlugins
   ],
   experiments: {
     typedRoutes: true
