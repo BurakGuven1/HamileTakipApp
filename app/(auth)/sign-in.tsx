@@ -31,6 +31,7 @@ import { trackEvent } from "@/lib/analytics";
 import { registerAndSavePushToken } from "@/lib/notifications";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { useFeedback } from "@/providers/FeedbackProvider";
+import { trackMetaCompleteRegistrationOnce } from "@/services/meta/metaAppEvents";
 import { colors, radii, spacing, typography } from "@/theme";
 
 type AuthMode = "sign-in" | "sign-up";
@@ -186,6 +187,14 @@ export default function SignInScreen() {
         });
 
         if (error) throw error;
+
+        if (data.user) {
+          await trackMetaCompleteRegistrationOnce(data.user.id).catch(
+            (metaError) => {
+              console.warn("Meta CompleteRegistration logging failed", metaError);
+            }
+          );
+        }
 
         await trackEvent("sign_up_submitted", {
           email_verification_required: !data.session

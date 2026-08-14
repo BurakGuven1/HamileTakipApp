@@ -30,6 +30,8 @@ jobs:
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
       EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: ${{ secrets.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY }}
       EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID: ${{ secrets.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID }}
+      META_APP_ID: ${{ secrets.META_APP_ID }}
+      META_CLIENT_TOKEN: ${{ secrets.META_CLIENT_TOKEN }}
 
     steps:
       - name: Check out source
@@ -57,6 +59,9 @@ jobs:
 
       - name: Verify RevenueCat production configuration
         run: npm run verify:revenuecat
+
+      - name: Verify Meta production configuration
+        run: npm run verify:meta
 
       - name: Type-check source
         run: npm run typecheck
