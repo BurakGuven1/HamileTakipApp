@@ -48,7 +48,7 @@ jobs:
           sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
           xcodebuild -version
           XCODE_VERSION="$(xcodebuild -version | awk 'NR == 1 { print $2 }')"
-          ruby -rgem -e 'abort("Xcode 26.2 or newer is required; found #{ARGV.fetch(0)}") if Gem::Version.new(ARGV.fetch(0)) < Gem::Version.new("26.2")' "$XCODE_VERSION"
+          ruby -rrubygems -e 'abort("Xcode 26.2 or newer is required; found #{ARGV.fetch(0)}") if Gem::Version.new(ARGV.fetch(0)) < Gem::Version.new("26.2")' "$XCODE_VERSION"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
