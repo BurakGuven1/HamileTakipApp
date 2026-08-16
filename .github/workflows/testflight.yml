@@ -18,7 +18,7 @@ concurrency:
 jobs:
   testflight:
     name: Archive and upload
-    # Expo SDK 57's ExpoModulesJSI package requires Swift tools 6.2 (Xcode 26).
+    # Expo SDK 57 requires Swift 6.2; Firebase Apple SDK 12.17 requires Xcode 26.2+.
     runs-on: macos-26
     timeout-minutes: 60
     # Existing GitHub Environment name. Its environment secrets are used below.
@@ -37,16 +37,18 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
-      - name: Select Xcode 26
+      - name: Select Xcode 26.2 or newer
         run: |
           set -euo pipefail
           XCODE_PATH="$(find /Applications -maxdepth 1 -name 'Xcode_26*.app' -print | sort | tail -n 1)"
           if [ -z "$XCODE_PATH" ]; then
-            echo "Xcode 26 is required by ExpoModulesJSI but was not found."
+            echo "Xcode 26.2 or newer is required but was not found."
             exit 1
           fi
           sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
           xcodebuild -version
+          XCODE_VERSION="$(xcodebuild -version | awk 'NR == 1 { print $2 }')"
+          ruby -rgem -e 'abort("Xcode 26.2 or newer is required; found #{ARGV.fetch(0)}") if Gem::Version.new(ARGV.fetch(0)) < Gem::Version.new("26.2")' "$XCODE_VERSION"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -63,11 +65,17 @@ jobs:
       - name: Verify Meta production configuration
         run: npm run verify:meta
 
+      - name: Verify Firebase iOS production configuration
+        run: npm run verify:firebase:ios
+
       - name: Type-check source
         run: npm run typecheck
 
       - name: Generate native iOS project
         run: IOS_BUILD_NUMBER="$(date +%s)" npx expo prebuild --platform ios --clean --no-install
+
+      - name: Verify generated Firebase iOS integration
+        run: npm run verify:firebase:ios:generated
 
       - name: Install CocoaPods dependencies
         run: pod install --project-directory=ios --repo-update

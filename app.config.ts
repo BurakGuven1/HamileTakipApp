@@ -39,7 +39,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   name: isDevelopment ? "Anne+ Dev" : "Anne+",
   slug: "hamileliktakipapp",
   scheme: "hamiletakip",
-  version: "1.2.0",
+  version: "1.2.1",
   icon: "./assets/branding/app-icon.png",
   orientation: "portrait",
   userInterfaceStyle: "light",
@@ -52,10 +52,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supportsTablet: false,
     // TestFlight requires a new, monotonically increasing build number for
     // every upload. The GitHub Actions workflow supplies a Unix timestamp.
-    buildNumber: process.env.IOS_BUILD_NUMBER ?? "2",
+    buildNumber: process.env.IOS_BUILD_NUMBER ?? "3",
     bundleIdentifier:
       process.env.EXPO_PUBLIC_IOS_BUNDLE_IDENTIFIER ||
       "com.burakguven.hamiletakip",
+    googleServicesFile: "./assets/GoogleService-Info.plist",
     appStoreUrl: process.env.EXPO_PUBLIC_IOS_APP_STORE_URL,
     infoPlist: {
       NSCameraUsageDescription:
@@ -103,6 +104,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     "expo-asset",
     "expo-secure-store",
     "expo-sharing",
+    "./plugins/with-ios-firebase-analytics",
+    [
+      "expo-build-properties",
+      {
+        ios: {
+          useFrameworks: "dynamic"
+        }
+      }
+    ],
     [
       "expo-splash-screen",
       {
