@@ -31,6 +31,7 @@ import { trackEvent } from "@/lib/analytics";
 import { registerAndSavePushToken } from "@/lib/notifications";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { useFeedback } from "@/providers/FeedbackProvider";
+import { trackFirebaseSignUpOnce } from "@/services/firebase/firebaseAnalytics";
 import { trackMetaCompleteRegistrationOnce } from "@/services/meta/metaAppEvents";
 import { colors, radii, spacing, typography } from "@/theme";
 
@@ -189,6 +190,14 @@ export default function SignInScreen() {
         if (error) throw error;
 
         if (data.user) {
+          const createdEmailIdentity = data.user.identities?.some(
+            (identity) => identity.provider === "email"
+          );
+
+          if (createdEmailIdentity) {
+            await trackFirebaseSignUpOnce(data.user.id, "email");
+          }
+
           await trackMetaCompleteRegistrationOnce(data.user.id).catch(
             (metaError) => {
               console.warn("Meta CompleteRegistration logging failed", metaError);

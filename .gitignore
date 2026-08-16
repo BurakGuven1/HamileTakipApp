@@ -18,6 +18,7 @@ credentials.json
 *.keystore
 google-services.json
 GoogleService-Info.plist
+!assets/GoogleService-Info.plist
 
 # env files (local configuration and templates)
 .env
