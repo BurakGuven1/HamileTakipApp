@@ -78,8 +78,8 @@ if (/\$RNFirebaseAnalyticsGoogleAppMeasurementOnDeviceConversion\s*=\s*true/.tes
   fail("On-device conversion measurement must not be enabled for this integration.");
 }
 
-if (/\$RNFirebaseDisableSPM\s*=\s*true/.test(podfile)) {
-  fail("Firebase SPM was unexpectedly disabled.");
+if (countMatches(podfile, /\$RNFirebaseDisableSPM\s*=\s*true/g) !== 1) {
+  fail("Firebase SPM must be disabled exactly once for static CocoaPods linking.");
 }
 
 let properties;
@@ -89,8 +89,8 @@ try {
   fail(`Podfile.properties.json is invalid: ${error.message}`);
 }
 
-if (properties["ios.useFrameworks"] !== "dynamic") {
-  fail('ios.useFrameworks must be "dynamic" for Firebase SPM.');
+if (properties["ios.useFrameworks"] !== "static") {
+  fail('ios.useFrameworks must be "static" for CocoaPods Firebase linking.');
 }
 
 const obsoleteBundleIdentifier = ["com", ["basari", "yolu"].join("")].join(
