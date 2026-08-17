@@ -20,6 +20,11 @@ const analyticsIosPlugin = require(
 function withIosFirebaseAnalytics(config) {
   let nextConfig = appIosPlugin.withFirebaseAppDelegate(config);
   nextConfig = appIosPlugin.withIosGoogleServicesFile(nextConfig);
+  nextConfig = appIosPlugin.withIosDisableSPM(nextConfig, {
+    ios: {
+      disableSPM: true
+    }
+  });
   nextConfig = analyticsIosPlugin.withIosWithoutAdIdSupport(nextConfig, {
     ios: {
       withoutAdIdSupport: true
