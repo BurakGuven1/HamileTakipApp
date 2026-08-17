@@ -109,7 +109,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "expo-build-properties",
       {
         ios: {
-          useFrameworks: "dynamic"
+          useFrameworks: "static"
         }
       }
     ],
