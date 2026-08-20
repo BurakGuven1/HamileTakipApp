@@ -11,7 +11,7 @@
     "web:export": "expo export --platform web",
     "lint": "expo lint",
     "vercel-build": "npm run web:export",
-    "deploy:web": "npx vercel --prod",
+    "deploy:web": "npx vercel --prod --archive=tgz",
     "deploy:web:eas": "eas deploy",
     "typecheck": "tsc --noEmit",
     "doctor": "expo-doctor",

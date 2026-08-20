@@ -32,6 +32,10 @@ import {
   type AnalyticsRangeDays,
   type FunnelStep
 } from "@/api/analyticsAdmin";
+import {
+  describeMissingOfferingEvents,
+  formatOfferingLabel
+} from "@/features/analytics/analyticsDisplay";
 import { supabase } from "@/lib/supabase";
 import { fonts } from "@/theme";
 
@@ -415,7 +419,7 @@ function OfferingTable({ rows }: { rows: AnalyticsDashboardData["offerings"] }) 
     <DataTable headers={["Offering", "Gösterim", "Başlatma", "Doğrulanan"]}>
       {rows.map((row) => (
         <DataRow key={row.offering_id} cells={[
-          row.offering_id,
+          formatOfferingLabel(row.offering_id),
           formatCount(row.impressions),
           formatCount(row.purchase_starts),
           formatCount(row.verified_purchases)
@@ -461,20 +465,27 @@ function RetentionTable({ rows }: { rows: AnalyticsDashboardData["retention"] })
 
 function DataQuality({ data }: { data: AnalyticsDashboardData["dataQuality"] }) {
   const rows = [
-    ["İstemci satın alma tamamlaması", data.client_completions],
-    ["Doğrulanmış ilk satın alma", data.verified_purchases],
-    ["Eski event’ten tamamlanan paywall", data.legacy_paywall_fallbacks],
-    ["Webhook öncesi subscription kaydı", data.subscription_cache_fallbacks],
-    ["Kaynağı eksik paywall", data.missing_paywall_source],
-    ["Offering kimliği eksik", data.missing_offering],
-    ["Sandbox webhook", data.sandbox_webhooks]
-  ] as const;
+    { label: "İstemci satın alma tamamlaması", value: data.client_completions },
+    { label: "Doğrulanmış ilk satın alma", value: data.verified_purchases },
+    { label: "Eski event’ten tamamlanan paywall", value: data.legacy_paywall_fallbacks },
+    { label: "Webhook öncesi subscription kaydı", value: data.subscription_cache_fallbacks },
+    { label: "Kaynağı eksik paywall", value: data.missing_paywall_source },
+    {
+      label: "RevenueCat offering kimliği alınamayan paywall",
+      value: data.missing_offering,
+      description: describeMissingOfferingEvents(data.missing_offering)
+    },
+    { label: "Sandbox webhook", value: data.sandbox_webhooks }
+  ];
   return (
     <View style={styles.healthList}>
-      {rows.map(([label, value]) => (
+      {rows.map(({ description, label, value }) => (
         <View key={label} style={styles.healthRow}>
-          <Text style={styles.rowLabel}>{label}</Text>
-          <Text style={[styles.rowValue, value > 0 && label.includes("eksik") && styles.warningValue]}>{formatCount(value)}</Text>
+          <View style={styles.healthCopy}>
+            <Text style={styles.rowLabel}>{label}</Text>
+            {description ? <Text style={styles.helperText}>{description}</Text> : null}
+          </View>
+          <Text style={[styles.rowValue, value > 0 && label.includes("alınamayan") && styles.warningValue]}>{formatCount(value)}</Text>
         </View>
       ))}
     </View>

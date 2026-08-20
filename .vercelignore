@@ -1,0 +1,8 @@
+# Dependencies are installed by Vercel from package-lock.json.
+node_modules/
+
+# Local and generated artifacts are not deployment source.
+.expo/
+dist/
+.tmp*/
+web-build/
