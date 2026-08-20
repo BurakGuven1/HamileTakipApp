@@ -42,6 +42,15 @@ export type SubscriptionHealth = {
   gross_revenue: number;
 };
 
+export type RevenueCatCustomerLifecycle = {
+  customer_key: string;
+  events: number;
+  first_webhook_at: string;
+  last_event_type: string;
+  last_product_id: string | null;
+  last_webhook_at: string;
+};
+
 export type AnalyticsTimeseriesPoint = {
   active_users: number;
   metric_date: string;
@@ -73,6 +82,7 @@ export type AnalyticsDashboardData = {
   from: string;
   funnel: FunnelStep[];
   offerings: OfferingPerformance[];
+  revenueCatLifecycle: RevenueCatCustomerLifecycle[];
   overview: AnalyticsOverview;
   paywallSources: PaywallSourcePerformance[];
   retention: RetentionCohort[];
@@ -100,6 +110,7 @@ export async function loadAnalyticsDashboard(
     creditFunnel,
     paywallSources,
     offerings,
+    revenueCatLifecycle,
     subscriptionHealth,
     timeseries,
     retention,
@@ -110,6 +121,7 @@ export async function loadAnalyticsDashboard(
     supabase.rpc("get_credit_conversion_funnel", args),
     supabase.rpc("get_paywall_source_performance", args),
     supabase.rpc("get_offering_performance", args),
+    supabase.rpc("get_revenuecat_customer_lifecycle", args),
     supabase.rpc("get_subscription_health", args),
     supabase.rpc("get_analytics_timeseries", args),
     supabase.rpc("get_analytics_retention", args),
@@ -122,6 +134,7 @@ export async function loadAnalyticsDashboard(
     creditFunnel.error,
     paywallSources.error,
     offerings.error,
+    revenueCatLifecycle.error,
     subscriptionHealth.error,
     timeseries.error,
     retention.error,
@@ -136,6 +149,7 @@ export async function loadAnalyticsDashboard(
     from: args.p_from,
     funnel: funnel.data ?? [],
     offerings: offerings.data ?? [],
+    revenueCatLifecycle: revenueCatLifecycle.data ?? [],
     overview: normalizeOverview(overview.data),
     paywallSources: paywallSources.data ?? [],
     retention: retention.data ?? [],

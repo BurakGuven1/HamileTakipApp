@@ -2452,6 +2452,17 @@ export type Database = {
           verified_purchases: number;
         }[];
       };
+      get_revenuecat_customer_lifecycle: {
+        Args: { p_from: string; p_to: string };
+        Returns: {
+          customer_key: string;
+          first_webhook_at: string;
+          last_webhook_at: string;
+          last_event_type: string;
+          last_product_id: string | null;
+          events: number;
+        }[];
+      };
       get_subscription_health: {
         Args: { p_from: string; p_to: string };
         Returns: {

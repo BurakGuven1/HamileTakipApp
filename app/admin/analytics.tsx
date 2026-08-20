@@ -311,6 +311,10 @@ function DashboardContent({ data, width }: { data: AnalyticsDashboardData; width
         </Panel>
       </View>
 
+      <Panel title="RevenueCat müşteri zaman çizelgesi" subtitle="Seçili dönemde webhook alan müşterilerin ilk/son abonelik olayıdır; uygulamaya geri dönüş ölçümü değildir.">
+        <RevenueCatLifecycleTable rows={data.revenueCatLifecycle} />
+      </Panel>
+
       <View style={[styles.twoColumn, compact && styles.singleColumn]}>
         <Panel style={styles.primaryPanel} title="Retention kohortları" subtitle="Tam 1., 7. ve 30. takvim gününde geri dönenler · — henüz ölçülmedi">
           <RetentionTable rows={data.retention.slice(-10).reverse()} />
@@ -443,6 +447,23 @@ function SubscriptionTable({ rows }: { rows: AnalyticsDashboardData["subscriptio
         </View>
       ))}
     </View>
+  );
+}
+
+function RevenueCatLifecycleTable({ rows }: { rows: AnalyticsDashboardData["revenueCatLifecycle"] }) {
+  if (!rows.length) return <EmptyRows />;
+  return (
+    <DataTable headers={["Müşteri", "İlk webhook", "Son webhook", "Son olay", "Olay"]}>
+      {rows.map((row) => (
+        <DataRow key={row.customer_key} cells={[
+          row.customer_key,
+          formatDateTime(row.first_webhook_at),
+          formatDateTime(row.last_webhook_at),
+          subscriptionEventLabels[row.last_event_type] ?? humanize(row.last_event_type),
+          formatCount(row.events)
+        ]} />
+      ))}
+    </DataTable>
   );
 }
 
@@ -580,6 +601,7 @@ function EmptyRows() {
 
 function formatCount(value: number) { return new Intl.NumberFormat("tr-TR").format(value); }
 function formatDecimal(value: number) { return new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 1 }).format(value); }
+function formatDateTime(value: string) { return new Intl.DateTimeFormat("tr-TR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value)); }
 function humanize(value: string) { return value.toLocaleLowerCase("tr-TR").replaceAll("_", " ").replace(/(^|\s)\S/g, (letter) => letter.toLocaleUpperCase("tr-TR")); }
 function retentionRate(users: number | null, cohort: number) { return users === null || !cohort ? "—" : `%${formatDecimal(users / cohort * 100)}`; }
 function getErrorMessage(error: unknown) { return error instanceof Error ? error.message : "Beklenmeyen bir hata oluştu."; }

@@ -4,6 +4,7 @@ import {
   dispatchPushes,
   type PushCandidate,
 } from "../_shared/push.ts";
+import { buildDailySupportCopy } from "./dailySupportCopy.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -182,12 +183,6 @@ Deno.serve(async (req) => {
       const article = matchingArticles.length > 0 && dayIndex % 2 === 0
         ? matchingArticles[dayIndex % matchingArticles.length]
         : null;
-      const support = week
-        ? pregnancySupport[dayIndex % pregnancySupport.length]
-        : baby
-          ? postpartumSupport[dayIndex % postpartumSupport.length]
-          : generalSupport[dayIndex % generalSupport.length];
-
       for (const userId of familyByOwner.get(profile.id) ?? []) {
         // A caregiver may coordinate explicitly shared pregnancy tasks, but
         // pregnancy week, maternal articles and wellbeing copy remain private.
@@ -196,28 +191,26 @@ Deno.serve(async (req) => {
         const recipientName = userId === profile.id
           ? profile.mother_name || "Anne"
           : memberNames.get(userId) || profile.father_name || "Aile üyesi";
-        const title = article
-          ? `${recipientName}, ${week}. hafta rehberin hazır`
-          : week
-            ? `${recipientName}, bugün kendine de iyi bak`
-            : baby
-              ? `${recipientName}, ${baby.name} kadar sen de önemlisin`
-              : `${recipientName}, bugünden küçük bir not`;
-        const body = article ? article.excerpt : support;
+        const copy = buildDailySupportCopy({
+          articleExcerpt: article?.excerpt ?? null,
+          babyName: baby?.name ?? null,
+          name: recipientName,
+          week,
+        });
 
         for (const token of tokensByUser.get(userId) ?? []) {
           candidates.push({
             dedupeKey: `daily-support:${profile.id}:${today}`,
-            kind: article ? "daily_article" : "daily_support",
+            kind: copy.screen === "article" ? "daily_article" : "daily_support",
             tokenId: token.id,
             token: token.expo_push_token,
             userId,
             message: {
-              title,
-              body,
+              title: copy.title,
+              body: copy.body,
               sound: "default",
               channelId: "daily-support",
-              data: article
+              data: copy.screen === "article" && article
                 ? {
                   type: "daily_article",
                   screen: "article",
