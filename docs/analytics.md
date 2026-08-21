@@ -32,12 +32,21 @@ for 15 months; daily aggregates are kept for 36 months.
 From the repository root:
 
 ```powershell
+supabase secrets set REVENUECAT_WEBHOOK_AUTH_HEADER="<strong-random-secret>" REVENUECAT_SECRET_API_KEY="sk_..." REVENUECAT_ENTITLEMENT_ID="premium" --workdir src
 supabase db push --linked --workdir src
+supabase functions deploy reconcile-revenuecat-subscription --workdir src
 supabase functions deploy revenuecat-webhook --no-verify-jwt --workdir src
-supabase secrets set REVENUECAT_WEBHOOK_AUTH_HEADER="Bearer <strong-random-secret>" --workdir src
 ```
 
-Configure the same Authorization header in the RevenueCat webhook settings.
+`REVENUECAT_SECRET_API_KEY` is server-only and must never use an
+`EXPO_PUBLIC_` prefix. Configure RevenueCat's webhook Authorization header as
+`Bearer <strong-random-secret>`; the Supabase secret itself contains only the
+raw random value.
+
+The authenticated `reconcile-revenuecat-subscription` function verifies the
+current Supabase user against RevenueCat after login and purchase restore. The
+webhook records both `PRODUCTION` and `SANDBOX` lifecycle analytics, while the
+effective subscription cache always gives known production state precedence.
 Then add the first dashboard administrator from the Supabase SQL Editor:
 
 ```sql
