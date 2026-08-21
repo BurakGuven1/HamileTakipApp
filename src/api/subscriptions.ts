@@ -1,14 +1,12 @@
 import { supabase } from "@/lib/supabase";
 import type { PremiumAccessSource } from "@/lib/revenuecat";
+import {
+  parseVerifiedSubscriptionAccess,
+  type VerifiedSubscriptionAccess
+} from "@/features/subscription/verifiedSubscriptionAccess";
 import type { Tables } from "@/types/database";
 
 export type Subscription = Tables<"subscriptions">;
-export type SubscriptionCacheStatus =
-  | "active"
-  | "cancelled"
-  | "expired"
-  | "grace_period";
-
 export type EffectivePremiumAccess = {
   accessExpiresAt: string | null;
   accessSource: PremiumAccessSource;
@@ -98,43 +96,24 @@ export async function getActiveSubscription() {
   return data;
 }
 
-export async function reconcileSubscription({
-  expiresAt,
-  isLifetime,
-  productId,
-  status
-}: {
-  expiresAt: string | null;
-  isLifetime: boolean;
-  productId: string;
-  status: SubscriptionCacheStatus;
-}) {
-  const {
-    data: { user },
-    error: userError
-  } = await supabase.auth.getUser();
+let reconciliationPromise: Promise<VerifiedSubscriptionAccess> | null = null;
 
-  if (userError) {
-    throw userError;
-  }
+export function reconcileRevenueCatSubscription() {
+  if (reconciliationPromise) return reconciliationPromise;
 
-  if (!user) {
-    return null;
-  }
-
-  const { data, error } = await supabase.rpc("reconcile_subscription", {
-    p_expires_at: expiresAt,
-    p_is_lifetime: isLifetime,
-    p_product_id: productId,
-    p_status: status,
-    p_user_id: user.id
+  reconciliationPromise = invokeRevenueCatReconciliation().finally(() => {
+    reconciliationPromise = null;
   });
+  return reconciliationPromise;
+}
 
-  if (error) {
-    throw error;
-  }
-
-  return data;
+async function invokeRevenueCatReconciliation() {
+  const { data, error } = await supabase.functions.invoke(
+    "reconcile-revenuecat-subscription",
+    { method: "POST" }
+  );
+  if (error) throw error;
+  return parseVerifiedSubscriptionAccess(data);
 }
 
 export async function isDay5OfferEligible() {
