@@ -16,6 +16,18 @@ type ProfileRow = {
   is_pregnant: boolean;
   due_date: string | null;
   notify_daily_support: boolean;
+  onboarding_completed: boolean;
+};
+
+type DailyAssignmentRow = {
+  id: string;
+  content_key: string;
+  life_stage: "pregnancy" | "postpartum";
+  opened_at: string | null;
+  payload: {
+    title?: string;
+    body?: string;
+  };
 };
 
 type BabyRow = {
@@ -94,9 +106,8 @@ Deno.serve(async (req) => {
         supabase
           .from("profiles")
           .select(
-            "id,mother_name,father_name,is_pregnant,due_date,notify_daily_support",
-          )
-          .eq("notify_daily_support", true),
+            "id,mother_name,father_name,is_pregnant,due_date,notify_daily_support,onboarding_completed",
+          ),
         supabase
           .from("family_members")
           .select("owner_id,member_id,display_name,access_scope"),
@@ -129,8 +140,10 @@ Deno.serve(async (req) => {
         .filter((item) => item.access_scope === "baby_care_only")
         .map((item) => item.member_id),
     );
-    const ownerProfiles = ((profileResult.data ?? []) as ProfileRow[])
-      .filter((profile) => !memberIds.has(profile.id));
+    const profiles = (profileResult.data ?? []) as ProfileRow[];
+    const profileById = new Map(profiles.map((profile) => [profile.id, profile]));
+    const ownerProfiles = profiles
+      .filter((profile) => !memberIds.has(profile.id) && profile.onboarding_completed);
 
     const familyByOwner = new Map<string, Set<string>>();
     for (const profile of ownerProfiles) {
@@ -168,8 +181,25 @@ Deno.serve(async (req) => {
     const dayIndex = Number(today.replaceAll("-", ""));
     const articles = (articleResult.data ?? []) as ArticleRow[];
     const candidates: PushCandidate[] = [];
+    const dailyAssignmentByOwner = new Map<string, DailyAssignmentRow>();
+
+    await Promise.all(ownerProfiles.map(async (profile) => {
+      const { data, error } = await supabase.rpc(
+        "ensure_daily_experience_for_profile",
+        { p_profile_id: profile.id },
+      );
+      if (error) {
+        console.warn("daily experience could not be prepared", profile.id, error.message);
+        return;
+      }
+      const assignment = data as DailyAssignmentRow | null;
+      if (assignment) {
+        dailyAssignmentByOwner.set(profile.id, assignment);
+      }
+    }));
 
     for (const profile of ownerProfiles) {
+      const dailyAssignment = dailyAssignmentByOwner.get(profile.id);
       const baby = babyByOwner.get(profile.id);
       const week = profile.is_pregnant && profile.due_date
         ? pregnancyWeek(profile.due_date, today)
@@ -184,6 +214,10 @@ Deno.serve(async (req) => {
         ? matchingArticles[dayIndex % matchingArticles.length]
         : null;
       for (const userId of familyByOwner.get(profile.id) ?? []) {
+        if (profileById.get(userId)?.notify_daily_support !== true) continue;
+        // The owner already received today's value in-app, so avoid a redundant
+        // acquisition notification. Caregivers still receive their own generic copy.
+        if (userId === profile.id && dailyAssignment?.opened_at) continue;
         // A caregiver may coordinate explicitly shared pregnancy tasks, but
         // pregnancy week, maternal articles and wellbeing copy remain private.
         if (profile.is_pregnant && babyCareOnlyMemberIds.has(userId)) continue;
@@ -199,18 +233,40 @@ Deno.serve(async (req) => {
         });
 
         for (const token of tokensByUser.get(userId) ?? []) {
+          const hasPersonalizedCopy = Boolean(
+            userId === profile.id
+              && dailyAssignment
+              && typeof dailyAssignment.payload?.title === "string"
+              && typeof dailyAssignment.payload?.body === "string",
+          );
           candidates.push({
-            dedupeKey: `daily-support:${profile.id}:${today}`,
-            kind: copy.screen === "article" ? "daily_article" : "daily_support",
+            dedupeKey: hasPersonalizedCopy
+              ? `daily-experience:${profile.id}:${today}`
+              : `daily-support:${profile.id}:${today}`,
+            kind: hasPersonalizedCopy
+              ? "daily_experience"
+              : copy.screen === "article" ? "daily_article" : "daily_support",
             tokenId: token.id,
             token: token.expo_push_token,
             userId,
             message: {
-              title: copy.title,
-              body: copy.body,
+              title: hasPersonalizedCopy
+                ? dailyAssignment!.payload.title!
+                : copy.title,
+              body: hasPersonalizedCopy
+                ? dailyAssignment!.payload.body!
+                : copy.body,
               sound: "default",
               channelId: "daily-support",
-              data: copy.screen === "article" && article
+              data: hasPersonalizedCopy
+                ? {
+                  type: "daily_experience",
+                  screen: "home",
+                  assignment_id: dailyAssignment!.id,
+                  content_key: dailyAssignment!.content_key,
+                  lifecycle: dailyAssignment!.life_stage,
+                }
+                : copy.screen === "article" && article
                 ? {
                   type: "daily_article",
                   screen: "article",

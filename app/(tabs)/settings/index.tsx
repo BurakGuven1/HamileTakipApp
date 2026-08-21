@@ -877,6 +877,15 @@ export default function SettingsScreen() {
                     updatePreferenceMutation.mutate({ notify_premium_offers: value })
                   }
                 />
+                <PreferenceRow
+                  label="E-posta ile Premium fırsatları"
+                  description="Premium yenilik ve fırsatlarını e-postayla almak için açık rızandır. Varsayılan olarak kapalıdır; istediğin an kapatabilirsin."
+                  value={Boolean(profile?.notify_premium_emails)}
+                  disabled={!profile || updatePreferenceMutation.isPending}
+                  onValueChange={(value) =>
+                    updatePreferenceMutation.mutate({ notify_premium_emails: value })
+                  }
+                />
                 {experienceStage === "pregnancy" ? (
                   <PreferenceRow
                     label="Günlük su hatırlatmaları · Ücretsiz"

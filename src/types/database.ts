@@ -33,6 +33,8 @@ export type Database = {
           notify_milk_inventory: boolean;
           notify_daily_support: boolean;
           notify_premium_offers: boolean;
+          notify_premium_emails: boolean;
+          premium_email_consent_at: string | null;
           feeding_mode: "breastfeeding" | "pumping" | "mixed" | "formula";
           created_at: string;
           updated_at: string;
@@ -60,6 +62,8 @@ export type Database = {
           notify_milk_inventory?: boolean;
           notify_daily_support?: boolean;
           notify_premium_offers?: boolean;
+          notify_premium_emails?: boolean;
+          premium_email_consent_at?: string | null;
           feeding_mode?: "breastfeeding" | "pumping" | "mixed" | "formula";
           created_at?: string;
           updated_at?: string;
@@ -86,6 +90,7 @@ export type Database = {
           notify_milk_inventory?: boolean;
           notify_daily_support?: boolean;
           notify_premium_offers?: boolean;
+          notify_premium_emails?: boolean;
           feeding_mode?: "breastfeeding" | "pumping" | "mixed" | "formula";
           updated_at?: string;
         };

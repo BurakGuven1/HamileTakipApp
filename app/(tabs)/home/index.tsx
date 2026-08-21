@@ -42,6 +42,14 @@ import {
 import { useReducedMotion } from "react-native-reanimated";
 
 import { listBabies, type Baby as BabyRecord } from "@/api/babies";
+import {
+  completeDailyExperience,
+  DAILY_EXPERIENCE_QUERY_KEY,
+  getTodayDailyExperience,
+  getWeeklyCheckInContext,
+  submitWeeklyCheckIn,
+  WEEKLY_CHECKIN_QUERY_KEY
+} from "@/api/dailyExperience";
 import { getCareHandoverSnapshot, getCurrentCareUserId, listCareJournalEntries, subscribeToCareCoordination, takeOverBabyCare, type CareJournalEntry } from "@/api/careJournal";
 import { getCurrentFamilyMembership } from "@/api/familyAccess";
 import { getFeaturedArticlesForExperience } from "@/api/articles";
@@ -66,10 +74,15 @@ import { Screen } from "@/components/Screen";
 import { Thread } from "@/components/Thread";
 import { VibrantBackdrop } from "@/components/VibrantBackdrop";
 import { WeeklyBabyDevelopmentCard } from "@/components/WeeklyBabyDevelopmentCard";
+import { DailyForYouCard } from "@/features/daily-experience/DailyForYouCard";
+import { getDailyDestinationPath } from "@/features/daily-experience/dailyExperiencePolicy";
+import { WeeklyCheckInCard } from "@/features/daily-experience/WeeklyCheckInCard";
 import { syncCareQuickWidget } from "@/features/care-journal/widgetSync";
 import type { Article } from "@/features/articles/articles";
 import { getExperienceStage } from "@/features/life-stage/lifeStage";
 import { getPregnancyWeekInfo } from "@/features/pregnancy/weekInfo";
+import { showPaywallIfNeeded } from "@/features/subscription/showPaywallIfNeeded";
+import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
 import {
   formatDate,
   getBabyAgeLabel,
@@ -77,6 +90,7 @@ import {
   getRelativeDayLabel
 } from "@/lib/dates";
 import { useFeedback } from "@/providers/FeedbackProvider";
+import { trackProductEvent } from "@/services/analytics/productAnalytics";
 import {
   colors,
   radii,
@@ -92,6 +106,7 @@ const motherBabyIllustration = require("../../../assets/illustrations/mother-bab
 export default function HomeScreen() {
   const queryClient = useQueryClient();
   const { showError, showInfo, showSuccess } = useFeedback();
+  const { isPremium } = useSubscriptionStatus();
   const reducedMotion = useReducedMotion();
   const profileQuery = useQuery({
     queryKey: ["current-profile"],
@@ -113,6 +128,24 @@ export default function HomeScreen() {
     enabled: Boolean(firstBaby?.id && firstBaby.photo_url)
   });
   const profile = profileQuery.data;
+  const dailyExperienceEnabled = Boolean(
+    profile?.onboarding_completed
+      && currentUserQuery.data
+      && currentUserQuery.data === profile.id
+  );
+  const weeklyCheckInQuery = useQuery({
+    queryKey: WEEKLY_CHECKIN_QUERY_KEY,
+    queryFn: getWeeklyCheckInContext,
+    enabled: dailyExperienceEnabled,
+    staleTime: 60_000
+  });
+  const dailyExperienceQuery = useQuery({
+    queryKey: DAILY_EXPERIENCE_QUERY_KEY,
+    queryFn: getTodayDailyExperience,
+    enabled: dailyExperienceEnabled,
+    staleTime: 60_000
+  });
+  const dailyExperience = dailyExperienceQuery.data;
   const experienceStage = getExperienceStage(profile, Boolean(firstBaby));
   const isMotherhoodMode = experienceStage === "postpartum";
   const isPregnancyMode = experienceStage === "pregnancy";
@@ -177,6 +210,41 @@ export default function HomeScreen() {
   const careGiverName = membershipQuery.data
     ? profile?.father_name || "Baba"
     : profile?.mother_name || profile?.display_name || "Anne";
+  const weeklyCheckInMutation = useMutation({
+    mutationFn: submitWeeklyCheckIn,
+    onSuccess: async () => {
+      showSuccess("Sonraki önerilerin cevaplarına göre hazırlanacak.", "Haftan hazır");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: WEEKLY_CHECKIN_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: DAILY_EXPERIENCE_QUERY_KEY })
+      ]);
+      void trackProductEvent("weekly_checkin_completed", {
+        life_stage: experienceStage,
+        week_key: weeklyCheckInQuery.data?.weekKey ?? null
+      });
+    },
+    onError: (error) => showError(error, "Haftalık cevapların kaydedilemedi")
+  });
+  const dailyCompleteMutation = useMutation({
+    mutationFn: completeDailyExperience,
+    onSuccess: async () => {
+      showSuccess("Küçük adımını tamamladın.", "Bugün tamamlandı");
+      await queryClient.invalidateQueries({ queryKey: DAILY_EXPERIENCE_QUERY_KEY });
+      void trackProductEvent("daily_experience_completed", {
+        content_key: dailyExperience?.contentKey ?? null,
+        life_stage: experienceStage
+      });
+    },
+    onError: (error) => showError(error, "Bugünkü adım kaydedilemedi")
+  });
+
+  useEffect(() => {
+    if (!dailyExperience?.id) return;
+    void trackProductEvent("daily_experience_opened", {
+      content_key: dailyExperience.contentKey,
+      life_stage: dailyExperience.lifeStage
+    });
+  }, [dailyExperience?.contentKey, dailyExperience?.id, dailyExperience?.lifeStage]);
   const handoverMutation = useMutation({
     mutationFn: async () => {
       if (!firstBaby) throw new Error("Bebek profili bulunamadı.");
@@ -363,6 +431,47 @@ export default function HomeScreen() {
     <Screen>
       <View style={styles.container}>
         <VibrantBackdrop />
+        {weeklyCheckInQuery.data?.needsCheckIn ? (
+          <Reveal>
+            <WeeklyCheckInCard
+              context={weeklyCheckInQuery.data}
+              onSubmit={(input) => weeklyCheckInMutation.mutate(input)}
+              pending={weeklyCheckInMutation.isPending}
+              profileId={profile!.id}
+            />
+          </Reveal>
+        ) : null}
+        {dailyExperience ? (
+          <Reveal>
+            <DailyForYouCard
+              experience={dailyExperience}
+              isPremium={isPremium}
+              onAction={() => {
+                void trackProductEvent("daily_experience_action_tapped", {
+                  content_key: dailyExperience.contentKey,
+                  destination: dailyExperience.payload.destination
+                });
+                router.push(getDailyDestinationPath(dailyExperience.payload.destination) as Href);
+              }}
+              onComplete={() => dailyCompleteMutation.mutate(dailyExperience.id)}
+              onPremiumPress={() => {
+                void trackProductEvent("daily_premium_teaser_tapped", {
+                  content_key: dailyExperience.contentKey,
+                  life_stage: dailyExperience.lifeStage
+                });
+                void showPaywallIfNeeded(
+                  "daily_personalized_insight",
+                  {
+                    feature: "daily_personalized_insight",
+                    life_stage: dailyExperience.lifeStage
+                  },
+                  { mode: "required" }
+                ).catch((error) => showError(error, "Premium ekranı açılamadı"));
+              }}
+              pending={dailyCompleteMutation.isPending}
+            />
+          </Reveal>
+        ) : null}
         {!isPregnancyMode ? (
           <Reveal>
             <View style={[styles.hero, { backgroundColor: appTheme.primarySoft }]}>
