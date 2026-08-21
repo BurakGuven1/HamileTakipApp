@@ -50,7 +50,8 @@ export function buildWebhookSubscriptionWrite(
     expiresAt: expirationAtMs === null
       ? null
       : new Date(expirationAtMs).toISOString(),
-    isLifetime: false,
+    isLifetime:
+      eventType === "NON_RENEWING_PURCHASE" && expirationAtMs === null,
     productId,
     status,
     userId,

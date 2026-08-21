@@ -44,6 +44,20 @@ Deno.test("refund expires access", () => {
   assertEquals(mapEventTypeToStatus("REFUND", null), "expired");
 });
 
+Deno.test("non-renewing purchase without expiration keeps lifetime access", () => {
+  const write = buildWebhookSubscriptionWrite({
+    environment: "PRODUCTION",
+    event_timestamp_ms: Date.parse("2026-08-21T10:00:00Z"),
+    expiration_at_ms: null,
+    product_id: "premium.lifetime",
+    type: "NON_RENEWING_PURCHASE"
+  }, "11111111-1111-4111-8111-111111111111");
+
+  assertEquals(write?.status, "active");
+  assertEquals(write?.expiresAt, null);
+  assertEquals(write?.isLifetime, true);
+});
+
 Deno.test("transfer collects unique valid source and destination UUIDs", () => {
   assertEquals(getTransferUserIds({
     transferred_from: [

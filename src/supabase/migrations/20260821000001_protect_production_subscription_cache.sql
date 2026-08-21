@@ -211,6 +211,8 @@ with lifecycle_events as (
     upper(coalesce(nullif(trim(re.environment), ''), 'UNKNOWN')) as environment,
     re.event_at,
     re.expiration_at,
+    re.event_type = 'NON_RENEWING_PURCHASE'
+      and re.expiration_at is null as is_lifetime,
     case
       when re.event_type in (
         'INITIAL_PURCHASE',
@@ -265,7 +267,7 @@ set
   product_id = p.product_id,
   status = p.status,
   expires_at = p.expiration_at,
-  is_lifetime = false,
+  is_lifetime = p.is_lifetime,
   environment = case
     when p.environment in ('PRODUCTION', 'SANDBOX') then p.environment
     else 'UNKNOWN'
