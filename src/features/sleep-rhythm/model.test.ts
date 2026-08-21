@@ -57,3 +57,21 @@ Deno.test("prediction becomes available after seven completed sleeps", () => {
   assert(Date.parse(prediction.nextSleep.centerAt) > lastWake, "Next sleep must be after the last wake");
   assert(Date.parse(prediction.nextWake.centerAt) > Date.parse(prediction.nextSleep.centerAt), "Wake prediction must follow sleep prediction");
 });
+
+Deno.test("seven valid completed sleeps do not stall on short test wake intervals", () => {
+  const events = [];
+  const base = Date.parse("2026-08-01T08:00:00.000Z");
+
+  for (let index = 0; index < 7; index += 1) {
+    const sleepAt = base + index * 35 * 60_000;
+    events.push(event(`s${index}`, "sleep", new Date(sleepAt).toISOString()));
+    events.push(event(`w${index}`, "wake", new Date(sleepAt + 30 * 60_000).toISOString()));
+  }
+
+  const now = Date.parse(events.at(-1).occurred_at) + 2 * 60_000;
+  const prediction = predictSleepRhythm(events, now);
+
+  assert(prediction?.sampleCount === 7, "Seven valid completed sleeps should be prediction-ready");
+  assert(Date.parse(prediction.nextSleep.centerAt) > now, "Next sleep must stay in the future");
+  assert(Date.parse(prediction.nextWake.centerAt) > Date.parse(prediction.nextSleep.centerAt), "Next wake must follow next sleep");
+});

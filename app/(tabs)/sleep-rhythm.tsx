@@ -2,7 +2,7 @@ import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { History, LockKeyhole, Moon, Plus, Sun } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import Animated, {
   FadeIn,
   FadeInDown,
@@ -32,6 +32,7 @@ import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
 import { SleepEventSheet } from "@/features/sleep-rhythm/SleepEventSheet";
 import { SleepHistorySheet } from "@/features/sleep-rhythm/SleepHistorySheet";
+import { getSleepPredictionPresentation } from "@/features/sleep-rhythm/predictionPresentation";
 import {
   createRhythmSegments,
   formatDuration,
@@ -61,7 +62,11 @@ export default function SleepRhythmScreen() {
   const { width } = useWindowDimensions();
   const reducedMotion = useReducedMotion();
   const { showError, showInfo, showSuccess } = useFeedback();
-  const { isPremium: accountPremium } = useSubscriptionStatus();
+  const {
+    isLoading: subscriptionLoading,
+    isPremium: accountPremium,
+    refetch: refreshSubscriptionStatus
+  } = useSubscriptionStatus();
   const [now, setNow] = useState(Date.now());
   const [sheetVisible, setSheetVisible] = useState(false);
   const [historyVisible, setHistoryVisible] = useState(false);
@@ -69,6 +74,7 @@ export default function SleepRhythmScreen() {
   const [inlineMessage, setInlineMessage] = useState<string | null>(null);
   const [lastQuickEvent, setLastQuickEvent] = useState<BabySleepEvent | null>(null);
   const [highlightedEventId, setHighlightedEventId] = useState<string | null>(null);
+  const [openingPrediction, setOpeningPrediction] = useState<"next_sleep" | "next_wake" | null>(null);
   const trackedRef = useRef(false);
 
   const babiesQuery = useQuery({ enabled: !previewMode, queryKey: ["babies"], queryFn: listBabies });
@@ -82,13 +88,17 @@ export default function SleepRhythmScreen() {
     queryKey: ["family-premium-care", selectedBaby?.id]
   });
   const isPremium = previewMode ? previewPremiumParam === "1" : accountPremium || Boolean(premiumFamilyQuery.data);
+  const premiumAccessLoading = !previewMode && (subscriptionLoading || premiumFamilyQuery.isLoading);
   const eventsQuery = useQuery({
     enabled: Boolean(!previewMode && selectedBaby?.id),
     queryFn: () => listBabySleepEvents(selectedBaby?.id as string),
     queryKey: [EVENTS_QUERY_KEY, selectedBaby?.id]
   });
   const previewEvents = useMemo(() => createPreviewEvents(), []);
-  const events = previewMode ? previewEvents : (eventsQuery.data ?? []);
+  const events = useMemo(
+    () => previewMode ? previewEvents : (eventsQuery.data ?? []),
+    [eventsQuery.data, previewEvents, previewMode]
+  );
   const currentState = useMemo(() => getCurrentSleepState(events, now), [events, now]);
   const completedSleepCount = useMemo(() => getPredictionSampleCount(events, now), [events, now]);
   const prediction = useMemo(() => predictSleepRhythm(events, now), [events, now]);
@@ -230,16 +240,32 @@ export default function SleepRhythmScreen() {
   }
 
   async function openPredictionPaywall(source: "next_sleep" | "next_wake") {
-    await trackEvent("sleep_rhythm_prediction_locked_tapped", {
-      prediction_type: source,
-      sample_count: completedSleepCount
-    });
-    await showPaywallIfNeeded(PREMIUM_FEATURES.sleepPrediction.source, {
-      feature: `sleep_rhythm_${source}`,
-      life_stage: "postpartum",
-      reason: "sleep_prediction_locked",
-      sample_count: completedSleepCount
-    });
+    if (openingPrediction) return;
+    setOpeningPrediction(source);
+    try {
+      await trackEvent("sleep_rhythm_prediction_locked_tapped", {
+        prediction_type: source,
+        sample_count: completedSleepCount
+      });
+      const result = await showPaywallIfNeeded(PREMIUM_FEATURES.sleepPrediction.source, {
+        feature: `sleep_rhythm_${source}`,
+        life_stage: "postpartum",
+        reason: "sleep_prediction_locked",
+        sample_count: completedSleepCount
+      });
+
+      if (result.didBecomePremium) {
+        await Promise.all([
+          refreshSubscriptionStatus(),
+          premiumFamilyQuery.refetch()
+        ]);
+        showSuccess("Uyku tahminlerin Premium ile açıldı.", "Premium aktif");
+      }
+    } catch (error) {
+      showError(error, "Premium ekranı açılamadı");
+    } finally {
+      setOpeningPrediction(null);
+    }
   }
 
   function openAddSheet() {
@@ -311,19 +337,21 @@ export default function SleepRhythmScreen() {
 
           <View style={styles.predictionGrid}>
             <PredictionTile
-              enoughData={completedSleepCount >= REQUIRED_SLEEP_SAMPLES}
+              isAccessLoading={premiumAccessLoading}
               isPremium={isPremium}
               label="Tahmini uyku"
               onLockedPress={() => void openPredictionPaywall("next_sleep")}
+              opening={openingPrediction === "next_sleep"}
               prediction={prediction?.nextSleep ?? null}
               sampleCount={completedSleepCount}
               type="sleep"
             />
             <PredictionTile
-              enoughData={completedSleepCount >= REQUIRED_SLEEP_SAMPLES}
+              isAccessLoading={premiumAccessLoading}
               isPremium={isPremium}
               label="Tahmini uyanma"
               onLockedPress={() => void openPredictionPaywall("next_wake")}
+              opening={openingPrediction === "next_wake"}
               prediction={prediction?.nextWake ?? null}
               sampleCount={completedSleepCount}
               type="wake"
@@ -425,29 +453,44 @@ export default function SleepRhythmScreen() {
   );
 }
 
-function PredictionTile({ enoughData, isPremium, label, onLockedPress, prediction, sampleCount, type }: {
-  enoughData: boolean;
+function PredictionTile({ isAccessLoading, isPremium, label, onLockedPress, opening, prediction, sampleCount, type }: {
+  isAccessLoading: boolean;
   isPremium: boolean;
   label: string;
   onLockedPress: () => void;
+  opening: boolean;
   prediction: ReturnType<typeof predictSleepRhythm> extends infer R ? R extends { nextSleep: infer P } ? P | null : never : never;
   sampleCount: number;
   type: SleepEventType;
 }) {
-  const content = !enoughData ? (
-    <><Text style={styles.predictionLearning}>{Math.min(sampleCount, REQUIRED_SLEEP_SAMPLES)}/{REQUIRED_SLEEP_SAMPLES} kayıt</Text><Text style={styles.predictionHelp}>Tahmin için birkaç uyku daha gerekli</Text></>
-  ) : !isPremium ? (
-    <><View style={styles.lockRow}><LockKeyhole color={palette.mintText} size={17} /><Text style={styles.lockText}>Premium</Text></View><Text style={styles.maskedTime}>••:•• – ••:••</Text><Text style={styles.predictionHelp}>Görmek için dokun</Text></>
-  ) : prediction ? (
+  const presentation = getSleepPredictionPresentation({
+    isAccessLoading,
+    isPremium,
+    predictionReady: Boolean(prediction),
+    requiredSampleCount: REQUIRED_SLEEP_SAMPLES,
+    sampleCount
+  });
+  const remainingSleepCount = Math.max(0, REQUIRED_SLEEP_SAMPLES - sampleCount);
+  const content = presentation === "learning" ? (
+    <>
+      <Text style={styles.predictionLearning}>{Math.min(sampleCount, REQUIRED_SLEEP_SAMPLES)}/{REQUIRED_SLEEP_SAMPLES} tamamlanmış uyku</Text>
+      <Text style={styles.predictionHelp}>{remainingSleepCount} uyku daha gerekli · en az 10 dk</Text>
+    </>
+  ) : presentation === "checking_access" ? (
+    <><View style={styles.lockRow}><ActivityIndicator color={palette.mintText} size="small" /><Text style={styles.lockText}>Erişim kontrol ediliyor</Text></View><Text style={styles.predictionHelp}>Premium durumu yenileniyor</Text></>
+  ) : presentation === "locked" ? (
+    <><View style={styles.lockRow}>{opening ? <ActivityIndicator color={palette.mintText} size="small" /> : <LockKeyhole color={palette.mintText} size={17} />}<Text style={styles.lockText}>{opening ? "Açılıyor…" : "Premium"}</Text></View><Text style={styles.maskedTime}>••:•• – ••:••</Text><Text style={styles.predictionHelp}>Tahmini görmek için dokun</Text></>
+  ) : presentation === "ready" && prediction ? (
     <><Text style={styles.predictionTime}>{formatClock(prediction.startAt)}–{formatClock(prediction.endAt)}</Text><Text style={styles.predictionUncertainty}>±{prediction.uncertaintyMinutes} dk</Text></>
   ) : (
-    <><Text style={styles.predictionLearning}>Örüntü gelişiyor</Text><Text style={styles.predictionHelp}>Bir sonraki geçişle yenilenecek</Text></>
+    <><Text style={styles.predictionLearning}>Örüntü yenileniyor</Text><Text style={styles.predictionHelp}>Son kayıtlarla tekrar hesaplanıyor</Text></>
   );
   return (
     <Pressable
-      accessibilityLabel={`${label}. ${!enoughData ? `${sampleCount} / ${REQUIRED_SLEEP_SAMPLES} kayıt` : !isPremium ? "Premium kilitli, açmak için dokun" : prediction ? `${formatClock(prediction.startAt)} ile ${formatClock(prediction.endAt)} arası` : "Hesaplanıyor"}`}
-      accessibilityRole={!isPremium && enoughData ? "button" : "text"}
-      disabled={isPremium || !enoughData}
+      accessibilityLabel={`${label}. ${presentation === "learning" ? `${sampleCount} / ${REQUIRED_SLEEP_SAMPLES} tamamlanmış uyku` : presentation === "checking_access" ? "Premium erişimi kontrol ediliyor" : presentation === "locked" ? opening ? "Premium ekranı açılıyor" : "Premium kilitli, açmak için dokun" : presentation === "ready" && prediction ? `${formatClock(prediction.startAt)} ile ${formatClock(prediction.endAt)} arası` : "Hesaplanıyor"}`}
+      accessibilityRole={presentation === "locked" ? "button" : "text"}
+      accessibilityState={{ busy: opening || presentation === "checking_access", disabled: presentation !== "locked" || opening }}
+      disabled={presentation !== "locked" || opening}
       onPress={onLockedPress}
       style={[styles.predictionTile, type === "sleep" && styles.predictionTileSleep]}
     >
@@ -517,7 +560,7 @@ function isToday(value: string) {
 
 function createPreviewEvents(): BabySleepEvent[] {
   const now = new Date();
-  const definitions: Array<[number, number, number, SleepEventType]> = [];
+  const definitions: [number, number, number, SleepEventType][] = [];
   for (let dayOffset = 7; dayOffset >= 1; dayOffset -= 1) {
     definitions.push([dayOffset, 7, 30, "wake"], [dayOffset, 11, 55, "sleep"], [dayOffset, 14, 5, "wake"]);
   }
