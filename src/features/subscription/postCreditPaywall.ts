@@ -42,12 +42,16 @@ export async function showPostCreditPaywallIfNeeded({
   });
 
   await delay(POST_SUCCESS_DELAY_MS);
-  const result = await showPaywallIfNeeded(source, {
-    feature,
-    life_stage: lifeStage,
-    reason: "last_free_credit_used",
-    remaining: 0
-  });
+  const result = await showPaywallIfNeeded(
+    source,
+    {
+      feature,
+      life_stage: lifeStage,
+      reason: "last_free_credit_used",
+      remaining: 0
+    },
+    { mode: "required" }
+  );
   return result.presented;
 }
 

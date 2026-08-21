@@ -442,7 +442,7 @@ export default function FamilyPlannerScreen() {
         life_stage: stage,
         reason: "free_credits_exhausted",
         remaining: 0
-      });
+      }, { mode: "required" });
     } catch (error) {
       showError(error, "Premium ekranı açılamadı");
     }

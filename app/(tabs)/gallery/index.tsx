@@ -120,7 +120,7 @@ function GalleryContent() {
         feature: "baby_memory_gallery",
         free_limit: galleryAccessQuery.data?.limit ?? 5,
         used: galleryAccessQuery.data?.used ?? 5
-      });
+      }, { mode: "required" });
       return;
     }
 
