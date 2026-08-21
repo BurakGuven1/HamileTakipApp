@@ -93,7 +93,7 @@ export default function DocumentInsightScreen() {
       life_stage: lifeStage,
       reason: "free_credits_exhausted",
       remaining: 0
-    });
+    }, { mode: "required" });
     return false;
   }
 
@@ -216,7 +216,7 @@ export default function DocumentInsightScreen() {
           life_stage: lifeStage,
           reason: "free_credits_exhausted",
           remaining: 0
-        });
+        }, { mode: "required" });
         return;
       }
       creditReserved = !reservation.is_premium;
@@ -287,7 +287,7 @@ export default function DocumentInsightScreen() {
         feature: "pregnancy_health_file_save",
         life_stage: "pregnancy",
         reason: "premium_feature_selected"
-      });
+      }, { mode: "required" });
       return;
     }
     if (!storageConsentAccepted) {

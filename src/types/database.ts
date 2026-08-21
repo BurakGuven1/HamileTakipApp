@@ -33,6 +33,8 @@ export type Database = {
           notify_milk_inventory: boolean;
           notify_daily_support: boolean;
           notify_premium_offers: boolean;
+          notify_premium_emails: boolean;
+          premium_email_consent_at: string | null;
           feeding_mode: "breastfeeding" | "pumping" | "mixed" | "formula";
           created_at: string;
           updated_at: string;
@@ -60,6 +62,8 @@ export type Database = {
           notify_milk_inventory?: boolean;
           notify_daily_support?: boolean;
           notify_premium_offers?: boolean;
+          notify_premium_emails?: boolean;
+          premium_email_consent_at?: string | null;
           feeding_mode?: "breastfeeding" | "pumping" | "mixed" | "formula";
           created_at?: string;
           updated_at?: string;
@@ -86,6 +90,7 @@ export type Database = {
           notify_milk_inventory?: boolean;
           notify_daily_support?: boolean;
           notify_premium_offers?: boolean;
+          notify_premium_emails?: boolean;
           feeding_mode?: "breastfeeding" | "pumping" | "mixed" | "formula";
           updated_at?: string;
         };
@@ -2450,6 +2455,17 @@ export type Database = {
           impressions: number;
           purchase_starts: number;
           verified_purchases: number;
+        }[];
+      };
+      get_revenuecat_customer_lifecycle: {
+        Args: { p_from: string; p_to: string };
+        Returns: {
+          customer_key: string;
+          first_webhook_at: string;
+          last_webhook_at: string;
+          last_event_type: string;
+          last_product_id: string | null;
+          events: number;
         }[];
       };
       get_subscription_health: {

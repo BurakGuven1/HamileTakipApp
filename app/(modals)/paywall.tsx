@@ -9,9 +9,9 @@ import type {
 } from "react-native-purchases";
 import RevenueCatUI from "react-native-purchases-ui";
 
+import { reconcileRevenueCatSubscription } from "@/api/subscriptions";
 import { Button } from "@/components/Button";
 import { QueryState } from "@/components/QueryState";
-import { reconcileCustomerInfoWithSupabase } from "@/features/subscription/reconcileSubscription";
 import { createAnalyticsEventId, trackEvent } from "@/lib/analytics";
 import { getErrorMessage } from "@/lib/errors";
 import {
@@ -125,15 +125,24 @@ export default function PaywallScreen() {
     );
 
     try {
-      await reconcileCustomerInfoWithSupabase(customerInfo);
-      await queryClient.invalidateQueries({
-        queryKey: SUBSCRIPTION_STATUS_QUERY_KEY
-      });
+      await reconcileRevenueCatSubscription();
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_STATUS_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: ["family-feature-access"] }),
+        queryClient.invalidateQueries({ queryKey: ["family-coordination-context"] }),
+        queryClient.invalidateQueries({ queryKey: ["baby-gallery-access"] })
+      ]);
     } catch (error) {
       await logPaywallError("sync", error, {
         paywallViewId: paywallViewIdRef.current,
         paywallSource: getPaywallSource(params.source)
       });
+      if (status.isPremium) {
+        showError(
+          new Error("Satın alma tamamlandı ancak Premium sunucuyla eşitlenemedi. Lütfen tekrar geri yükleyin."),
+          "Premium eşitlenemedi"
+        );
+      }
     }
 
     return status;

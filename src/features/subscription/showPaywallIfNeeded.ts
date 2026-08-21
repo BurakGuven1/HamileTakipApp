@@ -8,6 +8,11 @@ import {
   getSubscriptionStatusFromCustomerInfo
 } from "@/lib/revenuecat";
 
+import {
+  shouldCheckPremiumBeforePaywall,
+  type PremiumPaywallMode
+} from "./paywallPolicy";
+
 type PaywallTriggerProperties = Record<string, string | number | boolean | null>;
 
 export type PaywallPresentationResult = {
@@ -18,34 +23,40 @@ export type PaywallPresentationResult = {
 
 export async function showPaywallIfNeeded(
   source: string,
-  properties: PaywallTriggerProperties = {}
+  properties: PaywallTriggerProperties = {},
+  options: { mode?: PremiumPaywallMode } = {}
 ): Promise<PaywallPresentationResult> {
+  const presentationMode = options.mode ?? "if_needed";
   await trackEvent("premium_gate_hit", {
     ...properties,
+    presentation_mode: presentationMode,
     source
   });
 
-  try {
-    configureRevenueCat();
-    const [customerInfo, effectiveAccess] = await Promise.all([
-      getCustomerInfo(),
-      getEffectivePremiumAccess().catch(() => null)
-    ]);
-    const status = getSubscriptionStatusFromCustomerInfo(customerInfo);
+  if (shouldCheckPremiumBeforePaywall(presentationMode)) {
+    try {
+      configureRevenueCat();
+      const [customerInfo, effectiveAccess] = await Promise.all([
+        getCustomerInfo(),
+        getEffectivePremiumAccess().catch(() => null)
+      ]);
+      const status = getSubscriptionStatusFromCustomerInfo(customerInfo);
 
-    if (status.isPremium || effectiveAccess?.isPremium) {
-      return {
-        didBecomePremium: true,
-        presented: false,
-        result: "already_premium"
-      };
+      if (status.isPremium || effectiveAccess?.isPremium) {
+        return {
+          didBecomePremium: true,
+          presented: false,
+          result: "already_premium"
+        };
+      }
+    } catch (error) {
+      console.warn("Premium durum kontrolu yapilamadi", error);
     }
-  } catch (error) {
-    console.warn("Premium durum kontrolu yapilamadi", error);
   }
 
   await trackEvent("paywall_requested", {
     ...properties,
+    presentation_mode: presentationMode,
     source
   });
 

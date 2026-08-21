@@ -25,6 +25,7 @@ import {
 } from "@/api/profiles";
 import { listBabies } from "@/api/babies";
 import { getCurrentFamilyMembership } from "@/api/familyAccess";
+import { reconcileRevenueCatSubscription } from "@/api/subscriptions";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Screen } from "@/components/Screen";
@@ -39,7 +40,6 @@ import {
   setWaterRemindersEnabled,
   WATER_REMINDER_TIME_LABEL
 } from "@/features/pregnancy/waterReminders";
-import { reconcileCustomerInfoWithSupabase } from "@/features/subscription/reconcileSubscription";
 import { showPaywallIfNeeded } from "@/features/subscription/showPaywallIfNeeded";
 import {
   getSubscriptionStatusFromCustomerInfo,
@@ -333,12 +333,26 @@ export default function SettingsScreen() {
         SUBSCRIPTION_STATUS_QUERY_KEY,
         status
       );
-      await reconcileCustomerInfoWithSupabase(customerInfo);
-      await queryClient.invalidateQueries({
-        queryKey: SUBSCRIPTION_STATUS_QUERY_KEY
-      });
+      let verifiedAccess;
+      try {
+        verifiedAccess = await reconcileRevenueCatSubscription();
+      } catch (error) {
+        if (hasPremiumEntitlement(customerInfo)) {
+          throw new Error(
+            "Satın alma mağazada bulundu ancak Premium sunucuyla eşitlenemedi. Lütfen yeniden deneyin.",
+            { cause: error }
+          );
+        }
+        throw error;
+      }
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_STATUS_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: ["family-feature-access"] }),
+        queryClient.invalidateQueries({ queryKey: ["family-coordination-context"] }),
+        queryClient.invalidateQueries({ queryKey: ["baby-gallery-access"] })
+      ]);
 
-      if (hasPremiumEntitlement(customerInfo)) {
+      if (hasPremiumEntitlement(customerInfo) || verifiedAccess.isPremium) {
         showSuccess("Premium erişimin geri yüklendi.", "Satın alma bulundu");
         return;
       }
@@ -861,6 +875,15 @@ export default function SettingsScreen() {
                   disabled={!profile || updatePreferenceMutation.isPending}
                   onValueChange={(value) =>
                     updatePreferenceMutation.mutate({ notify_premium_offers: value })
+                  }
+                />
+                <PreferenceRow
+                  label="E-posta ile Premium fırsatları"
+                  description="Premium yenilik ve fırsatlarını e-postayla almak için açık rızandır. Varsayılan olarak kapalıdır; istediğin an kapatabilirsin."
+                  value={Boolean(profile?.notify_premium_emails)}
+                  disabled={!profile || updatePreferenceMutation.isPending}
+                  onValueChange={(value) =>
+                    updatePreferenceMutation.mutate({ notify_premium_emails: value })
                   }
                 />
                 {experienceStage === "pregnancy" ? (

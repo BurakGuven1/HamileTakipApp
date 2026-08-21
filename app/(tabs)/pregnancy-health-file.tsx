@@ -131,7 +131,7 @@ export default function PregnancyHealthFileScreen() {
         feature: "pregnancy_health_file_reminder",
         life_stage: "pregnancy",
         reason: "premium_feature_selected"
-      });
+      }, { mode: "required" });
       return;
     }
     setReminderEnabled(value);
@@ -143,7 +143,7 @@ export default function PregnancyHealthFileScreen() {
         feature: "pregnancy_health_file_pdf",
         life_stage: "pregnancy",
         reason: "premium_feature_selected"
-      });
+      }, { mode: "required" });
       return;
     }
     if (!healthQuery.data) return;

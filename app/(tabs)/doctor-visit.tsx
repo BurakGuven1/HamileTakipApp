@@ -64,6 +64,7 @@ import {
   shareAndCleanupDoctorVisitPdf
 } from "@/features/doctor-visit/report";
 import { showPaywallIfNeeded } from "@/features/subscription/showPaywallIfNeeded";
+import { getCreditGateDecision } from "@/features/subscription/paywallPolicy";
 import { PREMIUM_FEATURES } from "@/features/subscription/premiumFeatures";
 import { showPostCreditPaywallIfNeeded } from "@/features/subscription/postCreditPaywall";
 import { trackEvent } from "@/lib/analytics";
@@ -234,17 +235,18 @@ export default function DoctorVisitScreen() {
 
   async function createAndSharePdf() {
     if (!snapshot || !context || creatingPdf) return;
-    if (
-      !context.feature_access.is_premium &&
-      context.feature_access.remaining === 0
-    ) {
+    if (getCreditGateDecision({
+      allowed: context.feature_access.allowed,
+      isPremium: context.feature_access.is_premium,
+      remaining: context.feature_access.remaining
+    }) === "required_paywall") {
       try {
         await showPaywallIfNeeded(PREMIUM_FEATURES.doctorVisitReport.source, {
           feature: "doctor_visit_report",
           life_stage: snapshot.subject === "pregnancy" ? "pregnancy" : "postpartum",
           reason: "free_credits_exhausted",
           remaining: 0
-        });
+        }, { mode: "required" });
       } catch (error) {
         showError(error, "Premium ekranı açılamadı");
       }
@@ -270,7 +272,7 @@ export default function DoctorVisitScreen() {
           await showPaywallIfNeeded(PREMIUM_FEATURES.doctorVisitReport.source, {
             feature: "doctor_visit_report",
             reason: "free_credits_exhausted"
-          });
+          }, { mode: "required" });
           return;
         }
         throw new Error("Kullanım hakkı doğrulanamadı. Lütfen yeniden deneyin.");

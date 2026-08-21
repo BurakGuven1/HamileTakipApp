@@ -27,6 +27,10 @@ export type AnalyticsEventName =
   | "care_reminder_scheduled"
   | "care_task_added"
   | "doctor_visit_report_created"
+  | "daily_experience_action_tapped"
+  | "daily_experience_completed"
+  | "daily_experience_opened"
+  | "daily_premium_teaser_tapped"
   | "email_verification_required"
   | "first_open"
   | "forum_comment_created"
@@ -85,6 +89,7 @@ export type AnalyticsEventName =
   | "subscription_expired"
   | "vaccination_marked_done"
   | "vaccination_marked_pending"
+  | "weekly_checkin_completed"
   | "baby_profile_created"
   | "baby_tooth_marked"
   | "baby_tooth_unmarked";

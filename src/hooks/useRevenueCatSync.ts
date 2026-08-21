@@ -4,7 +4,7 @@ import { AppState } from "react-native";
 import type { CustomerInfo } from "react-native-purchases";
 import Purchases from "react-native-purchases";
 
-import { reconcileCustomerInfoWithSupabase } from "@/features/subscription/reconcileSubscription";
+import { reconcileRevenueCatSubscription } from "@/api/subscriptions";
 import { trackEvent } from "@/lib/analytics";
 import {
   configureRevenueCat,
@@ -51,8 +51,16 @@ export function useRevenueCatSync() {
     async function syncCustomerInfo(customerInfo: CustomerInfo | null) {
       writeCustomerInfo(customerInfo);
 
+      if (!lastUserIdRef.current) return;
+
       try {
-        await reconcileCustomerInfoWithSupabase(customerInfo);
+        await reconcileRevenueCatSubscription();
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_STATUS_QUERY_KEY }),
+          queryClient.invalidateQueries({ queryKey: ["family-feature-access"] }),
+          queryClient.invalidateQueries({ queryKey: ["family-coordination-context"] }),
+          queryClient.invalidateQueries({ queryKey: ["baby-gallery-access"] })
+        ]);
       } catch (error) {
         console.warn("RevenueCat reconciliation failed", error);
       }

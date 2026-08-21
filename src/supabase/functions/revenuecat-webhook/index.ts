@@ -1,5 +1,13 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+import {
+  buildWebhookSubscriptionWrite,
+  getTransferUserIds,
+  getWebhookIdentityCandidates,
+  type RevenueCatWebhookEvent
+} from "../_shared/revenuecatWebhook.ts";
+import { normalizeRevenueCatSubscriber } from "../_shared/revenuecatSubscription.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -11,17 +19,12 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const WEBHOOK_AUTH_HEADER =
   Deno.env.get("REVENUECAT_WEBHOOK_AUTH_HEADER") ?? "";
+const REVENUECAT_SECRET_API_KEY =
+  Deno.env.get("REVENUECAT_SECRET_API_KEY") ?? "";
+const REVENUECAT_ENTITLEMENT_ID =
+  Deno.env.get("REVENUECAT_ENTITLEMENT_ID") ?? "premium";
 
-const LIFETIME_PRODUCT_IDS: string[] = [];
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-type RevenueCatEvent = Record<string, unknown> & {
-  aliases?: unknown;
-  app_user_id?: unknown;
-  original_app_user_id?: unknown;
-  type?: unknown;
-};
+type RevenueCatEvent = RevenueCatWebhookEvent & { id?: unknown };
 
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
@@ -106,73 +109,67 @@ Deno.serve(async (request) => {
 
     const duplicate = !insertedEvent;
 
-    const status = mapEventTypeToStatus(
-      event.type,
-      expirationAtMs,
+    if (event.type === "TRANSFER") {
+      if (!REVENUECAT_SECRET_API_KEY) {
+        return json({ error: "revenuecat_server_key_missing" }, 500);
+      }
+      const transferResult = await reconcileTransferUsers(
+        supabase,
+        getTransferUserIds(event)
+      );
+      return json({
+        duplicate,
+        recorded: true,
+        subscription_updated: transferResult.updated > 0,
+        transfer_failed: transferResult.failed,
+        transfer_reconciled: transferResult.updated,
+        success: transferResult.failed === 0
+      }, transferResult.failed === 0 ? 200 : 207);
+    }
+
+    const cacheWrite = userId
+      ? buildWebhookSubscriptionWrite(event, userId)
+      : null;
+
+    if (!cacheWrite || !userId || !productId) {
+      return json({
+        duplicate,
+        recorded: true,
+        subscription_updated: false,
+        success: true,
+      });
+    }
+
+    const { data: subscription, error: subscriptionError } = await supabase.rpc(
+      "apply_revenuecat_subscription_cache",
+      {
+        p_environment: cacheWrite.environment,
+        p_event_at: cacheWrite.eventAt,
+        p_expires_at: cacheWrite.expiresAt,
+        p_is_lifetime: cacheWrite.isLifetime,
+        p_product_id: cacheWrite.productId,
+        p_status: cacheWrite.status,
+        p_user_id: cacheWrite.userId,
+        p_verified_at: cacheWrite.verifiedAt
+      }
     );
-
-    if (!status || !userId || !productId) {
-      return json({
-        duplicate,
-        recorded: true,
-        subscription_updated: false,
-        success: true,
-      });
-    }
-
-    const { data: currentSubscription, error: currentSubscriptionError } =
-      await supabase
-        .from("subscriptions")
-        .select("updated_at")
-        .eq("user_id", userId)
-        .maybeSingle();
-
-    if (currentSubscriptionError) {
-      console.error(
-        "Current subscription lookup failed",
-        currentSubscriptionError,
-      );
-      return json({ error: currentSubscriptionError.message }, 500);
-    }
-
-    if (
-      currentSubscription?.updated_at &&
-      new Date(currentSubscription.updated_at).getTime() >
-        new Date(eventAt).getTime()
-    ) {
-      return json({
-        duplicate,
-        recorded: true,
-        stale: true,
-        subscription_updated: false,
-        success: true,
-      });
-    }
-
-    const isLifetime = LIFETIME_PRODUCT_IDS.includes(productId);
-    const { error: subscriptionError } = await supabase
-      .from("subscriptions")
-      .upsert(
-        {
-          user_id: userId,
-          product_id: productId,
-          status,
-          is_lifetime: isLifetime,
-          expires_at: isLifetime ? null : toIsoDate(expirationAtMs),
-          updated_at: eventAt,
-        },
-        { onConflict: "user_id" },
-      );
 
     if (subscriptionError) {
       console.error("Subscription cache update failed", subscriptionError);
       return json({ error: subscriptionError.message }, 500);
     }
 
+    const applied = Boolean(
+      subscription
+      && subscription.environment === cacheWrite.environment
+      && subscription.revenuecat_event_at === cacheWrite.eventAt
+    );
+
     return json({
+      environment_precedence_ignored: !applied,
       duplicate,
       recorded: true,
-      subscription_updated: true,
+      subscription_updated: applied,
       success: true,
     });
   } catch (error) {
@@ -181,45 +178,11 @@ Deno.serve(async (request) => {
   }
 });
 
-export function mapEventTypeToStatus(
-  eventType: string,
-  expirationAtMs: number | null,
-): "active" | "cancelled" | "expired" | "grace_period" | null {
-  const expiresInFuture =
-    expirationAtMs !== null && expirationAtMs > Date.now();
-
-  switch (eventType) {
-    case "INITIAL_PURCHASE":
-    case "RENEWAL":
-    case "UNCANCELLATION":
-    case "NON_RENEWING_PURCHASE":
-    case "PRODUCT_CHANGE":
-    case "SUBSCRIPTION_EXTENDED":
-    case "REFUND_REVERSED":
-      return "active";
-    case "CANCELLATION":
-      return expiresInFuture ? "active" : "cancelled";
-    case "EXPIRATION":
-      return "expired";
-    case "BILLING_ISSUE":
-      return "grace_period";
-    default:
-      return null;
-  }
-}
-
 async function resolveUserId(
   supabase: ReturnType<typeof createClient<any>>,
   event: RevenueCatEvent,
 ) {
-  const aliases = Array.isArray(event.aliases) ? event.aliases : [];
-  const candidates = [
-    event.app_user_id,
-    event.original_app_user_id,
-    ...aliases,
-  ].filter((value): value is string =>
-    typeof value === "string" && UUID_PATTERN.test(value)
-  );
+  const candidates = getWebhookIdentityCandidates(event);
 
   for (const candidate of [...new Set(candidates)]) {
     const { data, error } = await supabase
@@ -231,6 +194,88 @@ async function resolveUserId(
   }
 
   return null;
+}
+
+async function reconcileTransferUsers(
+  supabase: ReturnType<typeof createClient<any>>,
+  userIds: string[]
+) {
+  let updated = 0;
+  let failed = 0;
+
+  for (const userId of userIds) {
+    try {
+      const response = await fetch(
+        `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(userId)}`,
+        {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${REVENUECAT_SECRET_API_KEY}`
+          },
+          signal: AbortSignal.timeout(15_000)
+        }
+      );
+      if (!response.ok) throw new Error(`RevenueCat HTTP ${response.status}`);
+
+      const normalized = normalizeRevenueCatSubscriber(
+        await response.json(),
+        REVENUECAT_ENTITLEMENT_ID
+      );
+      const verifiedAt = new Date().toISOString();
+      let write = normalized
+        ? {
+            environment: normalized.environment,
+            expiresAt: normalized.expiresAt,
+            isLifetime: normalized.isLifetime,
+            productId: normalized.productId,
+            status: normalized.status
+          }
+        : null;
+
+      if (!write) {
+        const { data: current, error: currentError } = await supabase
+          .from("subscriptions")
+          .select("environment,product_id")
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (currentError) throw currentError;
+        if (current?.product_id && current.environment !== "UNKNOWN") {
+          write = {
+            environment: current.environment,
+            expiresAt: verifiedAt,
+            isLifetime: false,
+            productId: current.product_id,
+            status: "expired" as const
+          };
+        }
+      }
+
+      if (!write) continue;
+      const { error } = await supabase.rpc(
+        "apply_revenuecat_subscription_cache",
+        {
+          p_environment: write.environment,
+          p_event_at: null,
+          p_expires_at: write.expiresAt,
+          p_is_lifetime: write.isLifetime,
+          p_product_id: write.productId,
+          p_status: write.status,
+          p_user_id: userId,
+          p_verified_at: verifiedAt
+        }
+      );
+      if (error) throw error;
+      updated += 1;
+    } catch (error) {
+      failed += 1;
+      console.error(
+        `RevenueCat transfer reconciliation failed (...${userId.slice(-6)})`,
+        error instanceof Error ? error.message : String(error)
+      );
+    }
+  }
+
+  return { failed, updated };
 }
 
 function stringValue(value: unknown) {
