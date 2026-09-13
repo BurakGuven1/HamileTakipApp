@@ -21,6 +21,7 @@ import {
   updateGrowthRecord,
   type GrowthRecord
 } from "@/api/growthRecords";
+import { GrowthPercentileCard } from "@/features/growth-tracking/GrowthPercentileCard";
 import { getCurrentProfile } from "@/api/profiles";
 import {
   listVaccinationsForBaby,
@@ -871,6 +872,10 @@ export default function BabyScreen() {
                       </View>
                     </View>
                   </Card>
+                ) : null}
+
+                {selectedBaby ? (
+                  <GrowthPercentileCard baby={selectedBaby} records={growthRecords} />
                 ) : null}
 
                 {growthRecords.length === 0 ? (
