@@ -77,6 +77,7 @@ import { Thread } from "@/components/Thread";
 import { VibrantBackdrop } from "@/components/VibrantBackdrop";
 import { WeeklyBabyDevelopmentCard } from "@/components/WeeklyBabyDevelopmentCard";
 import { DailyForYouCard } from "@/features/daily-experience/DailyForYouCard";
+import { PartnerCard } from "@/features/family/PartnerCard";
 import { IntroTrialBanner } from "@/features/subscription/IntroTrialBanner";
 import { getDailyDestinationPath } from "@/features/daily-experience/dailyExperiencePolicy";
 import { WeeklyCheckInCard } from "@/features/daily-experience/WeeklyCheckInCard";
@@ -632,6 +633,10 @@ export default function HomeScreen() {
             </Card>
           </Reveal>
         ) : null}
+
+        {/* No <Reveal>: the card renders nothing without a family code, and an
+            empty wrapper would still take a gap in this column. */}
+        <PartnerCard lifeStage={isPregnancyMode ? "pregnancy" : "postpartum"} />
 
         <Reveal delay={90} style={styles.shortcutsSection}>
           <View style={styles.sectionHeader}>

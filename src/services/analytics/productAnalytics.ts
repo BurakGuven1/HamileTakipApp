@@ -83,6 +83,7 @@ export type AnalyticsEventName =
   | "intro_trial_ended"
   | "symptom_check_emergency_call_tapped"
   | "symptom_check_opened"
+  | "partner_invite_shared"
   | "intro_trial_started"
   | "premium_gate_hit"
   | "purchase_cancelled"
