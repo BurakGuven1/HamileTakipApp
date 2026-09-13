@@ -46,7 +46,10 @@ export default function PregnancyHealthFileScreen() {
   const viewedTrackedRef = useRef(false);
 
   const healthQuery = useQuery({ queryKey: HEALTH_QUERY_KEY, queryFn: listPregnancyHealthTimeline });
-  const featureAccessQuery = useQuery({ queryKey: ["family-feature-access"], queryFn: getFamilyFeatureAccess });
+  const featureAccessQuery = useQuery({
+    queryKey: ["family-feature-access", PREMIUM_FEATURES.documentInsight.source],
+    queryFn: () => getFamilyFeatureAccess(PREMIUM_FEATURES.documentInsight.source)
+  });
   const isPremium = Boolean(featureAccessQuery.data?.is_premium);
   const timeline = healthQuery.data?.timeline ?? [];
   const remindersByEntry = useMemo(

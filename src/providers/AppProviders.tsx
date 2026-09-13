@@ -6,6 +6,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useAppBootstrap } from "@/hooks/useAppBootstrap";
 import { useCareReminderVoice } from "@/hooks/useCareReminderVoice";
 import { useCareSyncBootstrap } from "@/hooks/useCareSync";
+import { useIntroTrialTracking } from "@/hooks/useIntroTrialTracking";
 import { useNotificationNavigation } from "@/hooks/useNotificationNavigation";
 import { useRevenueCatSync } from "@/hooks/useRevenueCatSync";
 import { VaccineReminderGate } from "@/components/VaccineReminderGate";
@@ -40,6 +41,7 @@ function AppBootstrappers() {
   useAppBootstrap();
   useCareReminderVoice();
   useCareSyncBootstrap();
+  useIntroTrialTracking();
   useNotificationNavigation();
   useRevenueCatSync();
 

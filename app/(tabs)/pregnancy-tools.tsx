@@ -13,6 +13,7 @@ import {
   Plus,
   Sparkles,
   Stethoscope,
+  Timer,
   Trash2,
   Users,
   Weight
@@ -305,6 +306,23 @@ export default function PregnancyToolsScreen() {
               </View>
               <Link href="/birth-preparation" asChild>
                 <Button label="Ortak listeyi aç" />
+              </Link>
+            </Card>
+
+            <Card style={[styles.exerciseCard, styles.featureCard, { backgroundColor: appTheme.primarySoft }]}>
+              <View style={styles.cardHeader}>
+                <View style={{ flex: 1, gap: spacing.xs }}>
+                  <Text style={typography.eyebrow}>Doğum yaklaşınca</Text>
+                  <Text style={typography.heading2}>Kasılma sayacı</Text>
+                  <Text numberOfLines={3} style={typography.body}>
+                    Tek düğmeyle süreyi ve aralığı tut; 5-1-1 kuralı karşılandığında
+                    uygulama sana söyler.
+                  </Text>
+                </View>
+                <Timer color={appTheme.primary} size={30} />
+              </View>
+              <Link href="/contraction-timer" asChild>
+                <Button label="Sayacı aç" />
               </Link>
             </Card>
 

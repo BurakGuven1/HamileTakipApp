@@ -14,10 +14,19 @@ export type FamilyTaskAlarmStatus =
   | "dismissed"
   | "cancelled";
 
+export type FamilyFeatureCreditBreakdown = Record<
+  string,
+  { limit: number; remaining: number; used: number }
+>;
+
 export type FamilyFeatureAccess = {
   allowed: boolean;
+  feature_key?: string | null;
+  features?: FamilyFeatureCreditBreakdown;
   is_premium: boolean;
   limit?: number;
+  period_end?: string;
+  period_start?: string;
   reason: string | null;
   remaining: number | null;
   reservation_id?: string | null;
@@ -169,8 +178,12 @@ export async function getFamilyCoordinationContext() {
   } satisfies FamilyCoordinationContext;
 }
 
-export async function getFamilyFeatureAccess() {
-  const data = await callRpc<FamilyFeatureAccess>("get_family_feature_access");
+// Passing a feature key reports that feature's own monthly allowance. Omitting
+// it returns the account total plus the per-feature breakdown in `features`.
+export async function getFamilyFeatureAccess(featureKey?: string) {
+  const data = await callRpc<FamilyFeatureAccess>("get_family_feature_access", {
+    p_feature_key: featureKey ?? null
+  });
   return normalizeFeatureAccess(data);
 }
 

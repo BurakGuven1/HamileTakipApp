@@ -1,3 +1,8 @@
+import type { CareTimerType } from "@/features/care-journal/careTimerActivityCopy";
+import {
+  endCareTimerLiveActivity,
+  ensureCareTimerLiveActivity
+} from "@/features/care-journal/careTimerLiveActivity";
 import { trackEvent } from "@/lib/analytics";
 import { createRealtimeChannelName } from "@/lib/realtime";
 import { supabase } from "@/lib/supabase";
@@ -334,12 +339,56 @@ export async function listCareJournalActivity(babyId: string, limit = 12) {
   return data ?? [];
 }
 
-export function startSharedCareTimer(args: Parameters<typeof startSharedTimerOfflineFirst>[0]) {
-  return startSharedTimerOfflineFirst(args);
+// The Live Activity is driven from here rather than from each screen, so the
+// care journal and the night shift both get the Lock Screen timer without
+// either having to remember to ask for it. It is fire-and-forget: the entry is
+// already recorded offline-first and a Live Activity must never delay or break
+// logging a feed.
+export async function startSharedCareTimer(
+  args: Parameters<typeof startSharedTimerOfflineFirst>[0] & { babyName?: string }
+) {
+  const { babyName, ...timerArgs } = args;
+  const result = await startSharedTimerOfflineFirst(timerArgs);
+
+  void ensureCareTimerLiveActivity({
+    babyId: result.data.baby_id,
+    babyName: babyName ?? "Bebek",
+    breastSide: result.data.breast_side,
+    sleepKind: result.data.sleep_kind,
+    startedAt: result.data.started_at,
+    timerType: timerArgs.timerType
+  });
+
+  return result;
 }
 
-export function stopSharedCareTimer(timer: CareActiveTimer, actorName: string | null, amountMl: number | null = null) {
-  return stopSharedTimerOfflineFirst(timer, actorName, amountMl);
+export async function stopSharedCareTimer(
+  timer: CareActiveTimer,
+  actorName: string | null,
+  amountMl: number | null = null,
+  babyName?: string
+) {
+  const result = await stopSharedTimerOfflineFirst(timer, actorName, amountMl);
+
+  if (isCareTimerType(timer.timer_type)) {
+    void endCareTimerLiveActivity(
+      {
+        babyId: timer.baby_id,
+        babyName: babyName ?? "Bebek",
+        breastSide: timer.breast_side,
+        sleepKind: timer.sleep_kind,
+        startedAt: timer.started_at,
+        timerType: timer.timer_type
+      },
+      result.data.ended_at
+    );
+  }
+
+  return result;
+}
+
+function isCareTimerType(value: string | null): value is CareTimerType {
+  return value === "breastfeeding" || value === "pumping" || value === "sleep";
 }
 
 export async function listAllCareJournalEntries(babyId: string) {

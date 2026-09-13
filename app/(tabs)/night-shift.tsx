@@ -213,10 +213,13 @@ export default function NightShiftScreen() {
     mutationFn: async ({ kind, diaperType = "wet" }: { kind: "feed" | "diaper" | "sleep"; diaperType?: "wet" | "dirty" | "both" }) => {
       if (!selectedBaby || !isMyShift) throw new Error("Hızlı kayıt yalnızca vardiyadaki ebeveyn tarafından eklenebilir.");
       if (kind === "sleep") {
-        if (activeSleep) return stopSharedCareTimer(activeSleep, caregiverName);
+        if (activeSleep) {
+          return stopSharedCareTimer(activeSleep, caregiverName, null, selectedBaby.name);
+        }
         return startSharedCareTimer({
           actorName: caregiverName,
           babyId: selectedBaby.id,
+          babyName: selectedBaby.name,
           breastSide: "both",
           sleepKind: "night",
           timerType: "sleep"

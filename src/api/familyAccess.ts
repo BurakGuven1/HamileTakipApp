@@ -145,3 +145,33 @@ export async function isCurrentUserFamilyFather() {
 
   return Boolean(data);
 }
+
+/**
+ * The owner's side of the link: who has joined this family account. Used to
+ * decide whether to invite a partner or to show the shared-care entry points.
+ */
+export async function listFamilyMembersForOwner() {
+  const {
+    data: { user },
+    error: userError
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    throw userError;
+  }
+
+  if (!user) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("family_members")
+    .select("*")
+    .eq("owner_id", user.id);
+
+  if (error) {
+    throw error;
+  }
+
+  return data ?? [];
+}

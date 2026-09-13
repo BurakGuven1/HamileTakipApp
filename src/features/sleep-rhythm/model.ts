@@ -37,6 +37,8 @@ export type SleepRhythmPrediction = {
 export const REQUIRED_SLEEP_SAMPLES = 7;
 const MINUTE_MS = 60_000;
 const DAY_MS = 24 * 60 * MINUTE_MS;
+const MIN_PREDICTION_INTERVAL_MS = 10 * MINUTE_MS;
+const MAX_WAKE_INTERVAL_MS = 14 * 60 * MINUTE_MS;
 
 export function sortSleepEvents<T extends SleepEventLike>(events: T[]) {
   return [...events].sort(
@@ -169,13 +171,13 @@ export function predictSleepRhythm(
       lastWakeMs = occurredMs;
     } else if (lastWakeMs !== null && occurredMs > lastWakeMs) {
       const duration = occurredMs - lastWakeMs;
-      if (duration >= 10 * MINUTE_MS && duration <= 14 * 60 * MINUTE_MS) {
-        wakeDurations.push(duration);
-      }
+      wakeDurations.push(
+        Math.min(MAX_WAKE_INTERVAL_MS, Math.max(MIN_PREDICTION_INTERVAL_MS, duration))
+      );
       lastWakeMs = null;
     }
   }
-  if (wakeDurations.length < 3) return null;
+  if (!wakeDurations.length) return null;
 
   const sleepMedian = median(completedDurations);
   const wakeMedian = median(wakeDurations.slice(-21));

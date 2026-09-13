@@ -24,9 +24,11 @@ import {
   Salad,
   Smile,
   Ruler,
+  ShieldQuestion,
   Sparkles,
   Stethoscope,
   Syringe,
+  Timer,
   Users,
   Wrench
 } from "lucide-react-native";
@@ -75,6 +77,8 @@ import { Thread } from "@/components/Thread";
 import { VibrantBackdrop } from "@/components/VibrantBackdrop";
 import { WeeklyBabyDevelopmentCard } from "@/components/WeeklyBabyDevelopmentCard";
 import { DailyForYouCard } from "@/features/daily-experience/DailyForYouCard";
+import { PartnerCard } from "@/features/family/PartnerCard";
+import { IntroTrialBanner } from "@/features/subscription/IntroTrialBanner";
 import { getDailyDestinationPath } from "@/features/daily-experience/dailyExperiencePolicy";
 import { WeeklyCheckInCard } from "@/features/daily-experience/WeeklyCheckInCard";
 import { syncCareQuickWidget } from "@/features/care-journal/widgetSync";
@@ -431,6 +435,17 @@ export default function HomeScreen() {
     <Screen>
       <View style={styles.container}>
         <VibrantBackdrop />
+        {/* Rendered without <Reveal> because the banner returns null outside the
+            trial, and an empty wrapper would still take a gap in this column. */}
+        <IntroTrialBanner
+          onPress={() => {
+            void showPaywallIfNeeded(
+              "intro_trial_banner",
+              { feature: "intro_trial_banner", reason: "trial_active" },
+              { mode: "required" }
+            ).catch((error) => showError(error, "Premium ekranı açılamadı"));
+          }}
+        />
         {weeklyCheckInQuery.data?.needsCheckIn ? (
           <Reveal>
             <WeeklyCheckInCard
@@ -619,6 +634,10 @@ export default function HomeScreen() {
           </Reveal>
         ) : null}
 
+        {/* No <Reveal>: the card renders nothing without a family code, and an
+            empty wrapper would still take a gap in this column. */}
+        <PartnerCard lifeStage={isPregnancyMode ? "pregnancy" : "postpartum"} />
+
         <Reveal delay={90} style={styles.shortcutsSection}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleCopy}>
@@ -700,6 +719,22 @@ export default function HomeScreen() {
                       tint={vibrantColors.primaryLight}
                     />
                     <ShortcutCard
+                      accent={vibrantColors.secondary}
+                      href="/symptom-check"
+                      icon={<ShieldQuestion color={vibrantColors.secondary} fill={vibrantColors.secondarySoft} size={23} strokeWidth={2.6} />}
+                      subtitle="Beklemeli mi, aramalı mısın"
+                      title="Bu normal mi?"
+                      tint={vibrantColors.secondarySoft}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.peach}
+                      href="/contraction-timer"
+                      icon={<Timer color={vibrantColors.peach} fill={vibrantColors.peachSoft} size={23} strokeWidth={2.6} />}
+                      subtitle="Süre, aralık ve 5-1-1 kuralı"
+                      title="Kasılma sayacı"
+                      tint={vibrantColors.peachSoft}
+                    />
+                    <ShortcutCard
                       accent={vibrantColors.peach}
                       href="/birth-preparation"
                       icon={<BookOpenCheck color={vibrantColors.peach} fill={vibrantColors.peachSoft} size={23} strokeWidth={2.6} />}
@@ -726,6 +761,14 @@ export default function HomeScreen() {
                       subtitle="Beslenme, uyku veya bez kaydını hemen ekle"
                       title="Şimdi bakım kaydet"
                       tint={vibrantColors.primaryLight}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.secondary}
+                      href="/symptom-check"
+                      icon={<ShieldQuestion color={vibrantColors.secondary} fill={vibrantColors.secondarySoft} size={23} strokeWidth={2.6} />}
+                      subtitle="Beklemeli mi, aramalı mısın"
+                      title="Bu normal mi?"
+                      tint={vibrantColors.secondarySoft}
                     />
                     <ShortcutCard
                       accent={vibrantColors.peach}

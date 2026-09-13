@@ -23,6 +23,28 @@ new purchases and lifecycle changes come from `revenuecat_events`. Legacy
 `paywall_offering_loaded` events fill historical paywall gaps without creating
 fake raw `paywall_views` rows.
 
+## Install-to-sign-in funnel
+
+A cold start by a signed-out user used to emit nothing:
+`trackAuthenticatedSessionStartedIfNeeded()` returns early without a user ID,
+and the `AppState` listener never fires for a launch that is already active. So
+every install that stalled on the sign-in screen was invisible, and installs
+could not be compared against sign-ins. `useAppBootstrap` now calls
+`trackSessionStartedIfNeeded()` first, which records the unauthenticated
+`session_started`.
+
+Read the funnel as: `session_started` (no `identity_state`) →
+`auth_sign_in_completed` → `onboarding_completed` → `intro_trial_started` →
+`premium_gate_hit` → `paywall_requested` → `paywall_offering_loaded` →
+`purchase_started` → `purchase_client_completed`. A stall between the first two
+steps is an onboarding problem, not a pricing problem.
+
+`intro_trial_started` / `intro_trial_ended` separate "never had access" from
+"had access and let it lapse". `premium_gate_hit`, `paywall_requested` and the
+paywall events carry a `bundle` property (`health_archive`, `smart_care`,
+`family_sharing`) so conversion can be read per promise instead of per
+individual feature lock.
+
 Raw event properties must not contain names, free text, document contents, baby
 IDs, post IDs or other unnecessary personal data. Raw analytics events are kept
 for 15 months; daily aggregates are kept for 36 months.
