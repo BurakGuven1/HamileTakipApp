@@ -12,6 +12,7 @@ import {
   shouldCheckPremiumBeforePaywall,
   type PremiumPaywallMode
 } from "./paywallPolicy";
+import { getPremiumBundleForSource } from "./premiumFeatures";
 
 type PaywallTriggerProperties = Record<string, string | number | boolean | null>;
 
@@ -27,8 +28,12 @@ export async function showPaywallIfNeeded(
   options: { mode?: PremiumPaywallMode } = {}
 ): Promise<PaywallPresentationResult> {
   const presentationMode = options.mode ?? "if_needed";
+  // Every gate reports the bundle it belongs to so the funnel can be read per
+  // promise instead of per individual lock.
+  const bundle = getPremiumBundleForSource(source);
   await trackEvent("premium_gate_hit", {
     ...properties,
+    bundle: bundle.key,
     presentation_mode: presentationMode,
     source
   });
@@ -56,6 +61,7 @@ export async function showPaywallIfNeeded(
 
   await trackEvent("paywall_requested", {
     ...properties,
+    bundle: bundle.key,
     presentation_mode: presentationMode,
     source
   });
@@ -64,6 +70,7 @@ export async function showPaywallIfNeeded(
     pathname: "/paywall",
     params: {
       source,
+      bundle: bundle.key,
       feature: toRouteParam(properties.feature),
       life_stage: toRouteParam(properties.life_stage),
       reason: toRouteParam(properties.reason),

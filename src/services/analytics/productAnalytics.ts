@@ -77,6 +77,8 @@ export type AnalyticsEventName =
   | "sleep_rhythm_prediction_locked_tapped"
   | "pregnancy_timeline_viewed"
   | "document_insight_completed"
+  | "intro_trial_ended"
+  | "intro_trial_started"
   | "premium_gate_hit"
   | "purchase_cancelled"
   | "purchase_client_completed"

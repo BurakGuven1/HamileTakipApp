@@ -150,9 +150,11 @@ export default function FamilyPlannerScreen() {
     )
   });
 
+  // The badge on this screen counts timed task alarms, which is the only
+  // credit the planner spends on its main path.
   const featureAccessQuery = useQuery({
-    queryKey: ["family-feature-access"],
-    queryFn: getFamilyFeatureAccess,
+    queryKey: ["family-feature-access", PREMIUM_FEATURES.familyTaskAlarm.source],
+    queryFn: () => getFamilyFeatureAccess(PREMIUM_FEATURES.familyTaskAlarm.source),
     enabled: Boolean(context)
   });
 

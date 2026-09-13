@@ -75,6 +75,7 @@ import { Thread } from "@/components/Thread";
 import { VibrantBackdrop } from "@/components/VibrantBackdrop";
 import { WeeklyBabyDevelopmentCard } from "@/components/WeeklyBabyDevelopmentCard";
 import { DailyForYouCard } from "@/features/daily-experience/DailyForYouCard";
+import { IntroTrialBanner } from "@/features/subscription/IntroTrialBanner";
 import { getDailyDestinationPath } from "@/features/daily-experience/dailyExperiencePolicy";
 import { WeeklyCheckInCard } from "@/features/daily-experience/WeeklyCheckInCard";
 import { syncCareQuickWidget } from "@/features/care-journal/widgetSync";
@@ -431,6 +432,17 @@ export default function HomeScreen() {
     <Screen>
       <View style={styles.container}>
         <VibrantBackdrop />
+        {/* Rendered without <Reveal> because the banner returns null outside the
+            trial, and an empty wrapper would still take a gap in this column. */}
+        <IntroTrialBanner
+          onPress={() => {
+            void showPaywallIfNeeded(
+              "intro_trial_banner",
+              { feature: "intro_trial_banner", reason: "trial_active" },
+              { mode: "required" }
+            ).catch((error) => showError(error, "Premium ekranı açılamadı"));
+          }}
+        />
         {weeklyCheckInQuery.data?.needsCheckIn ? (
           <Reveal>
             <WeeklyCheckInCard

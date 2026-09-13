@@ -7,6 +7,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Screen } from "@/components/Screen";
+import { getPremiumBundleForSource } from "@/features/subscription/premiumFeatures";
 import { showPaywallIfNeeded } from "@/features/subscription/showPaywallIfNeeded";
 import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
 import { useAppTheme } from "@/providers/AppThemeProvider";
@@ -27,6 +28,9 @@ export function PremiumFeatureBoundary({
 }: PremiumFeatureBoundaryProps) {
   const appTheme = useAppTheme();
   const { isLoading, isPremium } = useSubscriptionStatus();
+  // The gate leads with the bundle promise rather than the individual lock, so
+  // the reader sees one product to buy instead of one more obstacle.
+  const bundle = getPremiumBundleForSource(featureKey);
   const { showError, showSuccess } = useFeedback();
   const [opening, setOpening] = useState(false);
 
@@ -70,8 +74,9 @@ export function PremiumFeatureBoundary({
             <LockKeyhole color={appTheme.primary} size={30} />
           </View>
           <View style={{ gap: spacing.sm }}>
-            <Text style={typography.eyebrow}>Premium alan</Text>
+            <Text style={typography.eyebrow}>{bundle.title}</Text>
             <Text style={typography.heading1}>{title}</Text>
+            <Text style={styles.promise}>{bundle.promise}</Text>
             <Text style={styles.description}>{description}</Text>
           </View>
         </Card>
@@ -163,6 +168,11 @@ const styles = StyleSheet.create({
     height: 58,
     justifyContent: "center",
     width: 58
+  },
+  promise: {
+    ...typography.body,
+    color: colors.text,
+    fontWeight: "600"
   },
   description: {
     ...typography.body,

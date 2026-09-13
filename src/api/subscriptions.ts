@@ -12,6 +12,8 @@ export type EffectivePremiumAccess = {
   accessSource: PremiumAccessSource;
   familyTrialExpiresAt: string | null;
   familyTrialStartedAt: string | null;
+  introTrialExpiresAt: string | null;
+  introTrialStartedAt: string | null;
   isLifetime: boolean;
   isPremium: boolean;
 };
@@ -21,6 +23,8 @@ const NO_PREMIUM_ACCESS: EffectivePremiumAccess = {
   accessSource: "none",
   familyTrialExpiresAt: null,
   familyTrialStartedAt: null,
+  introTrialExpiresAt: null,
+  introTrialStartedAt: null,
   isLifetime: false,
   isPremium: false
 };
@@ -55,13 +59,20 @@ export async function getEffectivePremiumAccess(): Promise<EffectivePremiumAcces
     accessSource: normalizeAccessSource(row.access_source),
     familyTrialExpiresAt: row.family_trial_expires_at,
     familyTrialStartedAt: row.family_trial_started_at,
+    introTrialExpiresAt: row.intro_trial_expires_at ?? null,
+    introTrialStartedAt: row.intro_trial_started_at ?? null,
     isLifetime: row.is_lifetime,
     isPremium: row.is_premium
   };
 }
 
 function normalizeAccessSource(value: string): EffectivePremiumAccess["accessSource"] {
-  if (value === "own" || value === "family" || value === "family_trial") {
+  if (
+    value === "own" ||
+    value === "family" ||
+    value === "family_trial" ||
+    value === "intro_trial"
+  ) {
     return value;
   }
 

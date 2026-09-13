@@ -21,6 +21,7 @@ export type RevenueCatConfigurationIssue =
 export type PremiumAccessSource =
   | "family"
   | "family_trial"
+  | "intro_trial"
   | "none"
   | "own";
 
@@ -42,6 +43,8 @@ export type PremiumSubscriptionStatus = {
   expirationDate: string | null;
   familyTrialExpirationDate: string | null;
   familyTrialStartedAt: string | null;
+  introTrialExpirationDate: string | null;
+  introTrialStartedAt: string | null;
   isLifetime: boolean;
   isPremium: boolean;
   productIdentifier: string | null;
@@ -180,6 +183,8 @@ export function getSubscriptionStatusFromCustomerInfo(
     expirationDate: entitlement?.expirationDate ?? null,
     familyTrialExpirationDate: null,
     familyTrialStartedAt: null,
+    introTrialExpirationDate: null,
+    introTrialStartedAt: null,
     isLifetime: Boolean(entitlement && !entitlement.expirationDate),
     isPremium: Boolean(entitlement),
     productIdentifier: entitlement?.productIdentifier ?? null,

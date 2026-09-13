@@ -43,6 +43,13 @@ export function useAppBootstrap() {
           console.warn("Meta App Events bootstrap failed", error);
         });
       await initializeAnalytics();
+      // A cold start by a signed-out user used to emit nothing at all:
+      // trackAuthenticatedSessionStartedIfNeeded() returns early without a
+      // userId, and the AppState listener below never fires for a launch that
+      // is already active. Every install that stalled on the sign-in screen was
+      // therefore invisible in the funnel. The unauthenticated session is
+      // recorded first so installs can be compared against sign-ins.
+      await trackSessionStartedIfNeeded();
       await trackAuthenticatedSessionStartedIfNeeded();
       await bootstrapPushToken(false);
     }

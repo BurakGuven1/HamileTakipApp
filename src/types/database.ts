@@ -2053,6 +2053,8 @@ export type Database = {
           is_lifetime: boolean;
           family_trial_started_at: string | null;
           family_trial_expires_at: string | null;
+          intro_trial_started_at: string | null;
+          intro_trial_expires_at: string | null;
         }[];
       };
       get_baby_gallery_access: {
@@ -2060,7 +2062,7 @@ export type Database = {
         Returns: Json;
       };
       get_family_feature_access: {
-        Args: Record<PropertyKey, never>;
+        Args: { p_feature_key?: string | null };
         Returns: Json;
       };
       claim_premium_prompt: {

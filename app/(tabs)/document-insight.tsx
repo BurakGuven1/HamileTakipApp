@@ -68,8 +68,8 @@ export default function DocumentInsightScreen() {
   const [isSavingToHealthFile, setIsSavingToHealthFile] = useState(false);
   const [result, setResult] = useState<DocumentInsightResult | null>(null);
   const featureAccessQuery = useQuery({
-    queryKey: ["family-feature-access"],
-    queryFn: getFamilyFeatureAccess
+    queryKey: ["family-feature-access", PREMIUM_FEATURES.documentInsight.source],
+    queryFn: () => getFamilyFeatureAccess(PREMIUM_FEATURES.documentInsight.source)
   });
   const profileQuery = useQuery({
     queryKey: ["profile"],

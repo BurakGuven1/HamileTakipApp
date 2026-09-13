@@ -27,6 +27,7 @@ import { colors, spacing } from "@/theme";
 
 type PaywallErrorSource = "load" | "purchase" | "restore" | "sync";
 type PaywallRouteParams = {
+  bundle?: string | string[];
   feature?: string | string[];
   life_stage?: string | string[];
   reason?: string | string[];
@@ -299,6 +300,7 @@ function getPaywallEventProperties(params: PaywallRouteParams) {
   const remainingParam = getRouteParam(params.remaining);
   const remaining = remainingParam === undefined ? null : Number(remainingParam);
   return {
+    bundle: getRouteParam(params.bundle)?.trim() || null,
     feature: getRouteParam(params.feature)?.trim() || null,
     life_stage: getRouteParam(params.life_stage)?.trim() || null,
     reason: getRouteParam(params.reason)?.trim() || null,
