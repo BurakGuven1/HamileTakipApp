@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
   },
   bigButton: {
     alignItems: "center",
-    borderRadius: radii.lg,
+    ...radii.button,
     gap: spacing.xs,
     justifyContent: "center",
     minHeight: 148,
@@ -344,8 +344,10 @@ const styles = StyleSheet.create({
     textAlign: "center"
   },
   bigButtonTimer: {
-    ...typography.heading2,
-    color: colors.surface
+    ...typography.dataStrong,
+    color: colors.surface,
+    fontSize: 34,
+    lineHeight: 40
   },
   status: {
     borderWidth: 2,
@@ -374,7 +376,7 @@ const styles = StyleSheet.create({
     fontSize: 12
   },
   metricValue: {
-    ...typography.label,
+    ...typography.data,
     color: colors.text
   },
   flagItem: {
@@ -391,13 +393,14 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm
   },
   rowTime: {
-    ...typography.label,
+    ...typography.data,
     color: colors.text
   },
   rowDetail: {
-    ...typography.body,
+    ...typography.data,
     color: colors.textMuted,
-    fontSize: 13
+    fontSize: 13,
+    lineHeight: 18
   },
   disclaimer: {
     ...typography.body,

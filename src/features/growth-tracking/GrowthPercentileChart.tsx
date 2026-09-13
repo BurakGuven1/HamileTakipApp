@@ -3,7 +3,7 @@ import { LayoutChangeEvent, StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, Line, Path, Text as SvgText } from "react-native-svg";
 
 import { useAppTheme } from "@/providers/AppThemeProvider";
-import { colors, radii, spacing, typography } from "@/theme";
+import { colors, fonts, radii, spacing, typography } from "@/theme";
 
 import type { GrowthSeries } from "./growthSeries";
 import {
@@ -135,6 +135,7 @@ export function GrowthPercentileChart({
           {monthTicks.map((month) => (
             <SvgText
               fill={colors.textMuted}
+              fontFamily={fonts.dataRegular}
               fontSize={10}
               key={`tick-${month}`}
               textAnchor="middle"
@@ -150,6 +151,7 @@ export function GrowthPercentileChart({
             return (
               <SvgText
                 fill={colors.textMuted}
+                fontFamily={fonts.dataRegular}
                 fontSize={10}
                 key={`value-${ratio}`}
                 textAnchor="start"

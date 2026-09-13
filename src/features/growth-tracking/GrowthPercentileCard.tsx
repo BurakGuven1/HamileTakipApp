@@ -84,7 +84,7 @@ export function GrowthPercentileCard({
     <Card style={{ gap: spacing.md }}>
       <View style={{ gap: spacing.xs }}>
         <Text style={typography.eyebrow}>Persantil eğrisi</Text>
-        <Text style={typography.heading2}>
+        <Text style={styles.measurement}>
           {`${latest.value.toLocaleString("tr-TR")} ${unit} · ${formatPercentile(latest.percentile)}`}
         </Text>
         <Text style={styles.muted}>
@@ -177,6 +177,13 @@ function formatAge(ageDays: number) {
 }
 
 const styles = StyleSheet.create({
+  // A weight and a percentile are measurements, so they take the mono face the
+  // design system reserves for real data.
+  measurement: {
+    ...typography.dataStrong,
+    fontSize: 26,
+    lineHeight: 32
+  },
   muted: {
     ...typography.body,
     color: colors.textMuted

@@ -31,7 +31,7 @@ export function IntroTrialBanner({ onPress }: { onPress: () => void }) {
           <Text style={typography.eyebrow}>
             {isLastStretch ? "Deneme bitmek üzere" : "Premium deneme"}
           </Text>
-          <Text style={typography.heading2}>
+          <Text style={styles.remaining}>
             {introTrialDaysRemaining === 1
               ? "Son gün"
               : `${introTrialDaysRemaining} gün kaldı`}
@@ -63,6 +63,12 @@ const styles = StyleSheet.create({
   copy: {
     flex: 1,
     gap: 2
+  },
+  // A countdown is measurable data, so it earns the mono face.
+  remaining: {
+    ...typography.dataStrong,
+    fontSize: 20,
+    lineHeight: 26
   },
   text: {
     ...typography.body,
