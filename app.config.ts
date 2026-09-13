@@ -39,7 +39,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   name: isDevelopment ? "Anne+ Dev" : "Anne+",
   slug: "hamileliktakipapp",
   scheme: "hamiletakip",
-  version: "1.2.1",
+  version: "1.2.2",
   icon: "./assets/branding/app-icon.png",
   orientation: "portrait",
   userInterfaceStyle: "light",
@@ -52,7 +52,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supportsTablet: false,
     // TestFlight requires a new, monotonically increasing build number for
     // every upload. The GitHub Actions workflow supplies a Unix timestamp.
-    buildNumber: process.env.IOS_BUILD_NUMBER ?? "3",
+    buildNumber: process.env.IOS_BUILD_NUMBER ?? "4",
     bundleIdentifier:
       process.env.EXPO_PUBLIC_IOS_BUNDLE_IDENTIFIER ||
       "com.burakguven.hamiletakip",
