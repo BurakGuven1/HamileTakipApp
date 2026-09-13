@@ -199,6 +199,10 @@ export default function TabsLayout() {
         options={{ href: null, title: "Gece vardiyası", tabBarStyle: { display: "none" } }}
       />
       <Tabs.Screen
+        name="symptom-check"
+        options={{ href: null, title: "Bu normal mi?" }}
+      />
+      <Tabs.Screen
         name="contraction-timer"
         options={{ href: null, title: "Kasılma sayacı" }}
       />

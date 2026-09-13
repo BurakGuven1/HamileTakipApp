@@ -81,6 +81,8 @@ export type AnalyticsEventName =
   | "contraction_started"
   | "contraction_stopped"
   | "intro_trial_ended"
+  | "symptom_check_emergency_call_tapped"
+  | "symptom_check_opened"
   | "intro_trial_started"
   | "premium_gate_hit"
   | "purchase_cancelled"

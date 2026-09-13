@@ -24,9 +24,11 @@ import {
   Salad,
   Smile,
   Ruler,
+  ShieldQuestion,
   Sparkles,
   Stethoscope,
   Syringe,
+  Timer,
   Users,
   Wrench
 } from "lucide-react-native";
@@ -712,6 +714,22 @@ export default function HomeScreen() {
                       tint={vibrantColors.primaryLight}
                     />
                     <ShortcutCard
+                      accent={vibrantColors.secondary}
+                      href="/symptom-check"
+                      icon={<ShieldQuestion color={vibrantColors.secondary} fill={vibrantColors.secondarySoft} size={23} strokeWidth={2.6} />}
+                      subtitle="Beklemeli mi, aramalı mısın"
+                      title="Bu normal mi?"
+                      tint={vibrantColors.secondarySoft}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.peach}
+                      href="/contraction-timer"
+                      icon={<Timer color={vibrantColors.peach} fill={vibrantColors.peachSoft} size={23} strokeWidth={2.6} />}
+                      subtitle="Süre, aralık ve 5-1-1 kuralı"
+                      title="Kasılma sayacı"
+                      tint={vibrantColors.peachSoft}
+                    />
+                    <ShortcutCard
                       accent={vibrantColors.peach}
                       href="/birth-preparation"
                       icon={<BookOpenCheck color={vibrantColors.peach} fill={vibrantColors.peachSoft} size={23} strokeWidth={2.6} />}
@@ -738,6 +756,14 @@ export default function HomeScreen() {
                       subtitle="Beslenme, uyku veya bez kaydını hemen ekle"
                       title="Şimdi bakım kaydet"
                       tint={vibrantColors.primaryLight}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.secondary}
+                      href="/symptom-check"
+                      icon={<ShieldQuestion color={vibrantColors.secondary} fill={vibrantColors.secondarySoft} size={23} strokeWidth={2.6} />}
+                      subtitle="Beklemeli mi, aramalı mısın"
+                      title="Bu normal mi?"
+                      tint={vibrantColors.secondarySoft}
                     />
                     <ShortcutCard
                       accent={vibrantColors.peach}
