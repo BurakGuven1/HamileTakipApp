@@ -813,13 +813,14 @@ function AdvancedCareJournalContent() {
     mutationFn: async (command: { action: "start"; type: "breastfeeding" | "sleep" | "pumping"; side?: "left" | "right" } | { action: "stop"; timer: CareActiveTimer; amountMl?: number | null }) => {
       if (!selectedBaby) throw new Error("Bebek profili gerekli.");
       if (command.action === "stop") {
-        return { action: "stop" as const, result: await stopSharedCareTimer(command.timer, caregiverName || null, command.amountMl ?? null) };
+        return { action: "stop" as const, result: await stopSharedCareTimer(command.timer, caregiverName || null, command.amountMl ?? null, selectedBaby.name) };
       }
       return {
         action: "start" as const,
         result: await startSharedCareTimer({
           actorName: caregiverName || null,
           babyId: selectedBaby.id,
+          babyName: selectedBaby.name,
           breastSide: command.side ?? breastSide,
           sleepKind,
           timerType: command.type
