@@ -1,25 +1,32 @@
+import * as Clipboard from "expo-clipboard";
 import * as DocumentPicker from "expo-document-picker";
 import { File, Paths } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowDown,
+  AlertTriangle,
   ArrowLeft,
-  ArrowUp,
   Camera,
   Check,
   ChevronDown,
   ChevronUp,
+  Copy,
+  EyeOff,
   FileSearch,
   Image as ImageIcon,
+  Info,
   Link2,
+  Minus,
+  Share2,
   ShieldCheck,
   Trash2,
+  TrendingDown,
+  TrendingUp,
   Upload
 } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, Share, StyleSheet, Text, View } from "react-native";
 
 import {
   DOCUMENT_INSIGHT_MAX_BYTES,
@@ -33,15 +40,51 @@ import {
   releaseFamilyFeatureCredit,
   reserveFamilyFeatureCredit
 } from "@/api/familyCoordination";
-import { savePregnancyHealthLabResults } from "@/api/pregnancyHealthFile";
+import {
+  listPregnancyHealthTimeline,
+  savePregnancyHealthLabResults
+} from "@/api/pregnancyHealthFile";
 import { getCurrentProfile } from "@/api/profiles";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
+import {
+  PressableScale,
+  SkeletonShimmer,
+  StaggeredList
+} from "@/components/motion";
 import { Screen } from "@/components/Screen";
 import { createCareUuid } from "@/features/care-journal/careSync";
+import {
+  acknowledgeDocumentDisclaimer,
+  DOCUMENT_DISCLAIMER_ACKNOWLEDGEMENT,
+  DOCUMENT_DISCLAIMER_BODY,
+  DOCUMENT_DISCLAIMER_TITLE,
+  hasAcknowledgedDocumentDisclaimer
+} from "@/features/document-insight/disclaimerConsent";
+import {
+  getTrimesterLabel,
+  resolveInterpretationContext
+} from "@/features/document-insight/pregnancyContext";
+import { buildRangeBarModel } from "@/features/document-insight/rangeBar";
+import type {
+  DocumentRedFlag,
+  DocumentRedFlagSeverity
+} from "@/features/document-insight/types";
+import {
+  collectPreviousLabValues,
+  findValueTrend,
+  formatTrendDate,
+  type PreviousLabValue
+} from "@/features/document-insight/trend";
+import {
+  getRemainingAnalysisCopy,
+  resolveValueMomentPaywall,
+  type DocumentInsightAction
+} from "@/features/document-insight/valueMomentPaywall";
 import { PREMIUM_FEATURES } from "@/features/subscription/premiumFeatures";
 import { showPostCreditPaywallIfNeeded } from "@/features/subscription/postCreditPaywall";
 import { showPaywallIfNeeded } from "@/features/subscription/showPaywallIfNeeded";
+import { getPregnancyWeek } from "@/lib/dates";
 import { trackEvent } from "@/lib/analytics";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { useFeedback } from "@/providers/FeedbackProvider";
@@ -56,7 +99,11 @@ type TemporaryDocument = {
 
 const MIME_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
 
-type ResultCategory = "low" | "high" | "normal" | "other";
+/** Sorted by how much the reader needs them, not by how the lab printed them. */
+type ResultGroup = "attention" | "normal" | "unread";
+
+const PERSISTENT_DISCLAIMER =
+  "Bu bilgi tıbbi tavsiye değildir; tanı ve tedavi için doktoruna başvur.";
 
 export default function DocumentInsightScreen() {
   const appTheme = useAppTheme();
@@ -64,9 +111,13 @@ export default function DocumentInsightScreen() {
   const [selected, setSelected] = useState<TemporaryDocument | null>(null);
   const selectedRef = useRef<TemporaryDocument | null>(null);
   const [consentAccepted, setConsentAccepted] = useState(false);
+  const [disclaimerAcknowledged, setDisclaimerAcknowledged] = useState<boolean | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSavingToHealthFile, setIsSavingToHealthFile] = useState(false);
   const [result, setResult] = useState<DocumentInsightResult | null>(null);
+  // The paywall may fire at most once per analysed document.
+  const paywallOfferedRef = useRef(false);
+
   const featureAccessQuery = useQuery({
     queryKey: ["family-feature-access", PREMIUM_FEATURES.documentInsight.source],
     queryFn: () => getFamilyFeatureAccess(PREMIUM_FEATURES.documentInsight.source)
@@ -76,9 +127,89 @@ export default function DocumentInsightScreen() {
     queryFn: getCurrentProfile
   });
   const featureAccess = featureAccessQuery.data;
-  const lifeStage = profileQuery.data?.is_pregnant ? "pregnancy" : "postpartum";
-  const creditsExhausted = Boolean(
-    featureAccess && !featureAccess.is_premium && featureAccess.remaining === 0
+  const profile = profileQuery.data;
+  const isPremium = Boolean(featureAccess?.is_premium);
+  const lifeStage = profile?.is_pregnant ? "pregnancy" : "postpartum";
+  const interpretationContext = useMemo(
+    () =>
+      resolveInterpretationContext({
+        isPregnant: profile?.is_pregnant ?? null,
+        pregnancyWeek: getPregnancyWeek(profile?.due_date)
+      }),
+    [profile?.due_date, profile?.is_pregnant]
+  );
+
+  // Trend comparison only has something to read once values were saved before,
+  // which is a Premium archive, so it is not fetched for anyone else.
+  const timelineQuery = useQuery({
+    queryKey: ["pregnancy-health-timeline"],
+    queryFn: listPregnancyHealthTimeline,
+    enabled: isPremium && Boolean(result?.values.length)
+  });
+  const previousValues = useMemo<PreviousLabValue[]>(
+    () => (timelineQuery.data ? collectPreviousLabValues(timelineQuery.data.timeline) : []),
+    [timelineQuery.data]
+  );
+
+  useEffect(() => {
+    let active = true;
+    void hasAcknowledgedDocumentDisclaimer().then((acknowledged) => {
+      if (active) setDisclaimerAcknowledged(acknowledged);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const runValueMoment = useCallback(
+    async (action: DocumentInsightAction) => {
+      const decision = resolveValueMomentPaywall(action, {
+        hasSeenResult: Boolean(result?.values.length),
+        isPremium,
+        remaining: featureAccess?.remaining ?? null,
+        alreadyOffered: paywallOfferedRef.current
+      });
+      if (!decision.present) return false;
+
+      paywallOfferedRef.current = true;
+      await trackEvent("document_insight_result_engaged", {
+        action,
+        life_stage: lifeStage,
+        paywall_reason: decision.reason,
+        remaining: featureAccess?.remaining ?? null
+      });
+
+      if (decision.reason === "last_free_credit_used") {
+        // Keeps the once-per-account server claim that postCreditPaywall owns.
+        return showPostCreditPaywallIfNeeded({
+          feature: "document_insight",
+          isPremium,
+          lifeStage,
+          remaining: 0,
+          source: PREMIUM_FEATURES.documentInsight.source
+        });
+      }
+
+      const source =
+        decision.reason === "premium_feature_selected"
+          ? PREMIUM_FEATURES.pregnancyHealthFileSave.source
+          : PREMIUM_FEATURES.documentInsight.source;
+      const outcome = await showPaywallIfNeeded(
+        source,
+        {
+          feature:
+            decision.reason === "premium_feature_selected"
+              ? "pregnancy_health_file_save"
+              : "document_insight",
+          life_stage: lifeStage,
+          reason: decision.reason,
+          remaining: featureAccess?.remaining ?? null
+        },
+        { mode: "required" }
+      );
+      return outcome.presented;
+    },
+    [featureAccess?.remaining, isPremium, lifeStage, result?.values.length]
   );
 
   async function ensureDocumentAccess() {
@@ -87,13 +218,26 @@ export default function DocumentInsightScreen() {
       showError(featureAccessQuery.error, "Akıllı hak kontrol edilemedi");
       return false;
     }
+    const creditsExhausted = Boolean(
+      featureAccess && !featureAccess.is_premium && featureAccess.remaining === 0
+    );
     if (!creditsExhausted) return true;
-    await showPaywallIfNeeded(PREMIUM_FEATURES.documentInsight.source, {
-      feature: "document_insight",
-      life_stage: lifeStage,
-      reason: "free_credits_exhausted",
-      remaining: 0
-    }, { mode: "required" });
+
+    // Nothing was seen yet on a fresh screen, so the offer only lands here when
+    // the user is coming back for another document.
+    const presented = await runValueMoment("pick_document");
+    if (!presented) {
+      await showPaywallIfNeeded(
+        PREMIUM_FEATURES.documentInsight.source,
+        {
+          feature: "document_insight",
+          life_stage: lifeStage,
+          reason: "free_credits_exhausted",
+          remaining: 0
+        },
+        { mode: "required" }
+      );
+    }
     return false;
   }
 
@@ -112,6 +256,11 @@ export default function DocumentInsightScreen() {
     },
     []
   );
+
+  const acceptDisclaimer = async () => {
+    await acknowledgeDocumentDisclaimer();
+    setDisclaimerAcknowledged(true);
+  };
 
   const choosePdf = async () => {
     try {
@@ -200,6 +349,7 @@ export default function DocumentInsightScreen() {
 
     setIsAnalyzing(true);
     setResult(null);
+    paywallOfferedRef.current = false;
     let ocrCopy: File | null = null;
     const operationId = createCareUuid();
     let creditReserved = false;
@@ -226,7 +376,8 @@ export default function DocumentInsightScreen() {
       ocrCopy = createPrivateOcrCopy(document);
       const analysis = await analyzeMedicalDocument({
         uri: ocrCopy.uri,
-        mimeType: document.mimeType
+        mimeType: document.mimeType,
+        context: interpretationContext
       });
       const hasUsefulResult = analysis.readability !== "unreadable" && analysis.values.length > 0;
       const finalCredit = hasUsefulResult && creditReserved
@@ -245,15 +396,26 @@ export default function DocumentInsightScreen() {
         result_count: analysis.values.length
       });
       showSuccess("Belge düzenlendi. Geçici dosya silindi.", "İşlem tamamlandı");
+
       if (hasUsefulResult) {
-        await featureAccessQuery.refetch();
-        await showPostCreditPaywallIfNeeded({
-          feature: "document_insight",
-          isPremium: finalCredit.is_premium,
-          lifeStage,
+        // The value moment: the user now has something real on screen. It is
+        // recorded, and deliberately *not* followed by an offer.
+        await trackEvent("document_insight_result_viewed", {
+          explained_count: analysis.values.filter((value) => value.interpretability === "explained").length,
+          life_stage: lifeStage,
+          not_interpretable_count: analysis.values.filter((value) => value.interpretability !== "explained").length,
+          pregnancy_status: analysis.context.pregnancyStatus,
+          red_flag_count: analysis.redFlags.length,
           remaining: finalCredit.remaining,
-          source: PREMIUM_FEATURES.documentInsight.source
+          result_count: analysis.values.length
         });
+        if (analysis.redFlags.length) {
+          await trackEvent("document_insight_red_flag_shown", {
+            flag_ids: analysis.redFlags.map((flag) => flag.id).join(","),
+            life_stage: lifeStage
+          });
+        }
+        await featureAccessQuery.refetch();
       }
     } catch (error) {
       if (creditReserved && !creditCommitted) {
@@ -274,6 +436,7 @@ export default function DocumentInsightScreen() {
   const clearAll = async () => {
     setResult(null);
     setConsentAccepted(false);
+    paywallOfferedRef.current = false;
     await setTemporaryDocument(null);
     showSuccess("Geçici belge ve ekrandaki sonuç temizlendi.", "Silindi");
   };
@@ -282,12 +445,8 @@ export default function DocumentInsightScreen() {
     values: DocumentInsightValue[],
     storageConsentAccepted: boolean
   ) => {
-    if (!featureAccess?.is_premium) {
-      await showPaywallIfNeeded(PREMIUM_FEATURES.pregnancyHealthFileSave.source, {
-        feature: "pregnancy_health_file_save",
-        life_stage: "pregnancy",
-        reason: "premium_feature_selected"
-      }, { mode: "required" });
+    if (!isPremium) {
+      await runValueMoment("save_to_health_file");
       return;
     }
     if (!storageConsentAccepted) {
@@ -310,6 +469,7 @@ export default function DocumentInsightScreen() {
         source: "document_insight",
         value_count: values.length
       });
+      await timelineQuery.refetch();
       showSuccess(`${values.length} değer Sağlık Dosyam'a kaydedildi.`, "Sağlık dosyan güncellendi");
     } catch (error) {
       showError(error, "Tahlil değerleri kaydedilemedi");
@@ -317,6 +477,8 @@ export default function DocumentInsightScreen() {
       setIsSavingToHealthFile(false);
     }
   };
+
+  const showUploadCard = !result;
 
   return (
     <Screen>
@@ -332,19 +494,23 @@ export default function DocumentInsightScreen() {
           <ShieldCheck color={appTheme.primary} size={30} />
         </View>
 
-        {!result ? (
+        {disclaimerAcknowledged === false ? (
+          <DisclaimerGate onAccept={() => void acceptDisclaimer()} />
+        ) : null}
+
+        {showUploadCard && disclaimerAcknowledged ? (
           <Card style={{ backgroundColor: appTheme.tint }}>
             <View style={styles.stack}>
               <Text style={typography.heading3}>Belge yalnızca bu cihazda okunur</Text>
               <Text style={typography.body}>
-                Laboratuvar değerlerini bulur, belgenin referans aralıklarıyla karşılaştırır ve her testi halk dilinde açıklar. Teşhis, aciliyet, tedavi veya ilaç önerisi üretmez.
+                Laboratuvar değerlerini bulur, belgenin kendi referans aralıklarıyla karşılaştırır ve her testin ne anlama geldiğini anlatır. Emin olmadığı değerleri yorumlamaz.
               </Text>
-              <Text style={styles.privacyLine}>İnternete gönderilmez • Orijinal dosya ve sonuç geçmişi saklanmaz</Text>
+              <Text style={styles.privacyLine}>İnternete gönderilmez • Orijinal dosya saklanmaz</Text>
             </View>
           </Card>
         ) : null}
 
-        {!result ? (
+        {showUploadCard && disclaimerAcknowledged ? (
           <Card>
             <View style={styles.stack}>
               <View style={styles.sectionTitleRow}>
@@ -353,10 +519,13 @@ export default function DocumentInsightScreen() {
               </View>
               <Text style={typography.body}>PDF ya da okunaklı bir belge fotoğrafı seçin. En fazla 8 MB.</Text>
               <Text style={styles.smallText}>
-                {featureAccess?.is_premium
-                  ? "Premium · sınırsız belge analizi"
-                  : `${featureAccess?.remaining ?? 0}/3 ortak akıllı hakkın kaldı`}
+                {getRemainingAnalysisCopy(isPremium, featureAccess?.remaining ?? null)}
               </Text>
+              {interpretationContext.pregnancyStatus === "pregnant" ? (
+                <Text style={styles.smallText}>
+                  {getTrimesterLabel(interpretationContext)} bilgin dikkate alınır; gebeliğe özel aralık gerektiren değerler tahmin edilmez.
+                </Text>
+              ) : null}
               <View style={styles.pickerRow}>
                 <PickerButton icon={<Upload color={appTheme.primary} size={21} />} label="PDF" onPress={choosePdf} />
                 <PickerButton icon={<Camera color={appTheme.primary} size={21} />} label="Kamera" onPress={() => chooseImage("camera")} />
@@ -376,33 +545,32 @@ export default function DocumentInsightScreen() {
                 </View>
               ) : null}
 
-              <Pressable
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: consentAccepted }}
-                onPress={() => setConsentAccepted((value) => !value)}
-                style={styles.consentRow}
-              >
-                <View style={[styles.checkbox, consentAccepted && { backgroundColor: appTheme.primary, borderColor: appTheme.primary }]}>
-                  {consentAccepted ? <Check color={colors.onPrimary} size={16} /> : null}
-                </View>
-                <Text style={styles.consentText}>
-                  Belgenin cihazda okunacağını, kimlik alanlarının sonuçtan çıkarılacağını ve geçici dosyanın işlem sonunda silineceğini anlıyorum.
-                </Text>
-              </Pressable>
+              <ConsentCheckbox
+                checked={consentAccepted}
+                label="Belgenin cihazda okunacağını, kimlik alanlarının sonuçtan çıkarılacağını ve geçici dosyanın işlem sonunda silineceğini anlıyorum."
+                onToggle={() => setConsentAccepted((value) => !value)}
+              />
 
               <Button disabled={!selected || !consentAccepted || isAnalyzing} label={isAnalyzing ? "Belge okunuyor…" : "Belgeyi anla"} onPress={analyze} />
             </View>
           </Card>
-        ) : (
+        ) : null}
+
+        {isAnalyzing ? <AnalysisSkeleton /> : null}
+
+        {result ? (
           <ResultView
-            isPremium={Boolean(featureAccess?.is_premium)}
+            isPremium={isPremium}
             isSaving={isSavingToHealthFile}
+            onEngage={(action) => void runValueMoment(action)}
             onSave={(values, storageConsentAccepted) =>
               void saveToHealthFile(values, storageConsentAccepted)
             }
+            previousValues={previousValues}
+            remaining={featureAccess?.remaining ?? null}
             result={result}
           />
-        )}
+        ) : null}
 
         {(selected || result) && !isAnalyzing ? <Button label="Belgeyi ve sonucu sil" onPress={clearAll} variant="ghost" /> : null}
       </View>
@@ -410,23 +578,57 @@ export default function DocumentInsightScreen() {
   );
 }
 
+/**
+ * Shown once, before the first analysis. Acknowledging it is a deliberate tap,
+ * not a checkbox buried under a button the user was going to press anyway.
+ */
+function DisclaimerGate({ onAccept }: { onAccept: () => void }) {
+  const appTheme = useAppTheme();
+  const [checked, setChecked] = useState(false);
+  return (
+    <Card style={{ backgroundColor: appTheme.tint }}>
+      <View style={styles.stack}>
+        <View style={styles.sectionTitleRow}>
+          <ShieldCheck color={appTheme.primary} size={24} />
+          <Text style={typography.heading2}>{DOCUMENT_DISCLAIMER_TITLE}</Text>
+        </View>
+        <Text style={typography.body}>{DOCUMENT_DISCLAIMER_BODY}</Text>
+        <ConsentCheckbox
+          checked={checked}
+          label={DOCUMENT_DISCLAIMER_ACKNOWLEDGEMENT}
+          onToggle={() => setChecked((value) => !value)}
+        />
+        <Button disabled={!checked} label="Anladım, devam et" onPress={onAccept} />
+      </View>
+    </Card>
+  );
+}
+
 function ResultView({
   isPremium,
   isSaving,
+  onEngage,
   onSave,
+  previousValues,
+  remaining,
   result
 }: {
   isPremium: boolean;
   isSaving: boolean;
+  onEngage: (action: DocumentInsightAction) => void;
   onSave: (values: DocumentInsightValue[], storageConsentAccepted: boolean) => void;
+  previousValues: PreviousLabValue[];
+  remaining: number | null;
   result: DocumentInsightResult;
 }) {
   const appTheme = useAppTheme();
+  const { showSuccess } = useFeedback();
   const [selectedIndexes, setSelectedIndexes] = useState<Set<number>>(() => new Set());
   const [storageConsentAccepted, setStorageConsentAccepted] = useState(false);
-  const groupedValues = useMemo(() => groupDocumentValues(result.values), [result.values]);
-  const categorizedCount = groupedValues.low.length + groupedValues.high.length + groupedValues.normal.length;
+  const grouped = useMemo(() => groupDocumentValues(result.values), [result.values]);
+  const contextualCount = result.values.filter((value) => value.interpretability === "contextual").length;
   const selectedValues = result.values.filter((_, index) => selectedIndexes.has(index));
+  const remainingCopy = getRemainingAnalysisCopy(isPremium, remaining);
 
   function toggleSelected(index: number) {
     setSelectedIndexes((current) => {
@@ -437,8 +639,27 @@ function ResultView({
     });
   }
 
+  const questionsText = result.doctorQuestions
+    .map((question, index) => `${index + 1}. ${question}`)
+    .join("\n");
+
+  const copyQuestions = async () => {
+    await Clipboard.setStringAsync(`Doktoruma soracaklarım\n\n${questionsText}\n\n${PERSISTENT_DISCLAIMER}`);
+    showSuccess("Sorular panoya kopyalandı.", "Kopyalandı");
+    onEngage("copy_questions");
+  };
+
+  const shareQuestions = async () => {
+    await Share.share({
+      message: `Doktoruma soracaklarım\n\n${questionsText}\n\n${PERSISTENT_DISCLAIMER}`
+    });
+    onEngage("copy_questions");
+  };
+
   return (
     <View style={styles.stackLarge}>
+      {result.redFlags.length ? <RedFlagCard flags={result.redFlags} /> : null}
+
       {result.readability !== "readable" ? (
         <Card style={{ backgroundColor: colors.highlightSoft }}>
           <Text style={typography.heading3}>Laboratuvar sonuçları güvenle ayırt edilemedi</Text>
@@ -449,29 +670,101 @@ function ResultView({
       <Card style={{ backgroundColor: appTheme.tint }}>
         <View style={styles.stack}>
           <Text style={typography.eyebrow}>BELGE ÖZETİ</Text>
-          <Text style={typography.heading2}>Sonuçların anlaşılır görünümü</Text>
-          <Text style={typography.body}>
+          <Text style={typography.heading2}>
             {result.values.length
-              ? `${result.values.length} sonuç okundu${categorizedCount ? `, ${categorizedCount} tanesi rapordaki bilgiye göre sınıflandırıldı` : ""}.`
-              : "Eşleştirilebilen bir laboratuvar sonucu bulunamadı."}
+              ? `${result.values.length} sonuç okundu`
+              : "Eşleştirilebilen bir sonuç bulunamadı"}
           </Text>
           {result.values.length ? (
             <View style={styles.resultSummaryRow}>
-              <SummaryCount label="Düşük" value={groupedValues.low.length} tone="low" />
-              <SummaryCount label="Yüksek" value={groupedValues.high.length} tone="high" />
-              <SummaryCount label="Normal" value={groupedValues.normal.length} tone="normal" />
+              <SummaryCount label="Dikkat" tone="attention" value={grouped.attention.length} />
+              <SummaryCount label="Beklenen" tone="normal" value={grouped.normal.length} />
+              <SummaryCount label="Yorumlanmadı" tone="unread" value={grouped.unread.length} />
             </View>
           ) : null}
+          {contextualCount ? (
+            <View style={styles.contextNote}>
+              <Info color={colors.honeyGold} size={16} />
+              <Text style={styles.contextNoteText}>
+                {contextualCount} sonuç “Gebelik notu var” rozetiyle işaretlendi: laboratuvarın kendi karşılaştırmasını gösteriyoruz, ama o aralık gebe olmayan yetişkinler için yazıldığı için sonucun anlamı hakkında bir şey söylemiyoruz.
+              </Text>
+            </View>
+          ) : null}
+          {remainingCopy ? <Text style={styles.smallText}>{remainingCopy}</Text> : null}
         </View>
       </Card>
 
-      {result.values.length ? (
+      {grouped.attention.length ? (
         <Card>
-          <View style={styles.resultList}>
-            <ResultCategorySection category="low" values={groupedValues.low} />
-            <ResultCategorySection category="high" values={groupedValues.high} />
-            <ResultCategorySection category="normal" values={groupedValues.normal} />
-            <ResultCategorySection category="other" values={groupedValues.other} />
+          <View style={styles.stack}>
+            <Text style={typography.heading2}>Rapordaki aralığın dışında görünenler</Text>
+            <StaggeredList style={styles.stack}>
+              {grouped.attention.map((value, index) => (
+                <ValueCard
+                  key={`attention-${value.testName}-${index}`}
+                  onExpand={() => onEngage("expand_value")}
+                  previousValues={previousValues}
+                  value={value}
+                />
+              ))}
+            </StaggeredList>
+          </View>
+        </Card>
+      ) : null}
+
+      {grouped.normal.length ? (
+        <Card>
+          <View style={styles.stack}>
+            <Text style={typography.heading2}>Rapordaki aralığın içinde görünenler</Text>
+            <StaggeredList style={styles.stack}>
+              {grouped.normal.map((value, index) => (
+                <ValueCard
+                  key={`normal-${value.testName}-${index}`}
+                  onExpand={() => onEngage("expand_value")}
+                  previousValues={previousValues}
+                  value={value}
+                />
+              ))}
+            </StaggeredList>
+          </View>
+        </Card>
+      ) : null}
+
+      {grouped.unread.length ? (
+        <Card style={{ backgroundColor: colors.surfaceMuted }}>
+          <View style={styles.stack}>
+            <View style={styles.sectionTitleRow}>
+              <EyeOff color={colors.textMuted} size={22} />
+              <Text style={typography.heading2}>Bunları yorumlamadık</Text>
+            </View>
+            <Text style={typography.body}>
+              Bu değerleri belgeden okuduk ama emin olamadığımız için anlamı hakkında bir şey yazmadık. Tahmin etmek yerine boş bırakmayı tercih ediyoruz.
+            </Text>
+            {grouped.unread.map((value, index) => (
+              <View key={`unread-${value.testName}-${index}`} style={styles.unreadRow}>
+                <View style={styles.valueHeader}>
+                  <Text style={[typography.label, styles.valueName]}>{value.testName}</Text>
+                  <Text style={styles.resultText}>{value.result}{value.unit ? ` ${value.unit}` : ""}</Text>
+                </View>
+                <Text style={styles.smallText}>{value.notInterpretableReason}</Text>
+              </View>
+            ))}
+          </View>
+        </Card>
+      ) : null}
+
+      {result.doctorQuestions.length ? (
+        <Card>
+          <View style={styles.stack}>
+            <Text style={typography.heading2}>Doktoruna sor</Text>
+            <Text style={typography.body}>Bu listeyi görüşmene götürebilirsin.</Text>
+            {result.doctorQuestions.map((question, index) => (
+              <Text key={`${question}-${index}`} style={styles.questionText}>{index + 1}. {question}</Text>
+            ))}
+            <View style={styles.questionActions}>
+              <SecondaryAction icon={<Copy color={appTheme.primary} size={18} />} label="Kopyala" onPress={() => void copyQuestions()} />
+              <SecondaryAction icon={<Share2 color={appTheme.primary} size={18} />} label="Paylaş" onPress={() => void shareQuestions()} />
+            </View>
           </View>
         </Card>
       ) : null}
@@ -481,51 +774,32 @@ function ResultView({
           <View style={styles.stack}>
             <Text style={typography.eyebrow}>{isPremium ? "PREMIUM · KALICI DOSYA" : "PREMIUM"}</Text>
             <Text style={typography.heading2}>Sağlık Dosyam'a kaydet</Text>
-            <Text style={typography.body}>Yalnızca seçtiğin test adı, değer, birim ve belgedeki referans aralığı saklanır. Belgenin kendisi ve OCR metni saklanmaz.</Text>
+            <Text style={typography.body}>
+              Kaydettiğin değerler bir sonraki tahlilinde karşılaştırma için kullanılır. Yalnızca seçtiğin test adı, değer, birim ve belgedeki referans aralığı saklanır; belgenin kendisi ve OCR metni saklanmaz.
+            </Text>
             {result.values.map((value, index) => {
-              const selected = selectedIndexes.has(index);
+              const checked = selectedIndexes.has(index);
               return (
-                <Pressable
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: selected }}
+                <ConsentCheckbox
+                  checked={checked}
                   key={`${value.testName}-${index}`}
-                  onPress={() => toggleSelected(index)}
-                  style={styles.consentRow}
-                >
-                  <View style={[styles.checkbox, selected && { backgroundColor: appTheme.primary, borderColor: appTheme.primary }]}>
-                    {selected ? <Check color={colors.onPrimary} size={16} /> : null}
-                  </View>
-                  <Text style={styles.consentText}>{value.testName}: {value.result}{value.unit ? ` ${value.unit}` : ""}</Text>
-                </Pressable>
+                  label={`${value.testName}: ${value.result}${value.unit ? ` ${value.unit}` : ""}`}
+                  onToggle={() => toggleSelected(index)}
+                />
               );
             })}
             {isPremium ? (
-              <Pressable
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: storageConsentAccepted }}
-                onPress={() => setStorageConsentAccepted((value) => !value)}
-                style={styles.consentRow}
-              >
-                <View style={[styles.checkbox, storageConsentAccepted && { backgroundColor: appTheme.primary, borderColor: appTheme.primary }]}>
-                  {storageConsentAccepted ? <Check color={colors.onPrimary} size={16} /> : null}
-                </View>
-                <Text style={styles.consentText}>Seçtiğim değerlerin Anne+ Sağlık Dosyam'da saklanacağını ve yalnızca tam aile erişimi verdiğim kişilerle paylaşılabileceğini kabul ediyorum.</Text>
-              </Pressable>
+              <ConsentCheckbox
+                checked={storageConsentAccepted}
+                label="Seçtiğim değerlerin Anne+ Sağlık Dosyam'da saklanacağını ve yalnızca tam aile erişimi verdiğim kişilerle paylaşılabileceğini kabul ediyorum."
+                onToggle={() => setStorageConsentAccepted((value) => !value)}
+              />
             ) : null}
             <Button
-              disabled={isSaving || selectedValues.length === 0 || (isPremium && !storageConsentAccepted)}
+              disabled={isSaving || (isPremium && (selectedValues.length === 0 || !storageConsentAccepted))}
               label={isSaving ? "Kaydediliyor..." : isPremium ? `${selectedValues.length} değeri kaydet` : "Sağlık Dosyam'a kaydet · Premium"}
               onPress={() => onSave(selectedValues, storageConsentAccepted)}
             />
-          </View>
-        </Card>
-      ) : null}
-
-      {result.doctorQuestions.length ? (
-        <Card>
-          <View style={styles.stack}>
-            <Text style={typography.heading2}>Doktoruna sorabileceğin sorular</Text>
-            {result.doctorQuestions.map((question, index) => <Text key={`${question}-${index}`} style={typography.body}>{index + 1}. {question}</Text>)}
           </View>
         </Card>
       ) : null}
@@ -534,52 +808,187 @@ function ResultView({
         <View style={styles.stack}>
           <View style={styles.sectionTitleRow}><ShieldCheck color={appTheme.primary} size={22} /><Text style={typography.heading3}>Bilmen gereken</Text></View>
           <Text style={styles.safetyNotice}>{result.safetyNotice}</Text>
-          <Text style={styles.smallText}>Geçici belge silindi; sonuç cihazda veya veritabanında saklanmadı.</Text>
+          <Text style={styles.smallText}>Geçici belge silindi; sonuç kendiliğinden hiçbir yere kaydedilmedi.</Text>
         </View>
       </Card>
     </View>
   );
 }
 
-function ValueRow({ value }: { value: DocumentInsightValue }) {
+/**
+ * The first thing on screen when it applies. Loud enough to be seen, quiet
+ * enough not to frighten: it names what the number looks like and what to do,
+ * and never what it might be.
+ */
+const SEVERITY_LABEL: Record<DocumentRedFlagSeverity, string> = {
+  urgent: "Bugün değerlendirilmeli",
+  today: "Bugün doktoruna danış",
+  soon: "Dikkat"
+};
+
+function RedFlagCard({ flags }: { flags: DocumentRedFlag[] }) {
+  return (
+    <Card style={styles.redFlagCard}>
+      <View style={styles.stack}>
+        <View style={styles.sectionTitleRow}>
+          <View style={styles.redFlagIcon}>
+            <AlertTriangle color={colors.dustyRose} size={20} />
+          </View>
+          <Text style={[typography.heading2, styles.redFlagTitle]}>Bunu doktorunla paylaş</Text>
+        </View>
+        <StaggeredList style={styles.stack}>
+          {flags.map((flag) => (
+            <View key={flag.id} style={styles.redFlagRow}>
+              <View style={styles.redFlagHeader}>
+                <Text style={[typography.label, styles.valueName]}>{flag.testName}</Text>
+                <View
+                  style={[
+                    styles.severityPill,
+                    { backgroundColor: flag.severity === "soon" ? colors.highlightSoft : colors.surface }
+                  ]}
+                >
+                  <Text style={styles.severityText}>{SEVERITY_LABEL[flag.severity]}</Text>
+                </View>
+              </View>
+              {/* A cuff at home and a laboratory report are not the same kind of
+                  evidence, so the card never lets them look alike. */}
+              <Text style={styles.smallText}>
+                {flag.source === "manual_measurement" ? "Kendi ölçümün" : "Tahlil raporundan"}
+              </Text>
+              <Text style={typography.body}>{flag.observation}</Text>
+              <Text style={styles.redFlagAction}>{flag.action}</Text>
+              <SourceLink label={flag.sourceLabel} url={flag.sourceUrl} />
+            </View>
+          ))}
+        </StaggeredList>
+        <Text style={styles.smallText}>
+          Bu uyarı bir tanı değildir ve aciliyet değerlendirmesi yapmaz. Kendini kötü hissediyorsan beklemeden sağlık kuruluşuna başvur.
+        </Text>
+      </View>
+    </Card>
+  );
+}
+
+function ValueCard({
+  onExpand,
+  previousValues,
+  value
+}: {
+  onExpand: () => void;
+  previousValues: PreviousLabValue[];
+  value: DocumentInsightValue;
+}) {
   const appTheme = useAppTheme();
   const [expanded, setExpanded] = useState(false);
+  const status = getValueStatus(value);
+  const rangeBar = useMemo(() => buildRangeBarModel(value), [value]);
+  const trend = useMemo(() => findValueTrend(value, previousValues), [previousValues, value]);
   const referenceRange = usefulDocumentText(value.referenceRange);
-  const resultSummary = usefulDocumentText(value.plainLanguage.resultSummary);
   const whatItIs = usefulDocumentText(value.plainLanguage.whatItIs);
   const possibleMeaning = usefulDocumentText(value.plainLanguage.possibleMeaning);
   const clinicianContext = usefulDocumentText(value.plainLanguage.clinicianContext);
-  const sourceUrl = /^https?:\/\//i.test(value.plainLanguage.sourceUrl ?? "")
-    ? value.plainLanguage.sourceUrl
-    : null;
+
+  function toggle() {
+    setExpanded((current) => {
+      if (!current) onExpand();
+      return !current;
+    });
+  }
+
   return (
-    <View style={styles.valueRow}>
+    <View style={styles.valueCard}>
       <View style={styles.valueHeader}>
         <Text style={[typography.label, styles.valueName]}>{value.testName}</Text>
-        <Text style={styles.resultText}>{value.result}{value.unit ? ` ${value.unit}` : ""}</Text>
+        <Text style={[styles.resultValue, { color: status.color }]}>
+          {value.result}
+          {value.unit ? <Text style={styles.resultUnit}> {value.unit}</Text> : null}
+        </Text>
       </View>
-      {resultSummary ? <Text style={styles.valueSummary}>{resultSummary}</Text> : null}
-      <Pressable
+
+      {/* Colour never carries the meaning alone: the icon and the word do too. */}
+      <View style={styles.pillRow}>
+        <View style={[styles.statusPill, { backgroundColor: status.background }]}>
+          {status.icon}
+          <Text style={styles.statusText}>{status.label}</Text>
+        </View>
+        {value.interpretability === "contextual" ? (
+          <View style={[styles.statusPill, { backgroundColor: colors.highlightSoft }]}>
+            <Info color={colors.honeyGold} size={14} />
+            <Text style={styles.statusText}>Gebelik notu var</Text>
+          </View>
+        ) : null}
+      </View>
+
+      {rangeBar ? (
+        <View
+          accessibilityLabel={`${value.testName} sonucu ${value.result} ${value.unit}. Rapordaki aralık ${referenceRange ?? "belirtilmemiş"}. Durum: ${status.label}.`}
+          accessibilityRole="image"
+          style={styles.rangeBarBlock}
+        >
+          <View style={styles.rangeTrack}>
+            <View
+              style={[
+                styles.rangeBand,
+                { left: `${rangeBar.bandStart * 100}%`, width: `${(rangeBar.bandEnd - rangeBar.bandStart) * 100}%` }
+              ]}
+            />
+            <View style={[styles.rangeMarker, { left: `${rangeBar.markerPosition * 100}%`, backgroundColor: status.color }]} />
+          </View>
+          <View style={styles.rangeLabels}>
+            <Text style={styles.rangeLabelText}>{rangeBar.lowLabel ? `alt ${rangeBar.lowLabel}` : ""}</Text>
+            <Text style={styles.rangeLabelText}>{rangeBar.highLabel ? `üst ${rangeBar.highLabel}` : ""}</Text>
+          </View>
+        </View>
+      ) : null}
+
+      {trend ? (
+        <View style={styles.trendRow}>
+          {trend.direction === "up" ? <TrendingUp color={colors.textMuted} size={16} />
+            : trend.direction === "down" ? <TrendingDown color={colors.textMuted} size={16} />
+            : <Minus color={colors.textMuted} size={16} />}
+          <Text style={styles.smallText}>
+            Önceki kayıt ({formatTrendDate(trend.previousDate)}): {trend.previousResult}{trend.previousUnit ? ` ${trend.previousUnit}` : ""}
+            {trend.difference ? ` · ${trend.difference}` : ""}
+          </Text>
+        </View>
+      ) : null}
+
+      <Text style={styles.valueSummary}>
+        {value.interpretability === "explained"
+          ? possibleMeaning ?? value.referenceExplanation
+          : value.interpretability === "contextual"
+            ? value.referenceExplanation
+            : value.notInterpretableReason}
+      </Text>
+
+      {/*
+        A contextual value keeps the lab's own comparison but not its meaning,
+        so the reason must be visible without opening anything — otherwise the
+        comparison reads as a verdict it is not.
+      */}
+      {value.contextNote ? (
+        <View style={styles.contextNote}>
+          <Info color={colors.honeyGold} size={16} />
+          <Text style={styles.contextNoteText}>{value.contextNote}</Text>
+        </View>
+      ) : null}
+
+      <PressableScale
         accessibilityRole="button"
         accessibilityState={{ expanded }}
-        onPress={() => setExpanded((current) => !current)}
+        onPress={toggle}
         style={styles.expandButton}
       >
-        <Text style={[styles.expandText, { color: appTheme.primary }]}>{expanded ? "Ayrıntıyı kapat" : "Açıklamayı gör"}</Text>
+        <Text style={[styles.expandText, { color: appTheme.primary }]}>{expanded ? "Ayrıntıyı kapat" : "Ayrıntıyı gör"}</Text>
         {expanded ? <ChevronUp color={appTheme.primary} size={17} /> : <ChevronDown color={appTheme.primary} size={17} />}
-      </Pressable>
+      </PressableScale>
+
       {expanded ? (
         <View style={styles.explanationBox}>
           {whatItIs ? (
             <View style={styles.explanationSection}>
               <Text style={styles.explanationLabel}>Bu test neyi anlatır?</Text>
               <Text style={typography.body}>{whatItIs}</Text>
-            </View>
-          ) : null}
-          {possibleMeaning ? (
-            <View style={styles.explanationSection}>
-              <Text style={styles.explanationLabel}>Genel olarak ne anlatabilir?</Text>
-              <Text style={typography.body}>{possibleMeaning}</Text>
             </View>
           ) : null}
           {value.plainLanguage.symptomContext.length ? (
@@ -598,58 +1007,119 @@ function ValueRow({ value }: { value: DocumentInsightValue }) {
           {referenceRange ? (
             <Text style={styles.rangeText}>Rapordaki referans aralığı: {referenceRange}</Text>
           ) : null}
-          {sourceUrl ? (
-            <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(sourceUrl)} style={styles.sourceLink}>
-              <Link2 color={appTheme.primary} size={16} />
-              <Text style={[styles.sourceText, { color: appTheme.primary }]}>{value.plainLanguage.sourceLabel}</Text>
-            </Pressable>
+          {value.trimesterSensitive ? (
+            <Text style={styles.smallText}>Bu testin beklenen aralığı gebelik dönemine göre değişebilir.</Text>
           ) : null}
+          <SourceLink label={value.plainLanguage.sourceLabel} url={value.plainLanguage.sourceUrl} />
         </View>
       ) : null}
     </View>
   );
 }
 
-function ResultCategorySection({ category, values }: { category: ResultCategory; values: DocumentInsightValue[] }) {
-  if (!values.length) return null;
-  const metadata = getCategoryMetadata(category);
+/** No source, no link — and therefore no claim standing on its own. */
+function SourceLink({ label, url }: { label: string; url: string }) {
+  const appTheme = useAppTheme();
+  if (!label.trim() || !/^https:\/\//i.test(url ?? "")) return null;
   return (
-    <View style={styles.categorySection}>
-      <View style={styles.categoryHeader}>
-        <View style={[styles.categoryIcon, { backgroundColor: metadata.background }]}>{metadata.icon}</View>
-        <Text style={[typography.heading3, styles.categoryTitle]}>{metadata.title}</Text>
-        <Text style={styles.categoryCount}>{values.length}</Text>
+    <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(url)} style={styles.sourceLink}>
+      <Link2 color={appTheme.primary} size={16} />
+      <Text style={[styles.sourceText, { color: appTheme.primary }]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function ConsentCheckbox({
+  checked,
+  label,
+  onToggle
+}: {
+  checked: boolean;
+  label: string;
+  onToggle: () => void;
+}) {
+  const appTheme = useAppTheme();
+  return (
+    <Pressable
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked }}
+      onPress={onToggle}
+      style={styles.consentRow}
+    >
+      <View style={[styles.checkbox, checked && { backgroundColor: appTheme.primary, borderColor: appTheme.primary }]}>
+        {checked ? <Check color={colors.onPrimary} size={16} /> : null}
       </View>
-      {category === "other" ? <Text style={styles.smallText}>Rapor bu sonuçlar için düşük, yüksek veya normal ayrımı yapmaya yetecek bilgi içermiyor.</Text> : null}
-      {values.map((value, index) => <ValueRow key={`${category}-${value.testName}-${index}`} value={value} />)}
+      <Text style={styles.consentText}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function SecondaryAction({ icon, label, onPress }: { icon: React.ReactNode; label: string; onPress: () => void }) {
+  const appTheme = useAppTheme();
+  return (
+    <PressableScale accessibilityRole="button" onPress={onPress} style={styles.secondaryAction}>
+      {icon}
+      <Text style={[styles.secondaryActionLabel, { color: appTheme.primary }]}>{label}</Text>
+    </PressableScale>
+  );
+}
+
+function SummaryCount({ label, tone, value }: { label: string; tone: ResultGroup; value: number }) {
+  const backgroundColor =
+    tone === "normal" ? colors.primarySoft : tone === "attention" ? colors.accentSoft : colors.surfaceMuted;
+  return (
+    <View style={[styles.summaryCount, { backgroundColor }]}>
+      <Text style={styles.summaryNumber}>{value}</Text>
+      <Text style={styles.summaryLabel}>{label}</Text>
     </View>
   );
 }
 
-function SummaryCount({ label, tone, value }: { label: string; tone: "low" | "high" | "normal"; value: number }) {
-  const backgroundColor = tone === "normal" ? colors.primarySoft : colors.highlightSoft;
-  return <View style={[styles.summaryCount, { backgroundColor }]}><Text style={styles.summaryNumber}>{value}</Text><Text style={styles.summaryLabel}>{label}</Text></View>;
-}
-
 function groupDocumentValues(values: DocumentInsightValue[]) {
-  return values.reduce<Record<ResultCategory, DocumentInsightValue[]>>((groups, value) => {
-    groups[getResultCategory(value)].push(value);
+  return values.reduce<Record<ResultGroup, DocumentInsightValue[]>>((groups, value) => {
+    groups[getResultGroup(value)].push(value);
     return groups;
-  }, { high: [], low: [], normal: [], other: [] });
+  }, { attention: [], normal: [], unread: [] });
 }
 
-function getResultCategory(value: DocumentInsightValue): ResultCategory {
-  if (value.referenceStatus === "below" || value.documentMarker === "low") return "low";
-  if (value.referenceStatus === "above" || value.documentMarker === "high") return "high";
+function getResultGroup(value: DocumentInsightValue): ResultGroup {
+  // A contextual value still carries the lab's own comparison, so it belongs
+  // beside the values it was compared with rather than in the unread pile. The
+  // badge and the note on its card are what mark it as the weaker claim.
+  if (value.interpretability === "not_interpretable") return "unread";
+  if (value.referenceStatus === "below" || value.referenceStatus === "above") return "attention";
+  if (value.documentMarker === "low" || value.documentMarker === "high" || value.documentMarker === "abnormal") {
+    return "attention";
+  }
   if (value.referenceStatus === "within" || value.documentMarker === "normal") return "normal";
-  return "other";
+  return "unread";
 }
 
-function getCategoryMetadata(category: ResultCategory) {
-  if (category === "low") return { background: colors.highlightSoft, icon: <ArrowDown color={colors.highlight} size={18} />, title: "Düşük görünenler" };
-  if (category === "high") return { background: colors.accentSoft, icon: <ArrowUp color={colors.accent} size={18} />, title: "Yüksek görünenler" };
-  if (category === "normal") return { background: colors.primarySoft, icon: <Check color={colors.primary} size={18} />, title: "Normal aralıkta görünenler" };
-  return { background: colors.surfaceMuted, icon: <FileSearch color={colors.textMuted} size={18} />, title: "Diğer sonuçlar" };
+function getValueStatus(value: DocumentInsightValue) {
+  const group = getResultGroup(value);
+  if (group === "attention") {
+    const low = value.referenceStatus === "below" || value.documentMarker === "low";
+    return {
+      background: colors.accentSoft,
+      color: colors.dustyRose,
+      icon: <AlertTriangle color={colors.dustyRose} size={14} />,
+      label: low ? "Aralığın altında" : "Aralığın üstünde"
+    };
+  }
+  if (group === "normal") {
+    return {
+      background: colors.primarySoft,
+      color: colors.sageGreen,
+      icon: <Check color={colors.sageGreen} size={14} />,
+      label: "Rapordaki aralıkta"
+    };
+  }
+  return {
+    background: colors.highlightSoft,
+    color: colors.honeyGold,
+    icon: <EyeOff color={colors.honeyGold} size={14} />,
+    label: "Yorumlanmadı"
+  };
 }
 
 function usefulDocumentText(value?: string | null) {
@@ -658,8 +1128,22 @@ function usefulDocumentText(value?: string | null) {
   return text;
 }
 
+function AnalysisSkeleton() {
+  return (
+    <Card>
+      <View style={styles.stack}>
+        <SkeletonShimmer height={18} width="55%" />
+        <SkeletonShimmer delay={80} height={12} />
+        <SkeletonShimmer delay={160} height={12} width="80%" />
+        <SkeletonShimmer delay={240} height={44} radius={radii.lg} />
+        <Text style={styles.smallText}>Belge cihazında okunuyor. Hiçbir şey internete gönderilmiyor.</Text>
+      </View>
+    </Card>
+  );
+}
+
 function PickerButton({ icon, label, onPress }: { icon: React.ReactNode; label: string; onPress: () => void }) {
-  return <Pressable accessibilityRole="button" onPress={onPress} style={styles.pickerButton}>{icon}<Text style={styles.pickerLabel}>{label}</Text></Pressable>;
+  return <PressableScale accessibilityRole="button" onPress={onPress} style={styles.pickerButton}>{icon}<Text style={styles.pickerLabel}>{label}</Text></PressableScale>;
 }
 
 function normalizeImageMimeType(mimeType: string | undefined, uri: string) {
@@ -713,33 +1197,48 @@ const styles = StyleSheet.create({
   pickerLabel: { color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13 },
   selectedBox: { alignItems: "center", borderRadius: radii.md, flexDirection: "row", gap: spacing.sm, padding: spacing.md },
   smallText: { color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 13, lineHeight: 19 },
-  consentRow: { alignItems: "flex-start", flexDirection: "row", gap: spacing.md },
+  consentRow: { alignItems: "flex-start", flexDirection: "row", gap: spacing.md, minHeight: 44 },
   checkbox: { alignItems: "center", borderColor: colors.border, borderRadius: 6, borderWidth: 1.5, height: 24, justifyContent: "center", marginTop: 2, width: 24 },
   consentText: { color: colors.text, flex: 1, fontFamily: fonts.bodyRegular, fontSize: 13, lineHeight: 20 },
   resultSummaryRow: { flexDirection: "row", gap: spacing.sm },
   summaryCount: { alignItems: "center", borderRadius: radii.md, flex: 1, gap: 2, paddingHorizontal: spacing.sm, paddingVertical: spacing.md },
   summaryNumber: { color: colors.text, fontFamily: fonts.dataBold, fontSize: 20 },
-  summaryLabel: { color: colors.textMuted, fontFamily: fonts.bodySemiBold, fontSize: 12 },
-  resultList: { gap: spacing.xl },
-  categorySection: { gap: spacing.md },
-  categoryHeader: { alignItems: "center", flexDirection: "row", gap: spacing.sm },
-  categoryIcon: { alignItems: "center", borderRadius: radii.pill, height: 34, justifyContent: "center", width: 34 },
-  categoryTitle: { flex: 1 },
-  categoryCount: { color: colors.textMuted, fontFamily: fonts.dataBold, fontSize: 14 },
-  valueRow: { borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth, gap: spacing.sm, paddingBottom: spacing.lg },
-  compactValueRow: { paddingBottom: spacing.md },
+  summaryLabel: { color: colors.textMuted, fontFamily: fonts.bodySemiBold, fontSize: 12, textAlign: "center" },
+  redFlagCard: { backgroundColor: colors.accentSoft, borderColor: colors.dustyRose, borderWidth: 1 },
+  redFlagIcon: { alignItems: "center", backgroundColor: colors.surface, borderRadius: radii.pill, height: 34, justifyContent: "center", width: 34 },
+  redFlagTitle: { flex: 1 },
+  redFlagRow: { gap: spacing.xs },
+  redFlagHeader: { alignItems: "center", flexDirection: "row", gap: spacing.sm, justifyContent: "space-between" },
+  severityPill: { borderRadius: radii.pill, paddingHorizontal: spacing.sm, paddingVertical: 2 },
+  severityText: { ...typography.body, color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13, lineHeight: 18 },
+  pillRow: { alignItems: "center", flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
+  contextNote: { alignItems: "flex-start", backgroundColor: colors.highlightSoft, borderRadius: radii.lg, flexDirection: "row", gap: spacing.sm, padding: spacing.md },
+  contextNoteText: { ...typography.body, color: colors.text, flex: 1, fontSize: 14, lineHeight: 20 },
+  redFlagAction: { color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 15, lineHeight: 22 },
+  valueCard: { borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth, gap: spacing.sm, paddingBottom: spacing.lg },
   valueHeader: { alignItems: "flex-start", flexDirection: "row", gap: spacing.md, justifyContent: "space-between" },
   valueName: { flex: 1 },
+  resultValue: { fontFamily: fonts.dataBold, fontSize: 26, lineHeight: 32, textAlign: "right" },
+  resultUnit: { color: colors.textMuted, fontFamily: fonts.dataRegular, fontSize: 14 },
   resultText: { color: colors.text, fontFamily: fonts.dataBold, fontSize: 16, textAlign: "right" },
-  valueSummary: { color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 14, lineHeight: 21 },
+  statusPill: { alignItems: "center", alignSelf: "flex-start", borderRadius: radii.pill, flexDirection: "row", gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
+  statusText: { color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 12 },
+  rangeBarBlock: { gap: spacing.xs, marginTop: spacing.xs },
+  rangeTrack: { backgroundColor: colors.surfaceMuted, borderRadius: radii.pill, height: 10, justifyContent: "center", overflow: "hidden" },
+  rangeBand: { backgroundColor: colors.primarySoft, bottom: 0, position: "absolute", top: 0 },
+  rangeMarker: { borderRadius: radii.pill, height: 16, marginLeft: -2, position: "absolute", width: 4 },
+  rangeLabels: { flexDirection: "row", justifyContent: "space-between" },
+  rangeLabelText: { color: colors.textMuted, fontFamily: fonts.dataRegular, fontSize: 11 },
+  trendRow: { alignItems: "center", flexDirection: "row", gap: spacing.xs },
+  valueSummary: { color: colors.textMuted, fontFamily: fonts.bodyRegular, fontSize: 15, lineHeight: 22 },
+  unreadRow: { gap: spacing.xs },
+  questionText: { color: colors.text, fontFamily: fonts.bodyRegular, fontSize: 16, lineHeight: 24 },
+  questionActions: { flexDirection: "row", gap: spacing.md },
+  secondaryAction: { alignItems: "center", flexDirection: "row", gap: spacing.xs, minHeight: 44, paddingRight: spacing.md },
+  secondaryActionLabel: { fontFamily: fonts.bodySemiBold, fontSize: 14 },
   expandButton: { alignItems: "center", alignSelf: "flex-start", flexDirection: "row", gap: spacing.xs, minHeight: 44 },
   expandText: { fontFamily: fonts.bodySemiBold, fontSize: 13 },
   rangeText: { color: colors.text, fontFamily: fonts.dataRegular, fontSize: 13, lineHeight: 19 },
-  statusPill: { alignSelf: "flex-start", borderRadius: radii.pill, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
-  statusOutside: { backgroundColor: colors.highlightSoft },
-  statusNeutral: { backgroundColor: colors.primarySoft },
-  statusText: { color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 12 },
-  lowConfidence: { color: colors.danger, fontFamily: fonts.bodySemiBold, fontSize: 12, lineHeight: 18 },
   explanationBox: { backgroundColor: colors.surfaceMuted, borderRadius: radii.md, gap: spacing.md, marginTop: spacing.xs, padding: spacing.md },
   explanationSection: { gap: spacing.xs },
   explanationLabel: { color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13, lineHeight: 19 },

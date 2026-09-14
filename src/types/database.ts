@@ -34,6 +34,8 @@ export type Database = {
           notify_daily_support: boolean;
           notify_premium_offers: boolean;
           notify_premium_emails: boolean;
+          /** Trigger tarafından yazılır; istemci yazamaz (App Review 4.5.4 kanıtı). */
+          premium_offer_consent_at: string | null;
           premium_email_consent_at: string | null;
           feeding_mode: "breastfeeding" | "pumping" | "mixed" | "formula";
           created_at: string;

@@ -153,5 +153,12 @@ export const colors = {
   lengthTint: vibrantColors.blueSoft,
   weightTint: vibrantColors.peachSoft,
   overlay: semanticColor(alpha(rgb.nightPlum, 0.08), "rgba(0, 0, 0, 0.34)"),
+  /** Sekme çubuğunda seçili olmayan ikon ve etiket rengi. */
+  tabInactive: semanticColor("#655F57", "#C8C1CB"),
+  /** Seçili sekmenin ikon arkasındaki yumuşak zemin. */
+  tabActiveSurface: semanticColor(
+    "rgba(139, 111, 232, 0.14)",
+    "rgba(255, 255, 255, 0.10)"
+  ),
   transparent: "transparent"
 } as const;

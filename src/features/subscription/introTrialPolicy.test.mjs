@@ -54,6 +54,13 @@ test("an unchanged trial state reports nothing", () => {
   assert.equal(resolveIntroTrialTransition(true, true), null);
 });
 
+test("a trial that ends and is later repurchased reports both edges", () => {
+  // Funnel reads depend on "had access and let it lapse" being distinguishable
+  // from "came back", so a second start after an end must not be swallowed.
+  assert.equal(resolveIntroTrialTransition(true, false), "ended");
+  assert.equal(resolveIntroTrialTransition(false, true), "started");
+});
+
 test("a never-started trial on a fresh install stays silent", () => {
   // Without this the paywall funnel would show an "ended" event for every
   // account that never had a trial at all.
