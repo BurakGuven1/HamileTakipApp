@@ -65,13 +65,13 @@ if (resourceMembershipCount !== 2) {
   );
 }
 
-if (
-  countMatches(
-    podfile,
-    /\$RNFirebaseAnalyticsWithoutAdIdSupport\s*=\s*true/g
-  ) !== 1
-) {
-  fail("The AnalyticsWithoutAdIdSupport Podfile flag is missing or duplicated.");
+// Google Ads install attribution needs the IDFA-capable measurement pod, so
+// the ad-id-free variant must stay off. The IDFA itself is still gated by the
+// ATT prompt at runtime.
+if (/\$RNFirebaseAnalyticsWithoutAdIdSupport\s*=\s*true/.test(podfile)) {
+  fail(
+    "AnalyticsWithoutAdIdSupport must stay disabled; it blocks Google Ads install attribution."
+  );
 }
 
 if (/\$RNFirebaseAnalyticsGoogleAppMeasurementOnDeviceConversion\s*=\s*true/.test(podfile)) {

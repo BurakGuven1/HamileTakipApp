@@ -1,9 +1,18 @@
 import type {
   FirebaseAnalyticsEventMap,
+  FirebaseConsentState,
   FirebaseSignUpMethod
 } from "@/services/firebase/firebaseAnalytics.types";
 
-export type { FirebaseAnalyticsEventMap, FirebaseSignUpMethod };
+export type {
+  FirebaseAnalyticsEventMap,
+  FirebaseConsentState,
+  FirebaseSignUpMethod
+};
+
+export async function applyFirebaseConsent(_consent: FirebaseConsentState) {
+  return false;
+}
 
 export async function isFirebaseAnalyticsAvailable() {
   return false;

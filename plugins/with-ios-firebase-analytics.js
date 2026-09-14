@@ -25,9 +25,14 @@ function withIosFirebaseAnalytics(config) {
       disableSPM: true
     }
   });
+  // The ad-id-free measurement pod cannot read the IDFA, which means Google
+  // Ads only ever sees modelled/SKAdNetwork conversions and cannot optimise an
+  // App campaign for installs. Keep the full GoogleAppMeasurement pod; the
+  // IDFA is still only read after the user accepts the ATT prompt, and Firebase
+  // consent is denied by default until then (see trackingPermission.ts).
   nextConfig = analyticsIosPlugin.withIosWithoutAdIdSupport(nextConfig, {
     ios: {
-      withoutAdIdSupport: true
+      withoutAdIdSupport: false
     }
   });
   return nextConfig;

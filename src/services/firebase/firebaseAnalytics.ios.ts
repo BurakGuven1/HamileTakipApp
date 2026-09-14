@@ -2,10 +2,15 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import type {
   FirebaseAnalyticsEventMap,
+  FirebaseConsentState,
   FirebaseSignUpMethod
 } from "@/services/firebase/firebaseAnalytics.types";
 
-export type { FirebaseAnalyticsEventMap, FirebaseSignUpMethod };
+export type {
+  FirebaseAnalyticsEventMap,
+  FirebaseConsentState,
+  FirebaseSignUpMethod
+};
 
 const SIGN_UP_MARKER_PREFIX = "@anne-plus/firebase-analytics/sign-up/v1:";
 
@@ -53,9 +58,54 @@ export async function logFirebaseAnalyticsEvent<
           parameters as FirebaseAnalyticsEventMap["sign_up"]
         );
         return true;
+      case "begin_checkout":
+        await modules.analytics.logBeginCheckout(
+          analytics,
+          parameters as FirebaseAnalyticsEventMap["begin_checkout"]
+        );
+        return true;
+      case "purchase":
+        await modules.analytics.logPurchase(
+          analytics,
+          parameters as FirebaseAnalyticsEventMap["purchase"]
+        );
+        return true;
     }
+
+    return false;
   } catch (error) {
     logDevelopmentError(`event ${String(eventName)} failed`, error);
+    return false;
+  }
+}
+
+/**
+ * Firebase starts with ad signals denied so nothing leaves the device before
+ * the ATT prompt is answered. Once the user accepts, ad_storage/ad_user_data/
+ * ad_personalization are granted, which is what lets Google Ads join the
+ * `first_open` conversion back to the click that produced the install.
+ */
+export async function applyFirebaseConsent({
+  trackingGranted
+}: FirebaseConsentState) {
+  const modules = await getFirebaseModules();
+  if (!modules) return false;
+
+  try {
+    if (modules.app.getApps().length === 0) return false;
+
+    const analytics = modules.analytics.getAnalytics();
+
+    await modules.analytics.setConsent(analytics, {
+      analytics_storage: true,
+      ad_storage: trackingGranted,
+      ad_user_data: trackingGranted,
+      ad_personalization: trackingGranted
+    });
+    await modules.analytics.setAnalyticsCollectionEnabled(analytics, true);
+    return true;
+  } catch (error) {
+    logDevelopmentError("consent update failed", error);
     return false;
   }
 }
