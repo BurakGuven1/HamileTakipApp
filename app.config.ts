@@ -8,15 +8,77 @@ const metaAppId = process.env.META_APP_ID?.trim();
 const metaClientToken = process.env.META_CLIENT_TOKEN?.trim();
 const metaTrackingPermission =
   "Reklamların etkinliğini ölçmek ve sana daha ilgili reklamlar sunmak için cihaz tanımlayıcının kullanılmasına izin ver.";
+// Google Ads (and Meta) can only attribute an install when the postback is
+// allowed to reach the ad network. Without these identifiers iOS silently
+// drops every SKAdNetwork postback, so the campaign never learns which click
+// produced the download and the bidder cannot optimise for installs.
+const skAdNetworkIdentifiers = [
+  // Google (Ads / AdMob) - the one that makes App campaigns measurable.
+  "cstr6suwn9",
+  "4fzdc2evr5",
+  "4pfyvq9l8r",
+  "2fnua5tdw4",
+  "ydx93a7ass",
+  "5a6flpkh64",
+  "p78axxw75g",
+  "v72qych5uu",
+  "ludvb6z3bs",
+  "cp8zw746q7",
+  "3sh42y64q3",
+  "c6k4g5qg8m",
+  "s39g8k73mm",
+  "3qy4746246",
+  "hs6bdukanm",
+  "v4nxqhlyqp",
+  "wzmmz9fp6w",
+  "yclnxrl5pm",
+  "t38b2kh725",
+  "7ug5zh24hu",
+  "9rd848q2bz",
+  "y5ghdn5j9k",
+  "n6fk4nfna4",
+  "47vhws6wlr",
+  "kbd757ywx3",
+  "9t245vhmpl",
+  "a2p9lx4jpn",
+  "22mmun2rn5",
+  "4468km3ulz",
+  "2u9pt9hc89",
+  "8s468mfl3y",
+  "klf5c3l5u5",
+  "ppxm28t8ap",
+  "ecpz2srf59",
+  "uw77j35x4d",
+  "pwa73g5rt2",
+  "mlmmfzh3r3",
+  "578prtvx9j",
+  "4dzt52r2t5",
+  "gta9lk7p23",
+  "e5fvkxwrpn",
+  "8c4e2ghe7u",
+  "zq492l623r",
+  "3rd42ekr43",
+  "3qcr597p9d",
+  // Meta.
+  "v9wttpbfk9",
+  "n38lu8286q",
+  "f38h382jlk"
+].map((skAdNetworkIdentifier) => ({
+  SKAdNetworkIdentifier: `${skAdNetworkIdentifier}.skadnetwork`
+}));
+
+// The ATT prompt is required for IDFA-based attribution in BOTH Firebase
+// (Google Ads) and Meta, so it is no longer gated behind the Meta credentials.
+const trackingTransparencyPlugin: NonNullable<ExpoConfig["plugins"]>[number] = [
+  "expo-tracking-transparency",
+  {
+    userTrackingPermission: metaTrackingPermission
+  }
+];
+
 const metaPlugins: NonNullable<ExpoConfig["plugins"]> =
   metaAppId && metaClientToken
     ? [
-        [
-          "expo-tracking-transparency",
-          {
-            userTrackingPermission: metaTrackingPermission
-          }
-        ],
         [
           "react-native-fbsdk-next",
           {
@@ -63,7 +125,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         "Bebek fotoğraflarını çekebilmek için kamera erişimi kullanılır.",
       NSPhotoLibraryUsageDescription:
         "Ana sayfa görselini seçmek ve anı galerisine fotoğraf eklemek için fotoğraf erişimi kullanılır.",
-      UIBackgroundModes: ["audio", "remote-notification"]
+      UIBackgroundModes: ["audio", "remote-notification"],
+      NSUserTrackingUsageDescription: metaTrackingPermission,
+      SKAdNetworkItems: skAdNetworkIdentifiers
     },
     config: {
       usesNonExemptEncryption: false
@@ -91,6 +155,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     "expo-router",
+    trackingTransparencyPlugin,
     "expo-status-bar",
     "expo-image",
     [

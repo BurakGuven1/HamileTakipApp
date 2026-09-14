@@ -20,7 +20,8 @@
     "verify:meta": "node --env-file-if-exists=.env tools/verify-meta-config.mjs",
     "verify:firebase:ios": "node --env-file-if-exists=.env tools/verify-firebase-ios-config.mjs",
     "verify:firebase:ios:generated": "node tools/verify-generated-firebase-ios.mjs",
-    "eas-build-post-install": "npm run verify:revenuecat && npm run verify:meta && npm run verify:firebase:ios"
+    "verify:google-ads": "node tools/verify-google-ads-config.mjs",
+    "eas-build-post-install": "npm run verify:revenuecat && npm run verify:meta && npm run verify:firebase:ios && npm run verify:google-ads"
   },
   "expo": {
     "autolinking": {

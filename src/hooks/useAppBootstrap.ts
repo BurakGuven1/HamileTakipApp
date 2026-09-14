@@ -14,6 +14,10 @@ import {
 import { configureRevenueCat } from "@/lib/revenuecat";
 import { supabase } from "@/lib/supabase";
 import {
+  refreshTrackingPermission,
+  requestTrackingPermissionIfNeeded
+} from "@/services/attribution/trackingPermission";
+import {
   initializeMetaAppEvents,
   logMetaDevelopmentTestEventIfEnabled,
   refreshMetaTrackingPermission,
@@ -33,10 +37,15 @@ export function useAppBootstrap() {
     async function bootstrap() {
       configureRevenueCat();
       clearAppNotificationBadge();
+      // Ask once, up front, for every ad platform. Firebase consent is applied
+      // here so Google Ads can attribute the install; the Meta bootstrap below
+      // reads the already-answered status instead of prompting a second time.
+      await requestTrackingPermissionIfNeeded();
       void initializeMetaAppEvents()
         .then(async (initialized) => {
           if (!initialized) return;
           await requestMetaTrackingPermissionIfNeeded();
+
           await logMetaDevelopmentTestEventIfEnabled();
         })
         .catch((error) => {
@@ -77,6 +86,7 @@ export function useAppBootstrap() {
       trackSessionStartedIfNeeded()
         .then(() => trackAuthenticatedSessionStartedIfNeeded())
         .catch(() => undefined);
+      refreshTrackingPermission().catch(() => undefined);
       refreshMetaTrackingPermission().catch((error) => {
         console.warn("Meta tracking permission refresh failed", error);
       });

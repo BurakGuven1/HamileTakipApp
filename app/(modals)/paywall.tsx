@@ -22,6 +22,8 @@ import {
 } from "@/lib/revenuecat";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { trackPaywallView } from "@/services/analytics/paywallAnalytics";
+import { logFirebaseAnalyticsEvent } from "@/services/firebase/firebaseAnalytics";
+import { trackFirebaseVerifiedRevenueCatPurchase } from "@/services/firebase/firebasePurchase";
 import { trackMetaVerifiedRevenueCatPurchase } from "@/services/meta/metaAppEvents";
 import { colors, spacing } from "@/theme";
 
@@ -193,6 +195,12 @@ export default function PaywallScreen() {
             package_id: packageBeingPurchased.identifier,
             product_id: packageBeingPurchased.product.identifier
           }, { paywallViewId: paywallViewIdRef.current });
+          // Mid-funnel signal for Google Ads: `purchase` alone is too sparse
+          // early in a campaign for the bidder to learn from.
+          void logFirebaseAnalyticsEvent("begin_checkout", {
+            value: packageBeingPurchased.product.price,
+            currency: packageBeingPurchased.product.currencyCode
+          });
         }}
         onPurchaseCompleted={({ customerInfo, storeTransaction }) => {
           void (async () => {
@@ -212,6 +220,16 @@ export default function PaywallScreen() {
               storeTransaction
             }).catch((metaError) => {
               console.warn("Meta purchase event logging failed", metaError);
+            });
+            await trackFirebaseVerifiedRevenueCatPurchase({
+              customerInfo,
+              purchasedPackage,
+              storeTransaction
+            }).catch((firebaseError) => {
+              console.warn(
+                "Firebase purchase event logging failed",
+                firebaseError
+              );
             });
             await trackEvent("purchase_client_completed", {
               ...getPaywallEventProperties(params),
