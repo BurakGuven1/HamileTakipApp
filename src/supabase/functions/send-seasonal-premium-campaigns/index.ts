@@ -14,6 +14,13 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// App Store Review Guideline 4.5.4 kuralının tek kaynağı. İstemci (Ayarlar
+// ekranı) ile sunucu aynı saf modülü kullanır; kural iki yerde ayrışamaz.
+import {
+  assertMarketingPushAllowed,
+  isMarketingPushAllowed,
+} from "../../../features/notifications/marketingConsent.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -38,6 +45,7 @@ type ProfileRow = {
   id: string;
   mother_name: string | null;
   notify_premium_offers: boolean;
+  premium_offer_consent_at: string | null;
 };
 
 type PushTokenRow = {
@@ -58,7 +66,12 @@ type CampaignLogRow = {
 type ExpoPushMessage = {
   body: string;
   data: Record<string, unknown>;
-  sound: "default";
+  // 4.5.4 + Focus: pazarlama bildirimi Odak modunu delmez ve sessiz teslim
+  // edilir. "time-sensitive" ya da "critical" burada ASLA kullanılmaz.
+  channelId: "premium-offers";
+  interruptionLevel: "passive";
+  priority: "normal";
+  sound: null;
   title: string;
   to: string;
 };
@@ -90,8 +103,12 @@ Deno.serve(async (req) => {
     const eligibleBefore = new Date(Date.now() - 5 * DAY_MS).toISOString();
     const { data: profiles, error: profileError } = await supabase
       .from("profiles")
-      .select("id, mother_name, created_at, notify_premium_offers")
+      .select(
+        "id, mother_name, created_at, notify_premium_offers, premium_offer_consent_at",
+      )
       .eq("notify_premium_offers", true)
+      // Açık onayın damgası olmadan kampanya gönderilmez (4.5.4).
+      .not("premium_offer_consent_at", "is", null)
       .lte("created_at", eligibleBefore)
       .limit(5000);
 
@@ -99,7 +116,11 @@ Deno.serve(async (req) => {
       return json({ error: profileError.message }, 500);
     }
 
-    const profileRows = (profiles ?? []) as ProfileRow[];
+    // Sorgu filtresi tek savunma değil: satırlar ayrıca kodda da süzülür, böylece
+    // filtre bir gün yanlışlıkla gevşetilse bile onaysız kimseye gönderilmez.
+    const profileRows = ((profiles ?? []) as ProfileRow[]).filter(
+      isMarketingPushAllowed,
+    );
     if (profileRows.length === 0) {
       return json({ success: true, sent: 0, message: "Uygun profil yok" });
     }
@@ -180,10 +201,18 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      // Son savunma: mesaj kuyruğa girmeden önce onay bir kez daha doğrulanır.
+      // Onaysız bir profil buraya kadar geldiyse bu bir hatadır; sessizce
+      // göndermektense gönderimi durdur.
+      assertMarketingPushAllowed(profile);
+
       usersWithMessages.add(token.user_id);
       messages.push({
         to: token.expo_push_token,
-        sound: "default",
+        sound: null,
+        channelId: "premium-offers",
+        interruptionLevel: "passive",
+        priority: "normal",
         title: campaign.title,
         body: personalizeBody(campaign.body, profile.mother_name),
         data: {

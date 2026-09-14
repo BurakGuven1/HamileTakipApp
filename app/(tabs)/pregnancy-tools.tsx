@@ -1,25 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
-import { Link } from "expo-router";
+import { router } from "expo-router";
 import {
   Activity,
-  CalendarDays,
-  ClipboardCheck,
-  Dumbbell,
-  Droplets,
-  FileHeart,
   HeartPulse,
   Minus,
   Plus,
-  Sparkles,
-  Stethoscope,
-  Timer,
   Trash2,
-  Users,
   Weight
 } from "lucide-react-native";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import {
   addPregnancyCounterDelta,
@@ -30,16 +21,19 @@ import {
   type PregnancyDailyCounter,
   type PregnancyWeightRecord
 } from "@/api/pregnancyTools";
-import { listBirthPreparationItems } from "@/api/birthPreparation";
 import { getCurrentProfile } from "@/api/profiles";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { DatePickerField } from "@/components/DatePickerField";
 import { EmptyState } from "@/components/EmptyState";
 import { Screen } from "@/components/Screen";
+import { StaggeredList } from "@/components/motion";
 import { TextField } from "@/components/TextField";
 import { QueryState } from "@/components/QueryState";
 import { Reveal } from "@/components/Reveal";
+import { getExperienceStage } from "@/features/life-stage/lifeStage";
+import { getToolCategories } from "@/features/tools/toolCatalog";
+import { ToolShortcutCard } from "@/features/tools/ToolShortcutCard";
 import { formatDate, toDateOnly } from "@/lib/dates";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { useFeedback } from "@/providers/FeedbackProvider";
@@ -64,6 +58,8 @@ export default function PregnancyToolsScreen() {
   const profile = profileQuery.data;
   const appTheme = accentColor.theme;
   const enabled = Boolean(profile?.is_pregnant);
+  const experienceStage = getExperienceStage(profile, false);
+  const toolCategories = getToolCategories(experienceStage);
 
   const weightsQuery = useQuery({
     queryKey: ["pregnancy-weight-records"],
@@ -77,23 +73,11 @@ export default function PregnancyToolsScreen() {
     enabled
   });
 
-  const preparationItemsQuery = useQuery({
-    queryKey: ["birth-preparation-items"],
-    queryFn: listBirthPreparationItems,
-    enabled
-  });
 
   const weights = weightsQuery.data ?? [];
   const counters = countersQuery.data ?? [];
   const todayCounter = counters.find((item) => item.counter_date === today);
   const latestWeight = weights[0];
-  const preparationItems = preparationItemsQuery.data ?? [];
-  const preparationCompleted = preparationItems.filter(
-    (item) => item.is_completed
-  ).length;
-  const preparationProgress = preparationItems.length
-    ? preparationCompleted / preparationItems.length
-    : 0;
 
   const saveWeightMutation = useMutation({
     mutationFn: async () => {
@@ -161,7 +145,7 @@ export default function PregnancyToolsScreen() {
     return <Screen scroll={false}><QueryState loading description="Hamilelik araçları hazırlanıyor…" /></Screen>;
   }
 
-  const toolQueries = [weightsQuery, countersQuery, preparationItemsQuery];
+  const toolQueries = [weightsQuery, countersQuery];
   const toolQueriesLoading = enabled && toolQueries.some((query) => query.isLoading);
   const toolQueriesError = enabled && toolQueries.some((query) => query.isError);
 
@@ -170,7 +154,7 @@ export default function PregnancyToolsScreen() {
       <Screen scroll={false}>
         <QueryState
           description="Hamilelik kayıtların şu anda alınamadı."
-          onRetry={() => void Promise.all([profileQuery.refetch(), weightsQuery.refetch(), countersQuery.refetch(), preparationItemsQuery.refetch()])}
+          onRetry={() => void Promise.all([profileQuery.refetch(), weightsQuery.refetch(), countersQuery.refetch()])}
           retrying={toolQueries.some((query) => query.isFetching) || profileQuery.isFetching}
           title="Hamilelik araçları yüklenemedi"
         />
@@ -190,212 +174,40 @@ export default function PregnancyToolsScreen() {
             <View style={[styles.heroIcon, { backgroundColor: appTheme.accentSoft }]}>
               <HeartPulse color={appTheme.primary} size={28} />
             </View>
-            <Text style={typography.eyebrow}>Hamilelik araçları</Text>
-            <Text style={typography.heading1}>Günlük takip merkezi</Text>
+            <Text style={typography.eyebrow}>Tüm araçlar</Text>
+            <Text style={typography.heading1}>Araç merkezi</Text>
             <Text numberOfLines={3} style={styles.heroText}>
-              Kilo değişimi, tekme sayısı, kasılma sayısı ve güvenli egzersiz akışı
-              hamilelik profilinde birlikte tutulur.
+              Takip, sağlık, doğum ve aile araçları kategorilere ayrıldı. Aradığını
+              tek bakışta bul, ana sayfan sade kalsın.
             </Text>
           </View>
         </Reveal>
 
+        <StaggeredList delay={60} interval={60} style={styles.catalog}>
+          {toolCategories.map((category) => (
+            <View key={category.key} style={styles.catalogCategory}>
+              <View style={styles.sectionTitleCopy}>
+                <Text style={typography.heading2}>{category.title}</Text>
+                <Text style={styles.sectionHint}>{category.hint}</Text>
+              </View>
+              <StaggeredList style={styles.catalogItems}>
+                {category.items.map((tool, index) => (
+                  <ToolShortcutCard key={tool.key} featured={index === 0} tool={tool} />
+                ))}
+              </StaggeredList>
+            </View>
+          ))}
+        </StaggeredList>
+
         {!enabled ? (
           <EmptyState
-            title="Bu alan hamilelik profiline özel"
-            description="Profilinde Hamileyim seçili olduğunda kilo, tekme, kasılma ve egzersiz araçları burada görünür."
+            title="Gebelik sayaçları hamilelik profiline özel"
+            description="Profilinde Hamileyim seçili olduğunda kilo, tekme ve kasılma sayaçları da burada açılır."
+            actionLabel="Profili aç"
+            onActionPress={() => router.push("/settings")}
           />
         ) : (
           <>
-            <Reveal delay={90} style={styles.launchSection}>
-              <View style={styles.sectionHeader}>
-                <View style={styles.sectionTitleCopy}>
-                  <Text style={typography.heading2}>Bugün neye ihtiyacın var?</Text>
-                  <Text style={styles.sectionHint}>Kartları yana kaydırarak keşfet</Text>
-                </View>
-                <Activity color={appTheme.accent} size={24} />
-              </View>
-              <ScrollView
-                horizontal
-                contentContainerStyle={styles.featureRail}
-                showsHorizontalScrollIndicator={false}
-              >
-            <Card style={[styles.featureCardWide, { backgroundColor: appTheme.primarySoft }]}>
-              <View style={{ gap: spacing.md }}>
-                <View style={styles.cardHeader}>
-                  <View style={{ flex: 1, gap: spacing.xs }}>
-                    <Text style={typography.eyebrow}>Tek sağlık zaman çizelgesi</Text>
-                    <Text style={typography.heading2}>Sağlık Dosyam</Text>
-                    <Text numberOfLines={3} style={typography.body}>
-                      Kilo, ölçüm, aşı, randevu ve seçerek kaydettiğin tahlil değerlerini birlikte gör.
-                    </Text>
-                  </View>
-                  <FileHeart color={appTheme.primary} size={30} />
-                </View>
-                <Link href="/pregnancy-health-file" asChild>
-                  <Button label="Sağlık dosyamı aç" />
-                </Link>
-              </View>
-            </Card>
-            <Card style={[styles.featureCardWide, { backgroundColor: appTheme.accentSoft }]}>
-              <View style={{ gap: spacing.md }}>
-                <View style={styles.cardHeader}>
-                  <View style={{ flex: 1, gap: spacing.xs }}>
-                    <Text style={typography.heading2}>Doktor görüşmesine hazırlan</Text>
-                    <Text numberOfLines={3} style={typography.body}>
-                      Sorularını yaz; kilo, sayaç, aşı ve sağlık ekibinden aldığın ölçümleri gerçek kayıtlarınla özetle.
-                    </Text>
-                  </View>
-                  <Stethoscope color={appTheme.primary} size={30} />
-                </View>
-                <Link href={{ pathname: "/doctor-visit", params: { subject: "pregnancy" } }} asChild>
-                  <Button label="Görüşme dosyasını hazırla" />
-                </Link>
-              </View>
-            </Card>
-
-            <Card style={[styles.featureCard, { backgroundColor: colors.primarySoft }]}>
-              <View style={{ gap: spacing.md }}>
-                <View style={styles.cardHeader}>
-                  <View style={{ flex: 1, gap: spacing.xs }}>
-                    <Text style={typography.heading2}>Aile desteği</Text>
-                    <Text numberOfLines={3} style={typography.body}>
-                      Hazırlık görevini anneye, babaya/bakıcıya ya da ikinize ata; zamanlı alarmı doğru cihaza gönder.
-                    </Text>
-                  </View>
-                  <Users color={appTheme.primary} size={30} />
-                </View>
-                <Link href="/family-planner" asChild>
-                  <Button label="Ortak görevleri aç" variant="secondary" />
-                </Link>
-              </View>
-            </Card>
-
-            <Card style={[styles.preparationCard, styles.featureCardWide, { backgroundColor: appTheme.primarySoft }]}>
-              <View style={styles.cardHeader}>
-                <View style={{ flex: 1, gap: spacing.xs }}>
-                  <Text style={typography.eyebrow}>Anne + baba ortak</Text>
-                  <Text style={typography.heading2}>Doğuma hazırlık</Text>
-                  <Text numberOfLines={2} style={typography.body}>
-                    Doğum çantası ve doğum planını tek, sade listede birlikte tamamlayın.
-                  </Text>
-                </View>
-                <View style={[styles.preparationIcon, { backgroundColor: appTheme.accentSoft }]}>
-                  <ClipboardCheck color={appTheme.primary} size={28} />
-                </View>
-              </View>
-              <View style={styles.preparationSummary}>
-                <Text style={styles.preparationSummaryText}>
-                  {preparationItems.length
-                    ? `${preparationCompleted}/${preparationItems.length} hazır`
-                    : "Liste ilk açılışta hazır olacak"}
-                </Text>
-                <Text style={[styles.preparationPercent, { color: appTheme.primary }]}>
-                  %{Math.round(preparationProgress * 100)}
-                </Text>
-              </View>
-              <View style={styles.preparationTrack}>
-                <View
-                  style={[
-                    styles.preparationFill,
-                    {
-                      backgroundColor: appTheme.primary,
-                      width: `${preparationProgress * 100}%`
-                    }
-                  ]}
-                />
-              </View>
-              <Link href="/birth-preparation" asChild>
-                <Button label="Ortak listeyi aç" />
-              </Link>
-            </Card>
-
-            <Card style={[styles.exerciseCard, styles.featureCard, { backgroundColor: appTheme.primarySoft }]}>
-              <View style={styles.cardHeader}>
-                <View style={{ flex: 1, gap: spacing.xs }}>
-                  <Text style={typography.eyebrow}>Doğum yaklaşınca</Text>
-                  <Text style={typography.heading2}>Kasılma sayacı</Text>
-                  <Text numberOfLines={3} style={typography.body}>
-                    Tek düğmeyle süreyi ve aralığı tut; 5-1-1 kuralı karşılandığında
-                    uygulama sana söyler.
-                  </Text>
-                </View>
-                <Timer color={appTheme.primary} size={30} />
-              </View>
-              <Link href="/contraction-timer" asChild>
-                <Button label="Sayacı aç" />
-              </Link>
-            </Card>
-
-            <Card style={[styles.exerciseCard, styles.featureCard, { backgroundColor: "#F7E8ED" }]}>
-              <View style={styles.cardHeader}>
-                <View style={{ flex: 1, gap: spacing.xs }}>
-                  <Text style={typography.eyebrow}>Özel bir an</Text>
-                  <Text style={typography.heading2}>Bebek isimleri</Text>
-                  <Text numberOfLines={3} style={typography.body}>
-                    Kız, erkek ya da sürpriz seç; anlamıyla birlikte sana özel bir isim keşfet.
-                  </Text>
-                </View>
-                <Sparkles color="#934C63" size={30} />
-              </View>
-              <Link href="/baby-names" asChild>
-                <Button label="Bir isim keşfet" variant="secondary" />
-              </Link>
-            </Card>
-
-            <Card style={[styles.exerciseCard, styles.featureCard, { backgroundColor: appTheme.accentSoft }]}>
-              <View style={styles.cardHeader}>
-                <View style={{ flex: 1, gap: spacing.xs }}>
-                  <Text style={typography.heading2}>Hamile egzersizi</Text>
-                  <Text numberOfLines={2} style={typography.body}>
-                    7 hareket, otomatik mola, nefes ritmi ve duraklatılabilir sayaç.
-                  </Text>
-                </View>
-                <Dumbbell color={appTheme.primary} size={30} />
-              </View>
-              <Link href="/pregnancy-exercise" asChild>
-                <Button label="Egzersizi başlat" />
-              </Link>
-            </Card>
-
-            <Card style={styles.featureCard}>
-              <View style={{ gap: spacing.md }}>
-                <View style={styles.cardHeader}>
-                  <View style={{ flex: 1, gap: spacing.xs }}>
-                    <Text style={typography.eyebrow}>Ücretsiz</Text>
-                    <Text style={typography.heading2}>Su ve takviye rehberi</Text>
-                    <Text numberOfLines={3} style={typography.body}>
-                      Günlük su hatırlatmalarını aç; gebelik ayına göre Sağlık
-                      Bakanlığı ve WHO kaynaklı genel takviye zamanlarını incele.
-                    </Text>
-                  </View>
-                  <Droplets color={appTheme.primary} size={30} />
-                </View>
-                <Link href="/pregnancy-nutrition" asChild>
-                  <Button label="Su ve takviye rehberini aç" variant="secondary" />
-                </Link>
-              </View>
-            </Card>
-
-            <Card style={styles.featureCard}>
-              <View style={{ gap: spacing.md }}>
-                <View style={styles.cardHeader}>
-                  <View style={{ flex: 1, gap: spacing.xs }}>
-                    <Text style={typography.heading2}>Hamilelik çizelgesi</Text>
-                    <Text numberOfLines={3} style={typography.body}>
-                      Haftalık gelişim, folik asit dönemi, hareket farkındalığı ve
-                      kontrol pencereleri tek timeline üzerinde.
-                    </Text>
-                  </View>
-                  <CalendarDays color={appTheme.primary} size={30} />
-                </View>
-                <Link href="/pregnancy-timeline" asChild>
-                  <Button label="Çizelgeyi aç" variant="secondary" />
-                </Link>
-              </View>
-            </Card>
-              </ScrollView>
-            </Reveal>
-
             <Card>
               <View style={{ gap: spacing.lg }}>
                 <View style={styles.cardHeader}>
@@ -624,6 +436,15 @@ function toNumber(value: string) {
 }
 
 const styles = StyleSheet.create({
+  catalog: {
+    gap: spacing.xl
+  },
+  catalogCategory: {
+    gap: spacing.md
+  },
+  catalogItems: {
+    gap: spacing.sm
+  },
   container: {
     gap: spacing.lg
   },
@@ -643,9 +464,6 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.text
   },
-  launchSection: {
-    gap: spacing.md
-  },
   sectionHeader: {
     alignItems: "center",
     flexDirection: "row",
@@ -662,58 +480,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20
   },
-  featureRail: {
-    alignItems: "stretch",
-    gap: spacing.md,
-    paddingRight: spacing.lg
-  },
-  featureCard: {
-    justifyContent: "space-between",
-    width: 284
-  },
-  featureCardWide: {
-    width: 316
-  },
   cardHeader: {
     alignItems: "center",
     flexDirection: "row",
     gap: spacing.md,
     justifyContent: "space-between"
-  },
-  exerciseCard: {
-    gap: spacing.md
-  },
-  preparationCard: {
-    gap: spacing.md
-  },
-  preparationIcon: {
-    alignItems: "center",
-    borderRadius: radii.pill,
-    height: 48,
-    justifyContent: "center",
-    width: 48
-  },
-  preparationSummary: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between"
-  },
-  preparationSummaryText: {
-    ...typography.label,
-    color: colors.text
-  },
-  preparationPercent: {
-    ...typography.label
-  },
-  preparationTrack: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.pill,
-    height: 7,
-    overflow: "hidden"
-  },
-  preparationFill: {
-    borderRadius: radii.pill,
-    height: "100%"
   },
   latestBox: {
     ...radii.card,

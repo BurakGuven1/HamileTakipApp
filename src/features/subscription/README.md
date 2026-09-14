@@ -44,6 +44,23 @@ month boundaries.
 no argument it returns the account aggregate plus a per-feature `features`
 breakdown.
 
+## Value moment before the ask
+
+`src/features/document-insight/valueMomentPaywall.ts` owns *when* the document
+insight paywall may appear. The rule it enforces is that the user must have seen
+a complete analysis before anything is asked of her: uploading spends the credit,
+the whole result renders, `document_insight_result_viewed` records the value
+moment, and no offer follows it.
+
+The offer arrives on the next deliberate act instead — expanding a value,
+copying the doctor questions, saving into Sağlık Dosyam, or picking a second
+document — and only when the balance is already at zero. It fires at most once
+per analysed document. `last_free_credit_used` still routes through
+`showPostCreditPaywallIfNeeded` so the one-per-account `claim_premium_prompt`
+guard stays intact; the other reasons go straight to `showPaywallIfNeeded` with
+their own `feature` / `source` / `reason`, which is what separates them in the
+funnel.
+
 ## Bundles
 
 `PREMIUM_BUNDLES` groups all seventeen features into three promises
