@@ -62,6 +62,7 @@ import { CommunityAgreementGate } from "@/components/CommunityAgreementGate";
 import { EmptyState } from "@/components/EmptyState";
 import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
+import { PageHeader } from "@/components/PageHeader";
 import { TextField } from "@/components/TextField";
 import { ForumReportDialog } from "@/features/forum/ForumReportDialog";
 import { openLegalPage } from "@/config/legal";
@@ -531,22 +532,20 @@ function ForumContent() {
   return (
     <Screen>
       <View style={styles.container}>
-        <View style={[styles.hero, { backgroundColor: appTheme.tint }]}>
+        <PageHeader
+          eyebrow="Anne topluluğu"
+          icon={MessageCircleHeart}
+          subtitle="Sor, paylaş, yalnız olmadığını hisset."
+          title="Birlikte daha güçlüyüz"
+        />
+        <View style={styles.hero}>
           <View style={styles.heroTop}>
-            <View style={styles.iconBubble}>
-              <MessageCircleHeart color={appTheme.primary} size={28} />
-            </View>
             <View style={styles.privatePill}>
               <ShieldCheck color={appTheme.primary} size={16} />
               <Text style={[styles.privatePillText, { color: appTheme.primary }]}>Anonim & güvenli</Text>
             </View>
           </View>
           <View style={{ gap: 2 }}>
-            <Text style={typography.eyebrow}>Anne topluluğu</Text>
-            <Text style={typography.heading1}>Birlikte daha güçlüyüz</Text>
-            <Text style={styles.heroText}>
-              Sor, paylaş, yalnız olmadığını hisset.
-            </Text>
             <Pressable
               accessibilityLabel="Topluluk kurallarını aç"
               accessibilityRole="link"

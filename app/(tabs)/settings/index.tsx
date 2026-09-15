@@ -29,6 +29,7 @@ import { reconcileRevenueCatSubscription } from "@/api/subscriptions";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Screen } from "@/components/Screen";
+import { PageHeader } from "@/components/PageHeader";
 import { TextField } from "@/components/TextField";
 import { LifeStageSwitcher } from "@/features/life-stage/LifeStageSwitcher";
 import {
@@ -539,12 +540,10 @@ export default function SettingsScreen() {
   return (
     <Screen ref={scrollRef}>
       <View style={styles.container}>
-        <View style={[styles.hero, { backgroundColor: appTheme.primarySoft }]}>
-          <Text style={typography.heading1}>Profil</Text>
-          <Text style={typography.body}>
-            Profil, bildirim, abonelik ve hesap güvenliği tek yerde.
-          </Text>
-        </View>
+        <PageHeader
+          subtitle="Profil, bildirim, abonelik ve hesap güvenliği tek yerde."
+          title="Profil"
+        />
 
         <Card style={[styles.profileCard, { backgroundColor: appTheme.primarySoft }]}>
           <View style={{ gap: spacing.md }}>

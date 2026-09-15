@@ -5,7 +5,8 @@ import {
   Manrope_400Regular,
   Manrope_500Medium,
   Manrope_600SemiBold,
-  Manrope_700Bold
+  Manrope_700Bold,
+  Manrope_800ExtraBold
 } from "@expo-google-fonts/manrope";
 import {
   SpaceMono_400Regular,
@@ -28,6 +29,7 @@ export default function RootLayout() {
     Manrope_500Medium,
     Manrope_600SemiBold,
     Manrope_700Bold,
+    Manrope_800ExtraBold,
     SpaceMono_400Regular,
     SpaceMono_700Bold
   });

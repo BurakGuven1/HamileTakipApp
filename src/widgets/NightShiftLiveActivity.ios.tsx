@@ -32,13 +32,18 @@ function NightShiftLiveActivity(
 ) {
   "widget";
 
-  // DESIGN.md: gece vardiyası "ilerleyen görev" olduğu için Ada Yeşili taşır;
-  // koyu temada aynı rol ışıklılığı yükseltilmiş karşılığıyla çizilir.
-  const isDark = environment.colorScheme === "dark";
-  const accent = isDark ? "#8FBBA2" : "#3F6F59"; // Ada Yeşili
-  const primary = isDark ? "#F5F1EC" : "#372F3D"; // Gece Eriği
-  const secondary = isDark ? "#C3BAC2" : "#655F57"; // Sis Grisi
-  const backgroundColor = isDark ? "#211D24" : "#F9F4F0"; // koyu yüzey / Krem Zemin
+  // SwiftUI'da `.frame(maxWidth: .infinity)` karşılığı. Doğrudan `Infinity`
+  // yazılamaz: modifier'lar yerel tarafa JSON ile geçiyor ve
+  // `JSON.stringify(Infinity)` "null" üretiyor, bu da çerçeveyi sıfır
+  // genişliğe düşürüp rozeti boş bir kutuya çeviriyor.
+  const EXPAND = 100000;
+
+  // Gece vardiyası mint taşır. Kilit ekranı rozeti kendi koyu zeminini
+  // kullanır; kontrast `colorScheme`'e bırakılmaz.
+  const accent = "#56E3C6"; // Mint
+  const primary = "#F4F0FF"; // Açık mürekkep
+  const secondary = "#A9A2BF"; // Soluk mürekkep
+  const backgroundColor = "#1A1426"; // Koyu yüzey
   const startedAt = new Date(props?.startedAtMs || Date.now());
   const plannedEndAt = new Date(
     props?.plannedEndAtMs || Date.now() + 60 * 60 * 1000
@@ -57,13 +62,13 @@ function NightShiftLiveActivity(
           activityBackgroundTint(backgroundColor)
         ]}
       >
-        <HStack modifiers={[frame({ maxWidth: Infinity })]}>
+        <HStack modifiers={[frame({ maxWidth: EXPAND })]}>
           <Text modifiers={[font({ size: 12, weight: "bold" }), foregroundStyle(accent)]}>
             ANNE+ · GECE VARDİYASI
           </Text>
         </HStack>
         <HStack spacing={10}>
-          <VStack spacing={3} modifiers={[frame({ maxWidth: Infinity, alignment: "topLeading" })]}>
+          <VStack spacing={3} modifiers={[frame({ maxWidth: EXPAND, alignment: "topLeading" })]}>
             <Text modifiers={[font({ size: 19, weight: "bold" }), foregroundStyle(primary), lineLimit(1)]}>
               {babyName}
             </Text>

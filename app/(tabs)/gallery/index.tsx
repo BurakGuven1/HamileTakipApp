@@ -23,6 +23,7 @@ import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
+import { PageHeader } from "@/components/PageHeader";
 import { TextField } from "@/components/TextField";
 import { PREMIUM_FEATURES } from "@/features/subscription/premiumFeatures";
 import { showPaywallIfNeeded } from "@/features/subscription/showPaywallIfNeeded";
@@ -266,19 +267,12 @@ function GalleryContent() {
         )}
         ListHeaderComponent={(
           <View style={styles.headerContent}>
-        <View style={[styles.hero, { backgroundColor: accentColor.accentSoft }]}>
-          <View style={[styles.iconBubble, { backgroundColor: colors.surface }]}>
-            <Images color={accentColor.primary} size={28} />
-          </View>
-          <View style={{ gap: spacing.xs }}>
-            <Text style={typography.eyebrow}>Anılar</Text>
-            <Text style={typography.heading1}>Fotoğraf galerisi</Text>
-            <Text style={styles.heroText}>
-              Fotoğrafları tarihe göre sakla; bebeğinin yolculuğunu zaman çizgisi
-              üzerinde gör.
-            </Text>
-          </View>
-        </View>
+        <PageHeader
+          eyebrow="Anılar"
+          icon={Images}
+          subtitle="Fotoğrafları tarihe göre sakla; bebeğinin yolculuğunu zaman çizgisi üzerinde gör."
+          title="Fotoğraf galerisi"
+        />
 
         {babies.length > 0 ? (
           <View style={styles.babyChips}>

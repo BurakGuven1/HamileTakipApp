@@ -1,37 +1,39 @@
 ---
 name: Anne+
-description: Ailenin gebelikten bebekliğe uzanan yaşam kaydını tek bir Yaşayan İplik üzerinde tutan native takip deneyimi.
+description: Hamilelikten bebekliğe uzanan aile takibini, ışıklı bir zemin üzerinde yüzen cam yüzeylerle taşıyan modern iOS deneyimi.
 colors:
-  cream-background: "#F9F4F0"
-  sage-green: "#3F6F59"
-  dusty-rose: "#A94F60"
-  night-plum: "#372F3D"
-  honey-gold: "#8A5B16"
-  mist-gray: "#655F57"
-  surface: "#FFFCF8"
-  dark-background: "#171419"
-  dark-surface: "#211D24"
-  dark-surface-strong: "#29242C"
+  background: "#FBF7FF"
+  iris: "#6C4CF1"
+  rose: "#FF7BA8"
+  mint: "#3ECFB2"
+  peach: "#FFB27A"
+  sky: "#5BA8F5"
+  ink: "#1C1330"
+  ink-muted: "#6B6280"
+  dark-background: "#0F0B17"
+  dark-surface: "#1A1426"
+  dark-ink: "#F4F0FF"
 typography:
   display:
-    fontFamily: "Fraunces"
-    fontSize: "32px"
-    fontWeight: 700
-    lineHeight: 1.1875
+    fontFamily: "Manrope"
+    fontWeight: 800
+    fontSize: "34px"
+    letterSpacing: "-0.8px"
   body:
     fontFamily: "Manrope"
-    fontSize: "17px"
     fontWeight: 400
-    lineHeight: 1.47
+    fontSize: "16px"
+    lineHeight: 1.44
   data:
     fontFamily: "Space Mono"
-    fontSize: "16px"
-    fontWeight: 400
-    lineHeight: 1.375
+    fontSize: "15px"
 rounded:
-  sm: "8px"
-  md: "14px"
-  lg: "20px"
+  sm: "12px"
+  md: "16px"
+  tile: "22px"
+  card: "26px"
+  sheet: "34px"
+  pill: "999px"
 spacing:
   xs: "4px"
   sm: "8px"
@@ -39,118 +41,114 @@ spacing:
   lg: "16px"
   xl: "24px"
   xxl: "32px"
-components:
-  button-primary:
-    backgroundColor: "{colors.sage-green}"
-    textColor: "{colors.surface}"
-    typography: "{typography.body}"
-    rounded: "{rounded.md}"
-    padding: "12px 16px"
-  card:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.night-plum}"
-    rounded: "{rounded.lg}"
-    padding: "16px"
 ---
 
 ## Overview
 
-**Creative North Star: “Yaşayan İplik.”**
+**Creative North Star: "Warm Aurora."**
 
-Anne+ sıcaklık hissini pastel dekorlardan değil, bir ailenin zaman içinde devam eden gerçek kaydından üretir. Tek bir çizgi gebelik haftasından doğuma, büyümeden aşılara ve anılara devam eder. Etrafındaki arayüz sakin, native ve göreve odaklıdır.
+Anne+ derinliğini düz kartlardan değil, iki katmandan üretir: yavaşça hareket eden renkli bir ışık zemini ve onun üzerinde yüzen yarı saydam cam yüzeyler. Bir kart nerede durduğuna göre renk alır, çünkü altındaki aurora ondan geçer. Sıcaklık pastel dekordan değil, bu ışıktan gelir.
+
+Bu doküman, daha önce burada duran **"Yaşayan İplik"** anayasasının yerini alır. O yön —dekoratif tek çizgi, asimetrik köşeler, ölçülü hareket, kısıtlı palet— bilerek bırakıldı.
 
 **Key Characteristics:**
 
-- İşlevsel ve veriyle bağlı tek İplik
-- Fraunces başlıklar, Manrope arayüz metni, Space Mono ölçümler
-- Krem ve erik yüzeyler üzerinde ada yeşili, gül ve bal vurguları
-- Yön hissi taşıyan asimetrik köşeler
-- Tek güçlü orkestrasyon anı; geri kalanında ölçülü native geri bildirim
+- Aurora zemin + cam yüzey: her ekranda aynı iki katman
+- Yay (spring) tabanlı, kademeli ve belirgin hareket
+- İris, gül, mint, şeftali: dört ışık, tek aile
+- Simetrik, yumuşak squircle köşeler
+- Veri gerçekten veriye bağlıdır; dekoratif grafik yoktur
 
 ## Colors
 
-Ana yüzeyler açık temada Krem Zemin ve sıcak beyaz yüzeylerle; koyu temada Gece Eriği, koyu yüzey ve güçlü koyu yüzey katmanlarıyla kurulur. Ada Yeşili ana eylem ve anlamlı İplik ilerlemesini, Toz Gül yakınlık ve bakım olaylarını, Bal Altını seçkin vurgu ve premium bağlamını taşır.
+Açık temada `#FBF7FF` zemin, koyu temada `#0F0B17`. Zeminin üstünde üç aurora ışığı yavaşça sürüklenir. Yüzeyler renk taşımaz; `glass` (`rgba(255,255,255,0.62)` / koyuda `0.07`) ve bir ışık kenarlığı taşırlar — rengi zeminden alırlar.
 
-**The Existing Palette Rule.** Yeni ekranlar mevcut semantik renk rollerini kullanır; terracotta, neon veya yeni bir marka paleti eklemez.
+**The Aurora Carries the Color Rule.** Kartların kendi dolgu rengi yoktur. Bir yüzeyin renklenmesi gerekiyorsa `tone="tinted"` ile o rengin *tonu* camın altına serilir; opak dolgu verilmez, yoksa cam kaybolur.
 
-**The Night Plum Rule.** Koyu tema bir ters çevirme değil, düşük ışıkta katmanları ışıklılıkla ayıran Gece Eriği ortamıdır.
+**The Night Is Not an Inversion Rule.** Koyu tema ters çevirme değildir: zemin derinleşir, aurora doygunlaşır, cam ışığa döner (beyaz %7). Gölge yerine ton farkı çalışır.
+
+Her renk `semanticColor(light, dark)` ile tanımlanır; tek bir renk iki temayı birden taşır.
 
 ## Typography
 
-Fraunces yalnızca anlamlı başlık ve yaşam anlarında kullanılır. Manrope görev, açıklama, buton ve form dilini taşır. Space Mono yalnızca hafta, tarih, süre ve ölçüm gibi gerçek veriler içindir.
+Manrope tek arayüz yüzüdür: 800 ExtraBold büyük başlıklarda, 700/600 ara başlıklarda, 400 gövdede. Space Mono yalnızca gerçek ölçüm içindir — hafta, tarih, süre, kilo, persentil.
 
 **The Data Earns Mono Rule.** Teknik görünmek için monospace kullanılmaz; yalnızca ölçülebilir veri bu yüzü kazanır.
 
+Başlıklar sıkı (negatif letterSpacing) ve büyüktür. Bir ekranda tek bir `display` başlık bulunur; gerisi `heading2`/`heading3`.
+
 ## Layout
 
-Telefonlarda 16 px yatay içerik payı ve 4/8 tabanlı aralık sistemi korunur. İçerik küçük ekranda tek kolondur; sabit genişlik yerine mevcut alanı kullanır. Yaşayan İplik, içeriğin altında dekoratif bir katman değil; ilgili olayların yanında bilgi omurgasıdır. Tablet ve geniş görünümde ana görev ve destekleyici içerik iki bölgeye ayrılabilir, ancak okuma sırası değişmez.
+16 px yatay pay, 4/8 tabanlı aralık. Telefonda tek kolon. Her ekran `Screen` (sekmeli) veya `ToolScreen` (araç) ile kurulur; ikisi de aurora zemini ve yüzen sekme çubuğunu temizleyen alt dolguyu kendileri halleder.
 
-**The Quiet Around the Thread Rule.** İplik görünüyorsa yakın çevrede ikinci bir büyük dekoratif odak kullanılmaz.
+**The Floating Chrome Rule.** Sekme çubuğu ve araç başlığı sayfanın *üstünde yüzer*, sayfayı kesmez: içerik altlarından bulanık olarak görünmeye devam eder. Bu yüzden ikisi de saydamdır ve zeminlerini `BlurView` taşır.
 
 ## Elevation & Depth
 
-Derinlik yumuşak ofset gölgeler ve tonal yüzey ayrımıyla sağlanır. Aynı yüzeyde hem güçlü sınır hem güçlü gölge kullanılmaz. Koyu temada gölge yerine yüzey tonları önceliklidir.
+Derinlik dört kademedir (`shadows.soft/card/lifted/floating`). Gölge nötr siyah değil, zeminin iris tonunu taşır. Cam yüzeyin üst kenarında ince bir specular parlama bulunur — ışığın nereden geldiğini söyleyen tek işaret.
+
+Aynı yüzeyde hem güçlü kenarlık hem güçlü gölge kullanılmaz; camın ışık kenarlığı zaten hairline'dır.
 
 ## Shapes
 
-Kartlar ve butonlar yön hissi veren asimetrik köşeleri korur. Düğüm ve ilmekler tam dairesel olabilir; büyük içerik kapları pill biçimine dönmez. İplik yuvarlak uçlu ve kesintisizdir.
-
-**The Directional Corner Rule.** Asimetri her bileşene rastgele uygulanmaz; ana yüzeyler ve birincil eylemler aynı köşe yönünü paylaşır.
+Yumuşak, simetrik squircle'lar: kare kutucuk 22, kart 26, hero 34, alt sayfa 34, kapsül pill. Asimetrik "yön veren" köşeler kaldırıldı. Halkalar, avatarlar ve düğümler tam dairedir.
 
 ## Components
 
 ### Buttons
 
-- Birincil eylem mevcut tema rengini ve asimetrik buton şeklini kullanır.
-- Basma geri bildirimi kısa ölçek/ton değişimidir; sürekli nefes animasyonu kullanılmaz.
-- Etiket işlem boyunca aynı fiili korur.
+- Birincil eylem temanın **gradyanını** taşır (`appTheme.gradient`), beyaz etiket, yay ile basma geri bildirimi ve orta şiddette haptik.
+- İkincil eylem cam yüzey üstünde renkli kenarlıkla durur.
+- Sürekli "nefes alan" buton yoktur; etiket işlem boyunca aynı fiili korur.
 
 ### Cards / Containers
 
-- Kartlar yalnızca gerçek bir bilgi grubunu veya görevi bir arada tutar.
-- İç içe kart kullanılmaz.
-- Yüzey sınır veya gölgeden yalnızca birini baskın kullanır.
+- `Card` artık camdır; tüm ekranlar onu çağırarak aynı dili alır.
+- İç içe cam kullanılmaz: camın içindeki ikincil yüzey `glassStrong` dolgulu düz bir kutudur.
+- Vurgu gerektiğinde `tone="tinted"` + `tint`.
 
-### Inputs / Fields
+### Sheets
 
-- Alanlar görünür etiket taşır.
-- Hata metni sorunu ve düzeltmeyi aynı yerde söyler.
-- Büyük yazı boyutunda yükseklik büyür; metin kırpılmaz.
+Alt sayfalar `GlassSheet`: bulanık arkalık, aşağı sürüklenerek kapanma (mesafe veya hız eşiği), yay ile yerine oturma. Her ekranın kendi `Modal`'ını kurması bırakıldı.
 
-### Yaşayan İplik
+### Segmented control
 
-- Akış geçen zamanı veya ölçülebilir ilerlemeyi gösterir.
-- Düğüm tamamlanan gerçek bir olayı gösterir.
-- İlmek yaklaşan veya eylem bekleyen noktayı gösterir.
-- İplik yalnızca anlam taşıdığında görünür ve ekran okuyucuya özet/değer verir.
+`SegmentedControl`: seçili sekmenin altındaki kapsül yay ile **kayar**. Kayma, hangi sekmeden hangisine geçildiğini anlatır; anında yer değiştiren vurgu bu yönü kaybeder.
 
-## Generic Ekran Testi
+### Büyüme ipliği
 
-- **Ana sayfa:** Sağlık uygulamalarındaki standart hero + ikon ızgarası reddedildi. Gebelik haftası gerçek bir düğüme, hafta notu kalıcı bir bilgi yüzeyine, kısayollar ise açık başlıklı tek kolon görev listelerine dönüştürüldü.
-- **Bebek profili:** Genel profil kartı reddedildi. Doğum düğümü, bugün ilmeği, gerçek aşı tamamlanması ve büyüme kayıtları aynı yaşam ipliğinin farklı okumaları oldu.
-- **Forum:** Genel sosyal medya kart akışı reddedildi. Gönderi ve yorumlar ortak dikey iplik üzerindeki konuşma düğümleri olarak bağlandı; anonimlik ve anneye özel erişim görünür ürün kararları olarak kaldı.
-- **Paywall:** RevenueCat panelinde tasarlanan paywall tek görsel ve ticari kaynaktır; uygulama tarafında yeniden tasarlanmaz. Anne+ kimliği paywall’a giden bağlamda korunur, paket/fiyat/sunum RevenueCat UI’dan gelir.
+Uygulamadaki tek "iplik" `GrowthThread`'dir ve tamamen veriye bağlıdır:
+
+- Arka planda WHO persentil bantları (−2σ…+2σ), aradaki alan "normal aralık"
+- Üstünde ailenin girdiği ölçümlerden geçen gerçek eğri
+- Her ölçüm dokunulabilir düğüm; en yenisi nabız atan nokta
+- Altında düz Türkçe cümle: değer, persentil ve kendi çizgisini koruyup korumadığı
+- Veri yoksa eğri çizilmez; "ilk ölçümü ekle" daveti gelir
+
+**The Chart Must Mean Something Rule.** Veriye bağlanamayan hiçbir çizgi, eğri veya grafik çizilmez. Boşluk doldurmak için grafik kullanılmaz.
 
 ## Durumlar ve Hareket
 
-- **Boş:** Açık ilmek ve ilk anlamlı eylemle davet eder.
-- **Hata:** Sorunu adlandırır, kullanıcıya düzeltme yolunu söyler ve yeniden deneme eylemi verir.
-- **Yükleniyor:** Ekranın gerçek silüetini asimetrik yüzeylerle gösterir; genel gri çubuk kullanmaz.
-- **Orkestra anı:** Onboarding tamamlandığında İplik bir kez çizilir ve ilk gerçek düğüm bağlanır. Reduce Motion açıkken aynı anlam kısa, düşük mesafeli bir geçişle korunur.
-- **Sadeleştirme kararı:** Dekoratif giriş çizgileri, sürekli nefes alan butonlar ve genel ekran giriş animasyonları kaldırıldı; geriye yalnızca işlevsel durum ve basma geri bildirimi kaldı.
+- **Boş:** ortalanmış davet ikonu, tek cümle ve ilk anlamlı eylem.
+- **Hata:** sorunu adlandırır, düzeltmeyi söyler, yeniden dene verir.
+- **Yükleniyor:** ekranın gerçek silüeti `SkeletonShimmer` ile; dekoratif çizgi yok.
+- **Hareket:** girişler kademeli (`stagger`), durum değişimleri yay, aurora 9 saniyelik çok yavaş bir sürüklenme.
+- **Reduce Motion:** aurora durur, çizim ve nabız anında tamamlanır, kapsül anında yerine geçer. Hiçbir bilgi kaybolmaz.
 
 ## Do's and Don'ts
 
 ### Do:
 
-- **Do** İpliği gerçek ilerleme, olay veya ilişki verisine bağla.
-- **Do** boş durumları kullanıcıyı ilk anlamlı kayda davet edecek şekilde yaz.
-- **Do** koyu temada mevcut Gece Eriği yüzey rollerini ayrı ayrı tasarla.
+- **Do** yeni yüzeyleri `Card` / `GlassSurface` / `PressableGlass` üzerinden kur.
+- **Do** rengi `appTheme` üzerinden al; sabit hex yazma.
+- **Do** her animasyonu `useReducedMotion` ile koşulla.
 - **Do** Lucide ince çizgi ikonlarını tutarlı boyut ve stroke ile kullan.
+- **Do** ikon ve etiketi aynı kutunun içinde ve aynı eksende hizala.
 
 ### Don'ts:
 
-- **Don't** İpliği yalnızca boş alan dolduran arka plan dokusuna dönüştür.
-- **Don't** krem zeminle terracotta vurgu, neon koyu tema veya gazete düzeni ekle.
+- **Don't** karta opak `backgroundColor` verip camı öldürme.
+- **Don't** veriye bağlı olmayan grafik veya "iplik" çizme.
+- **Don't** cam içine cam koyma.
 - **Don't** hazır stok illüstrasyon ya da dolgu/3D ikon paketi kullan.
-- **Don't** dekoratif numaralandırma, konfeti veya her yerde sürekli animasyon kullan.
+- **Don't** konfeti, sürekli nefes alan buton veya durmayan dekoratif animasyon ekle.

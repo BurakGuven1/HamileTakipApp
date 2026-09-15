@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import {
-  ArrowLeft,
   Check,
   CircleHelp,
   Plus,
@@ -24,6 +23,7 @@ import { Button } from "@/components/Button";
 import { EmptyState } from "@/components/EmptyState";
 import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
+import { PageHeader } from "@/components/PageHeader";
 import {
   getNextExpectedTooth,
   primaryTeethQuadrants,
@@ -102,7 +102,7 @@ export default function TeethingScreen() {
     return (
       <Screen>
         <View style={styles.container}>
-          <Header />
+          <PageHeader back title="Diş takibi" />
           <EmptyState
             actionLabel="Bebek profili ekle"
             description="Dişleri bebeğinin profiline bağlı ve aileyle ortak takip edebilirsin."
@@ -117,7 +117,7 @@ export default function TeethingScreen() {
   return (
     <Screen>
       <View style={styles.container}>
-        <Header />
+        <PageHeader back title="Diş takibi" />
 
         {babies.length > 1 ? (
           <View style={styles.babySelector}>
@@ -249,23 +249,6 @@ export default function TeethingScreen() {
         )}
       </View>
     </Screen>
-  );
-}
-
-function Header() {
-  return (
-    <View style={styles.headerRow}>
-      <Pressable
-        accessibilityLabel="Geri dön"
-        accessibilityRole="button"
-        onPress={() => router.back()}
-        style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
-      >
-        <ArrowLeft color={colors.text} size={24} />
-      </Pressable>
-      <Text style={styles.screenTitle}>Diş takibi</Text>
-      <View style={styles.headerSpacer} />
-    </View>
   );
 }
 

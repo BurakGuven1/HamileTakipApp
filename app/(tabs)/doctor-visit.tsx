@@ -9,7 +9,6 @@ import DateTimePicker, { type DateTimePickerEvent } from "@react-native-communit
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import {
-  ArrowLeft,
   Baby,
   CalendarClock,
   Check,
@@ -55,6 +54,7 @@ import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
+import { PageHeader } from "@/components/PageHeader";
 import { TextField } from "@/components/TextField";
 import { createCareUuid } from "@/features/care-journal/careSync";
 import {
@@ -347,7 +347,7 @@ export default function DoctorVisitScreen() {
   if (familyQuery.isLoading) {
     return (
       <Screen>
-        <Header />
+        <PageHeader back eyebrow="Doktor görüşmesi" title="Görüşmeye hazırla" />
         <QueryState loading description="Aile ve görüşme alanı hazırlanıyor…" />
       </Screen>
     );
@@ -356,7 +356,7 @@ export default function DoctorVisitScreen() {
   if (familyQuery.isError) {
     return (
       <Screen>
-        <Header />
+        <PageHeader back eyebrow="Doktor görüşmesi" title="Görüşmeye hazırla" />
         <QueryState
           description="Aile erişimi doğrulanamadı. Bağlantınızı kontrol edip yeniden deneyin."
           onRetry={() => void familyQuery.refetch()}
@@ -370,7 +370,7 @@ export default function DoctorVisitScreen() {
   if (!context || availableSubjects.length === 0) {
     return (
       <Screen>
-        <Header />
+        <PageHeader back eyebrow="Doktor görüşmesi" title="Görüşmeye hazırla" />
         <EmptyState
           title="Önce bir takip profili gerekli"
           description="Hamilelik profilinizi tamamladığınızda veya bir bebek eklediğinizde doktor görüşmesi hazırlığı burada açılır."
@@ -384,21 +384,16 @@ export default function DoctorVisitScreen() {
   return (
     <Screen>
       <View style={styles.page}>
-        <Header />
-
+        <PageHeader
+          back
+          eyebrow="Doktor görüşmesi"
+          icon={Stethoscope}
+          subtitle="Sorularınızı ve uygulamadaki gerçek kayıtları tek, okunabilir özette buluşturun."
+          title="Görüşmeye hazırla"
+        />
         <Animated.View
           entering={reducedMotion ? undefined : FadeIn.duration(360).easing(Easing.out(Easing.exp))}
-          style={[styles.hero, { backgroundColor: appTheme.theme.primarySoft }]}
         >
-          <View style={[styles.heroIcon, { backgroundColor: colors.surface }]}>
-            <Stethoscope color={appTheme.primary} size={28} strokeWidth={2.1} />
-          </View>
-          <View style={styles.heroCopy}>
-            <Text style={typography.heading1}>Görüşmeye hazırla</Text>
-            <Text style={styles.heroBody}>
-              Sorularınızı ve uygulamadaki gerçek kayıtları tek, okunabilir özette buluşturun.
-            </Text>
-          </View>
         </Animated.View>
 
         {!context.can_access_maternal ? (
@@ -734,24 +729,6 @@ export default function DoctorVisitScreen() {
 
       </View>
     </Screen>
-  );
-}
-
-function Header() {
-  return (
-    <View style={styles.header}>
-      <Pressable
-        accessibilityLabel="Geri dön"
-        accessibilityRole="button"
-        hitSlop={10}
-        style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
-        onPress={() => router.back()}
-      >
-        <ArrowLeft color={colors.text} size={24} />
-      </Pressable>
-      <Text style={styles.headerTitle}>Doktor Görüşmesi</Text>
-      <View style={styles.headerSpacer} />
-    </View>
   );
 }
 

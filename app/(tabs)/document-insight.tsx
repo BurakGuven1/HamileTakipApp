@@ -2,11 +2,9 @@ import * as Clipboard from "expo-clipboard";
 import * as DocumentPicker from "expo-document-picker";
 import { File, Paths } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
-import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
-  ArrowLeft,
   Camera,
   Check,
   ChevronDown,
@@ -53,6 +51,7 @@ import {
   StaggeredList
 } from "@/components/motion";
 import { Screen } from "@/components/Screen";
+import { PageHeader } from "@/components/PageHeader";
 import { createCareUuid } from "@/features/care-journal/careSync";
 import {
   acknowledgeDocumentDisclaimer,
@@ -483,16 +482,7 @@ export default function DocumentInsightScreen() {
   return (
     <Screen>
       <View style={styles.page}>
-        <View style={styles.topBar}>
-          <Pressable accessibilityLabel="Geri dön" accessibilityRole="button" onPress={() => router.back()} style={styles.iconButton}>
-            <ArrowLeft color={colors.text} size={22} />
-          </Pressable>
-          <View style={styles.titleCopy}>
-            <Text style={typography.eyebrow}>Gizlilik odaklı</Text>
-            <Text style={typography.heading1}>Belgeyi Anla</Text>
-          </View>
-          <ShieldCheck color={appTheme.primary} size={30} />
-        </View>
+        <PageHeader back eyebrow="Gizlilik odaklı" icon={ShieldCheck} title="Belgeyi Anla" />
 
         {disclaimerAcknowledged === false ? (
           <DisclaimerGate onAccept={() => void acceptDisclaimer()} />

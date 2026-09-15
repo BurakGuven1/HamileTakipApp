@@ -11,6 +11,7 @@ import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
+import { PageHeader } from "@/components/PageHeader";
 import { getExperienceStage } from "@/features/life-stage/lifeStage";
 import { getPregnancyProgress } from "@/lib/dates";
 import { colors, radii, spacing, typography } from "@/theme";
@@ -79,14 +80,13 @@ export default function ArticlesScreen() {
   return (
     <Screen>
       <View style={styles.container}>
-        <View style={styles.hero}>
-          <View style={styles.heroIcon}>
-            <BookOpen color={colors.primary} size={28} />
-          </View>
-          <Text style={typography.eyebrow}>Anne+ rehberleri</Text>
-          <Text style={typography.heading1}>{heroTitle}</Text>
-          <Text style={styles.heroText}>{heroBody}</Text>
-        </View>
+        <PageHeader
+          back
+          eyebrow="Anne+ rehberleri"
+          icon={BookOpen}
+          subtitle={heroBody}
+          title={heroTitle}
+        />
 
         <View style={styles.sectionHeader}>
           <Text style={typography.heading2}>Sana uygun yazılar</Text>

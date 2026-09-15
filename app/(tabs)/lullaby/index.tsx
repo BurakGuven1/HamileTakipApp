@@ -16,6 +16,7 @@ import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
+import { PageHeader } from "@/components/PageHeader";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { useLullabyPlayer } from "@/providers/LullabyPlayerProvider";
@@ -93,16 +94,12 @@ export default function LullabyScreen() {
   return (
     <Screen>
       <View style={{ gap: spacing.lg }}>
-        <View style={[styles.hero, { backgroundColor: accentColor.tint }]}>
-          <View style={styles.iconBubble}>
-            <Music2 color={accentColor.primary} size={28} />
-          </View>
-          <Text style={typography.heading1}>Ninni Kütüphanesi</Text>
-          <Text style={typography.body}>
-            Sakin sesleri oynat, favori süreyi seç ve ninnileri çevrimdışı dinlemek
-            için indir.
-          </Text>
-        </View>
+        <PageHeader
+          back
+          icon={Music2}
+          subtitle="Sakin sesleri oynat, favori süreyi seç ve ninnileri çevrimdışı dinlemek için indir."
+          title="Ninni Kütüphanesi"
+        />
 
         <View style={styles.filterRow}>
           <FilterChip

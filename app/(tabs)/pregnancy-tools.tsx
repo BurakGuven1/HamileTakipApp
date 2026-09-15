@@ -170,16 +170,16 @@ export default function PregnancyToolsScreen() {
     <Screen>
       <View style={styles.container}>
         <Reveal>
-          <View style={[styles.hero, { backgroundColor: appTheme.primarySoft }]}>
-            <View style={[styles.heroIcon, { backgroundColor: appTheme.accentSoft }]}>
-              <HeartPulse color={appTheme.primary} size={28} />
+          <View style={styles.pageHeader}>
+            <View style={styles.pageHeaderCopy}>
+              <Text style={typography.display}>Araçlar</Text>
+              <Text style={styles.heroText}>
+                Takip, sağlık, doğum ve aile araçları kategorilere ayrıldı.
+              </Text>
             </View>
-            <Text style={typography.eyebrow}>Tüm araçlar</Text>
-            <Text style={typography.heading1}>Araç merkezi</Text>
-            <Text numberOfLines={3} style={styles.heroText}>
-              Takip, sağlık, doğum ve aile araçları kategorilere ayrıldı. Aradığını
-              tek bakışta bul, ana sayfan sade kalsın.
-            </Text>
+            <View style={[styles.heroIcon, { backgroundColor: appTheme.primarySoft }]}>
+              <HeartPulse color={appTheme.primary} size={26} strokeWidth={2.3} />
+            </View>
           </View>
         </Reveal>
 
@@ -187,7 +187,7 @@ export default function PregnancyToolsScreen() {
           {toolCategories.map((category) => (
             <View key={category.key} style={styles.catalogCategory}>
               <View style={styles.sectionTitleCopy}>
-                <Text style={typography.heading2}>{category.title}</Text>
+                <Text style={typography.heading3}>{category.title}</Text>
                 <Text style={styles.sectionHint}>{category.hint}</Text>
               </View>
               <StaggeredList style={styles.catalogItems}>
@@ -448,10 +448,16 @@ const styles = StyleSheet.create({
   container: {
     gap: spacing.lg
   },
-  hero: {
-    ...radii.cardLarge,
-    gap: spacing.sm,
-    padding: spacing.lg
+  pageHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.md,
+    paddingHorizontal: spacing.xs,
+    paddingTop: spacing.sm
+  },
+  pageHeaderCopy: {
+    flex: 1,
+    gap: spacing.xs
   },
   heroIcon: {
     alignItems: "center",
@@ -461,8 +467,7 @@ const styles = StyleSheet.create({
     width: 52
   },
   heroText: {
-    ...typography.body,
-    color: colors.text
+    ...typography.caption
   },
   sectionHeader: {
     alignItems: "center",
@@ -475,10 +480,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs
   },
   sectionHint: {
-    ...typography.body,
-    color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 20
+    ...typography.caption
   },
   cardHeader: {
     alignItems: "center",
