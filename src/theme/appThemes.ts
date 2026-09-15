@@ -1,4 +1,4 @@
-import { accentColors, colors, semanticColor } from "@/theme/colors";
+import { colors, gradients, palette, semanticColor } from "@/theme/colors";
 
 export type ThemePreference =
   | "auto"
@@ -14,70 +14,87 @@ type AccentThemePreference = Exclude<ThemePreference, "auto" | "dark">;
 type AppTheme = {
   accent: string;
   accentSoft: string;
+  /** Birincil eylem gradyanı — buton ve hero yüzeyleri bunu kullanır. */
+  gradient: readonly [string, string, ...string[]];
   label: string;
   navigationPrimary: string;
   primary: string;
   primarySoft: string;
 };
 
+const soft = (rgb: string, lightOpacity = 0.13, darkOpacity = 0.2) =>
+  semanticColor(`rgba(${rgb}, ${lightOpacity})`, `rgba(${rgb}, ${darkOpacity})`);
+
+/**
+ * Altı vurgu teması. Hepsi "Warm Aurora" ailesinden çıkar: aynı ışık,
+ * farklı hue. Anahtar isimleri (sage/rose/blue/pink/lavender/dark) veritabanında
+ * kayıtlı olduğu için korunuyor; taşıdıkları renkler yenilendi.
+ */
 export const appThemes: Record<Exclude<ThemePreference, "auto">, AppTheme> = {
   sage: {
-    accent: colors.accent,
-    accentSoft: colors.accentSoft,
-    label: "Ada yeşili",
-    navigationPrimary: "#3F6F59",
-    primary: colors.primary,
-    primarySoft: colors.primarySoft
+    accent: colors.secondary,
+    accentSoft: colors.secondarySoft,
+    gradient: gradients.fresh,
+    label: "Taze mint",
+    navigationPrimary: palette.mint,
+    primary: semanticColor(palette.mint, palette.mintLight),
+    primarySoft: soft("62, 207, 178")
   },
   rose: {
-    accent: semanticColor("#8A5B16", "#E9C47E"),
-    accentSoft: semanticColor("rgba(138, 91, 22, 0.14)", "rgba(233, 196, 126, 0.14)"),
+    accent: semanticColor(palette.peach, palette.peachLight),
+    accentSoft: soft("255, 178, 122", 0.16),
+    gradient: gradients.warm,
     label: "Sıcak gül",
-    navigationPrimary: "#A94F60",
-    primary: semanticColor("#A94F60", "#F0A7B4"),
-    primarySoft: semanticColor("rgba(169, 79, 96, 0.14)", "rgba(240, 167, 180, 0.14)")
+    navigationPrimary: palette.rose,
+    primary: semanticColor(palette.rose, palette.roseLight),
+    primarySoft: soft("255, 123, 168")
   },
   blue: {
-    accent: semanticColor("#456F98", "#9FC6EA"),
-    accentSoft: semanticColor("rgba(69, 111, 152, 0.14)", "rgba(159, 198, 234, 0.14)"),
+    accent: semanticColor(palette.mint, palette.mintLight),
+    accentSoft: soft("62, 207, 178"),
+    gradient: gradients.calm,
     label: "Bebek mavisi",
-    navigationPrimary: "#456F98",
-    primary: semanticColor(accentColors.erkek.primary, "#9FC6EA"),
-    primarySoft: semanticColor(accentColors.erkek.tint, "rgba(159, 198, 234, 0.14)")
+    navigationPrimary: palette.sky,
+    primary: semanticColor(palette.sky, palette.skyLight),
+    primarySoft: soft("91, 168, 245")
   },
   pink: {
-    accent: semanticColor("#9F3F5D", "#F0A7B4"),
-    accentSoft: semanticColor("rgba(159, 63, 93, 0.14)", "rgba(240, 167, 180, 0.14)"),
+    accent: semanticColor(palette.iris, palette.irisLight),
+    accentSoft: soft("108, 76, 241"),
+    gradient: [palette.rose, "#FF9ECF"] as const,
     label: "Pamuk pembe",
-    navigationPrimary: "#A54664",
-    primary: semanticColor(accentColors.kiz.primary, "#F0A7B4"),
-    primarySoft: semanticColor(accentColors.kiz.tint, "rgba(240, 167, 180, 0.14)")
+    navigationPrimary: palette.rose,
+    primary: semanticColor(palette.rose, palette.roseLight),
+    primarySoft: soft("255, 123, 168")
   },
   lavender: {
-    accent: semanticColor("#6F56A3", "#C7B4F4"),
-    accentSoft: semanticColor("rgba(111, 86, 163, 0.14)", "rgba(199, 180, 244, 0.14)"),
+    accent: semanticColor(palette.rose, palette.roseLight),
+    accentSoft: soft("255, 123, 168"),
+    gradient: gradients.primary,
     label: "Lavanta",
-    navigationPrimary: "#6F56A3",
-    primary: semanticColor("#6F56A3", "#C7B4F4"),
-    primarySoft: semanticColor("rgba(111, 86, 163, 0.14)", "rgba(199, 180, 244, 0.14)")
+    navigationPrimary: palette.iris,
+    primary: semanticColor(palette.iris, palette.irisLight),
+    primarySoft: soft("108, 76, 241")
   },
   dark: {
-    accent: "#F0A7B4",
-    accentSoft: "rgba(240, 167, 180, 0.14)",
+    accent: palette.roseLight,
+    accentSoft: "rgba(255, 155, 190, 0.2)",
+    gradient: gradients.primary,
     label: "Koyu mod",
-    navigationPrimary: "#9ED0B5",
-    primary: "#9ED0B5",
-    primarySoft: "rgba(158, 208, 181, 0.14)"
+    navigationPrimary: palette.irisLight,
+    primary: palette.irisLight,
+    primarySoft: "rgba(156, 134, 255, 0.2)"
   }
 };
 
 export const themeOptions = [
   {
     id: "auto" as ThemePreference,
-    accent: colors.accent,
-    accentSoft: colors.accentSoft,
+    accent: colors.secondary,
+    accentSoft: colors.secondarySoft,
+    gradient: gradients.primary,
     label: "Bebeğe göre",
-    navigationPrimary: "#3F6F59",
+    navigationPrimary: palette.iris,
     primary: colors.primary,
     primarySoft: colors.primarySoft
   },
@@ -97,7 +114,7 @@ export function getAppTheme(theme?: string | null, gender?: string | null) {
     };
   }
 
-  return appThemes[theme as Exclude<ThemePreference, "auto">] ?? appThemes.sage;
+  return appThemes[theme as Exclude<ThemePreference, "auto">] ?? appThemes.lavender;
 }
 
 export function getSuggestedThemeForGender(
@@ -105,5 +122,5 @@ export function getSuggestedThemeForGender(
 ): AccentThemePreference {
   if (gender === "erkek") return "blue";
   if (gender === "kiz" || gender === "kız") return "pink";
-  return "sage";
+  return "lavender";
 }

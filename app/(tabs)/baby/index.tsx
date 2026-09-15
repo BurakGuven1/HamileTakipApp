@@ -22,6 +22,10 @@ import {
   type GrowthRecord
 } from "@/api/growthRecords";
 import { GrowthPercentileCard } from "@/features/growth-tracking/GrowthPercentileCard";
+import {
+  toGrowthSex,
+  type GrowthIndicator
+} from "@/features/growth-tracking/percentile";
 import { getCurrentProfile } from "@/api/profiles";
 import {
   listVaccinationsForBaby,
@@ -36,8 +40,11 @@ import { DatePickerField } from "@/components/DatePickerField";
 import { EmptyState } from "@/components/EmptyState";
 import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
+import { PageHeader } from "@/components/PageHeader";
 import { TextField } from "@/components/TextField";
-import { Thread } from "@/components/Thread";
+import { GrowthThread } from "@/components/GrowthThread";
+import { SegmentedControl } from "@/components/glass";
+import { ProgressRing } from "@/components/motion";
 import {
   formatDate,
   getBabyAgeLabel,
@@ -60,6 +67,8 @@ export default function BabyScreen() {
   const [formOpen, setFormOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [growthFormOpen, setGrowthFormOpen] = useState(false);
+  // Profil kartındaki büyüme eğrisinin hangi ölçümü çizdiği.
+  const [growthIndicator, setGrowthIndicator] = useState<GrowthIndicator>("weight");
   const [name, setName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [gender, setGender] = useState<BabyGender>("belirtilmemis");
@@ -388,19 +397,12 @@ export default function BabyScreen() {
   return (
     <Screen>
       <View style={styles.container}>
-        <View style={[styles.hero, { backgroundColor: appTheme.primarySoft }]}>
-          <View style={[styles.iconBubble, { backgroundColor: appTheme.accentSoft }]}>
-            <BabyIcon color={appTheme.primary} size={28} />
-          </View>
-          <View style={{ gap: spacing.xs }}>
-            <Text style={typography.eyebrow}>Bebek ve bakım</Text>
-            <Text style={typography.heading1}>Bebek profili</Text>
-            <Text style={styles.heroText}>
-              Bebek bilgileri, aşı takvimi ve gelişim kayıtları burada tek yerde
-              tutulur.
-            </Text>
-          </View>
-        </View>
+        <PageHeader
+          eyebrow="Bebek ve bakım"
+          icon={BabyIcon}
+          subtitle="Bebek bilgileri, aşı takvimi ve gelişim kayıtları burada tek yerde tutulur."
+          title="Bebek profili"
+        />
 
         {selectedBaby ? (
           <Card style={{ backgroundColor: appTheme.accentSoft }}>
@@ -422,26 +424,15 @@ export default function BabyScreen() {
           </Card>
         ) : null}
 
-        <View accessibilityRole="tablist" style={styles.sectionSwitch}>
-          <SegmentButton
-            active={section === "profile"}
-            activeColor={appTheme.primary}
-            label="Profil"
-            onPress={() => setSection("profile")}
-          />
-          <SegmentButton
-            active={section === "vaccines"}
-            activeColor={appTheme.primary}
-            label="Aşı takvimi"
-            onPress={() => setSection("vaccines")}
-          />
-          <SegmentButton
-            active={section === "growth"}
-            activeColor={appTheme.primary}
-            label="Büyüme"
-            onPress={() => setSection("growth")}
-          />
-        </View>
+        <SegmentedControl
+          onChange={setSection}
+          options={[
+            { label: "Profil", value: "profile" },
+            { label: "Aşı takvimi", value: "vaccines" },
+            { label: "Büyüme", value: "growth" }
+          ]}
+          value={section}
+        />
 
         {babies.length > 0 ? (
           <View style={styles.babyChips}>
@@ -460,14 +451,44 @@ export default function BabyScreen() {
                   }
                 ]}
               >
-                <Text
+                <View
                   style={[
-                    styles.babyChipText,
-                    baby.id === selectedBaby?.id && styles.babyChipTextActive
+                    styles.babyChipAvatar,
+                    {
+                      backgroundColor:
+                        baby.id === selectedBaby?.id ? "rgba(255,255,255,0.25)" : appTheme.primarySoft
+                    }
                   ]}
                 >
-                  {baby.name}
-                </Text>
+                  <Text
+                    style={[
+                      styles.babyChipInitial,
+                      { color: baby.id === selectedBaby?.id ? "#FFFFFF" : appTheme.primary }
+                    ]}
+                  >
+                    {baby.name.trim().charAt(0).toLocaleUpperCase("tr-TR")}
+                  </Text>
+                </View>
+                <View style={styles.babyChipCopy}>
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      styles.babyChipText,
+                      baby.id === selectedBaby?.id && styles.babyChipTextActive
+                    ]}
+                  >
+                    {baby.name}
+                  </Text>
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      styles.babyChipAge,
+                      baby.id === selectedBaby?.id && styles.babyChipTextActive
+                    ]}
+                  >
+                    {getBabyAgeLabel(baby.birth_date)}
+                  </Text>
+                </View>
               </Pressable>
             ))}
           </View>
@@ -487,23 +508,22 @@ export default function BabyScreen() {
                     </View>
                     <HeartPulse color={appTheme.primary} size={28} />
                   </View>
-                  <Thread
-                    accessibilityLabel={`${selectedBaby.name} için doğumdan bugüne yaşam ipliği`}
-                    color={appTheme.primary}
-                    height={72}
-                    markers={[
-                      { kind: "knot", position: 0.08 },
-                      { kind: "loop", position: 0.88 }
+                  <SegmentedControl
+                    onChange={setGrowthIndicator}
+                    options={[
+                      { label: "Kilo", value: "weight" },
+                      { label: "Boy", value: "length" },
+                      { label: "Baş çevresi", value: "headCircumference" }
                     ]}
-                    mutedColor={appTheme.primarySoft}
-                    progress={1}
-                    semantic="timeline"
-                    variant="progress"
+                    value={growthIndicator}
                   />
-                  <View style={styles.threadLegend}>
-                    <Text style={styles.threadLegendText}>Doğum düğümü</Text>
-                    <Text style={styles.threadLegendText}>Bugün</Text>
-                  </View>
+                  <GrowthThread
+                    birthDate={selectedBaby.birth_date}
+                    indicator={growthIndicator}
+                    name={selectedBaby.name}
+                    records={growthRecords}
+                    sex={toGrowthSex(selectedBaby.gender) ?? "female"}
+                  />
                   <View style={styles.infoGrid}>
                     <InfoPill label="Doğum" value={formatDate(selectedBaby.birth_date)} />
                     <InfoPill label="Cinsiyet" value={formatGender(selectedBaby.gender)} />
@@ -672,20 +692,34 @@ export default function BabyScreen() {
                     </View>
                     <Syringe color={appTheme.primary} size={28} />
                   </View>
-                  <Thread
-                    accessibilityLabel={`${selectedBaby.name} için ${vaccinations.length} aşının ${completedCount} tanesi tamamlandı`}
-                    color={appTheme.primary}
-                    height={68}
-                    markers={vaccinations.map((vaccination, index) => ({
-                      kind: vaccination.completed ? ("knot" as const) : ("loop" as const),
-                      position: (index + 1) / (vaccinations.length + 1)
-                    }))}
-                    mutedColor={colors.border}
-                    progress={
-                      vaccinations.length > 0 ? completedCount / vaccinations.length : 0
-                    }
-                    variant="progress"
-                  />
+                  <View style={styles.vaccineProgress}>
+                    <ProgressRing
+                      accessibilityLabel={`${vaccinations.length} aşının ${completedCount} tanesi tamamlandı`}
+                      color={appTheme.primary}
+                      progress={
+                        vaccinations.length > 0 ? completedCount / vaccinations.length : 0
+                      }
+                      size={92}
+                      strokeWidth={10}
+                      trackColor={appTheme.primarySoft}
+                    >
+                      <Text style={[styles.vaccineRingValue, { color: appTheme.primary }]}>
+                        {completedCount}
+                      </Text>
+                      <Text style={styles.vaccineRingUnit}>{`/ ${vaccinations.length}`}</Text>
+                    </ProgressRing>
+                    <View style={styles.vaccineProgressCopy}>
+                      <Text style={typography.bodyStrong}>
+                        {vaccinations.length > 0 && completedCount === vaccinations.length
+                          ? "Takvim tamam"
+                          : `${vaccinations.length - completedCount} aşı bekliyor`}
+                      </Text>
+                      <Text style={typography.caption}>
+                        Tamamladığın her aşı bu halkayı doldurur; sıradaki aşıyı aşağıdaki
+                        listede işaretleyebilirsin.
+                      </Text>
+                    </View>
+                  </View>
                 </Card>
 
                 {vaccinations.length === 0 ? (
@@ -1135,6 +1169,40 @@ const styles = StyleSheet.create({
   segmentTextActive: {
     color: colors.primary
   },
+  vaccineProgress: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.lg
+  },
+  vaccineProgressCopy: {
+    flex: 1,
+    gap: spacing.xs
+  },
+  vaccineRingValue: {
+    ...typography.dataStrong
+  },
+  vaccineRingUnit: {
+    ...typography.caption,
+    fontSize: 12
+  },
+  babyChipAvatar: {
+    alignItems: "center",
+    borderRadius: radii.pill,
+    height: 34,
+    justifyContent: "center",
+    width: 34
+  },
+  babyChipInitial: {
+    ...typography.label
+  },
+  babyChipCopy: {
+    gap: 1
+  },
+  babyChipAge: {
+    ...typography.caption,
+    fontSize: 12,
+    lineHeight: 16
+  },
   babyChips: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1142,13 +1210,16 @@ const styles = StyleSheet.create({
   },
   babyChip: {
     alignItems: "center",
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
+    backgroundColor: colors.glass,
+    borderColor: colors.glassBorder,
     borderRadius: radii.pill,
     borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.sm,
     justifyContent: "center",
-    minHeight: 48,
-    paddingHorizontal: spacing.md,
+    minHeight: 52,
+    paddingLeft: spacing.sm,
+    paddingRight: spacing.lg,
     paddingVertical: spacing.sm
   },
   babyChipActive: {

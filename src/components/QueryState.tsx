@@ -4,7 +4,6 @@ import { StyleSheet, Text, View } from "react-native";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { SkeletonShimmer } from "@/components/motion";
-import { Thread } from "@/components/Thread";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
@@ -91,22 +90,22 @@ function LoadingSilhouette({
         importantForAccessibility="no-hide-descendants"
         style={styles.skeleton}
       >
-        {shape === "home" ? <HomeSkeleton color={color} /> : null}
-        {shape === "baby" ? <BabySkeleton color={color} /> : null}
+        {shape === "home" ? <HomeSkeleton /> : null}
+        {shape === "baby" ? <BabySkeleton /> : null}
         {shape === "forum" ? <ForumSkeleton color={color} /> : null}
-        {shape === "paywall" ? <PaywallSkeleton color={color} /> : null}
-        {shape === "generic" ? <GenericSkeleton color={color} /> : null}
+        {shape === "paywall" ? <PaywallSkeleton /> : null}
+        {shape === "generic" ? <GenericSkeleton /> : null}
       </View>
       <Text style={styles.loadingLabel}>{description}</Text>
     </View>
   );
 }
 
-function HomeSkeleton({ color }: { color: string }) {
+function HomeSkeleton() {
   return (
     <>
-      <SkeletonShimmer height={24} width="52%" />
-      <Thread color={color} height={58} progress={0.64} variant="progress" />
+      <SkeletonShimmer height={30} width="62%" />
+      <SkeletonShimmer delay={60} height={16} width="42%" />
       <View style={styles.skeletonHero} />
       <View style={styles.skeletonRow}>
         <SkeletonShimmer delay={90} height={58} radius={radii.md} style={styles.skeletonFlex} />
@@ -116,7 +115,7 @@ function HomeSkeleton({ color }: { color: string }) {
   );
 }
 
-function BabySkeleton({ color }: { color: string }) {
+function BabySkeleton() {
   return (
     <>
       <SkeletonShimmer height={24} width="52%" />
@@ -125,9 +124,7 @@ function BabySkeleton({ color }: { color: string }) {
         <SkeletonShimmer delay={90} height={42} radius={radii.pill} style={styles.skeletonFlex} />
         <SkeletonShimmer delay={180} height={42} radius={radii.pill} style={styles.skeletonFlex} />
       </View>
-      <View style={styles.skeletonHero}>
-        <Thread color={color} height={64} progress={0.72} variant="chart" />
-      </View>
+      <SkeletonShimmer delay={240} height={150} radius={radii.lg} />
     </>
   );
 }
@@ -150,30 +147,20 @@ function ForumSkeleton({ color }: { color: string }) {
   );
 }
 
-function PaywallSkeleton({ color }: { color: string }) {
+function PaywallSkeleton() {
   return (
     <>
-      <SkeletonShimmer height={24} width="52%" />
-      <Thread
-        color={color}
-        height={58}
-        markers={[
-          { kind: "knot", position: 0.22 },
-          { kind: "loop", position: 0.7 }
-        ]}
-        progress={0.72}
-        variant="progress"
-      />
-      <SkeletonShimmer height={94} radius={radii.lg} />
+      <SkeletonShimmer height={30} width="62%" />
+      <SkeletonShimmer delay={60} height={94} radius={radii.lg} />
       <SkeletonShimmer height={50} radius={radii.md} />
     </>
   );
 }
 
-function GenericSkeleton({ color }: { color: string }) {
+function GenericSkeleton() {
   return (
     <>
-      <Thread color={color} height={58} progress={0.54} variant="progress" />
+      <SkeletonShimmer height={22} width="56%" />
       <SkeletonShimmer delay={90} width="92%" />
       <SkeletonShimmer delay={180} width="68%" />
     </>

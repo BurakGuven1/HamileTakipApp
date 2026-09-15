@@ -50,6 +50,7 @@ import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
+import { PageHeader } from "@/components/PageHeader";
 import { TextField } from "@/components/TextField";
 import type { ReportPeriod } from "@/features/care-journal/report";
 import { syncCareQuickWidget } from "@/features/care-journal/widgetSync";
@@ -299,17 +300,13 @@ function CareJournalScreenContent() {
   return (
     <Screen>
       <View style={styles.container}>
-        <View style={styles.hero}>
-          <View style={styles.iconBubble}>
-            <Baby color={colors.sageGreen} size={28} />
-          </View>
-          <Text style={typography.eyebrow}>Anne + bebek</Text>
-          <Text style={typography.heading1}>Akıllı bakım günlüğü</Text>
-          <Text style={styles.heroText}>
-            Beslenme, uyku ve bez kayıtlarını ekle; geçmişini görüntüle ve doktorun
-            için PDF oluştur.
-          </Text>
-        </View>
+        <PageHeader
+          back
+          eyebrow="Anne + bebek"
+          icon={Baby}
+          subtitle="Beslenme, uyku ve bez kayıtlarını ekle; geçmişini görüntüle ve doktorun için PDF oluştur."
+          title="Akıllı bakım günlüğü"
+        />
 
         <Pressable
           accessibilityRole="button"
@@ -1006,14 +1003,13 @@ function AdvancedCareJournalContent() {
   return (
     <Screen>
       <View style={styles.container}>
-        <View style={[styles.hero, { backgroundColor: appTheme.theme.primarySoft }]}>
-          <View style={[styles.iconBubble, { backgroundColor: appTheme.theme.accentSoft }]}>
-            <Baby color={appTheme.primary} size={28} />
-          </View>
-          <Text style={typography.eyebrow}>{isPremium ? "Premium aile alanı" : "Anne + bebek"}</Text>
-          <Text style={typography.heading1}>Akıllı bakım günlüğü</Text>
-          <Text style={styles.heroText}>Son bakımı hatırlamaya çalışma; ailece kaydet, günün akışını tek bakışta gör.</Text>
-        </View>
+        <PageHeader
+          back
+          eyebrow={isPremium ? "Premium aile alanı" : "Anne + bebek"}
+          icon={Baby}
+          subtitle="Son bakımı hatırlamaya çalışma; ailece kaydet, günün akışını tek bakışta gör."
+          title="Akıllı bakım günlüğü"
+        />
 
         {babies.length === 0 ? (
           <EmptyState title="Bebek profili gerekli" description="Günlüğü kullanmak için Bebek sekmesinden bir profil oluştur." />

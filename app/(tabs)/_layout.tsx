@@ -14,11 +14,12 @@ import type { ColorValue } from "react-native";
 
 import { listBabies } from "@/api/babies";
 import { isCurrentUserFamilyFather } from "@/api/familyAccess";
+import { GlassTabBarBackground } from "@/components/glass/GlassTabBarBackground";
 import { AnimatedTabIcon } from "@/components/motion";
 import { getCurrentProfile } from "@/api/profiles";
 import { getExperienceStage } from "@/features/life-stage/lifeStage";
 import { useAppTheme } from "@/providers/AppThemeProvider";
-import { colors, radii, spacing, typography } from "@/theme";
+import { colors, shadows, spacing, typography } from "@/theme";
 
 type TabIconProps = {
   activeBackground: string;
@@ -62,23 +63,21 @@ export default function TabsLayout() {
         tabBarActiveTintColor: accentColor.theme.navigationPrimary,
         tabBarInactiveTintColor: colors.tabInactive,
         tabBarLabelStyle: typography.tabLabel,
+        tabBarBackground: () => <GlassTabBarBackground />,
+        tabBarItemStyle: { paddingTop: spacing.sm },
         tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderColor: colors.border,
-          ...radii.card,
-          borderTopWidth: 1,
-          bottom: spacing.sm,
-          height: 72,
-          left: spacing.sm,
-          paddingBottom: spacing.sm,
+          // Zemin `tabBarBackground` içindeki cam kapsül; çubuğun kendisi
+          // saydam kalır, yoksa camın altından hiçbir şey görünmez.
+          backgroundColor: colors.transparent,
+          borderTopWidth: 0,
+          bottom: spacing.md,
+          height: 76,
+          left: spacing.md,
+          paddingBottom: spacing.md,
           paddingTop: spacing.sm,
           position: "absolute",
-          right: spacing.sm,
-          shadowColor: colors.text,
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.08,
-          shadowRadius: 18,
-          elevation: 8
+          right: spacing.md,
+          ...shadows.floating
         }
       }}
     >

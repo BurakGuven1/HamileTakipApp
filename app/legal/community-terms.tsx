@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Card } from "@/components/Card";
 import { Screen } from "@/components/Screen";
+import { PageHeader } from "@/components/PageHeader";
 import { openLegalPage } from "@/config/legal";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { useFeedback } from "@/providers/FeedbackProvider";
@@ -37,20 +38,12 @@ export default function CommunityTermsScreen() {
           </Text>
         </Pressable>
 
-        <View style={[styles.hero, { backgroundColor: appTheme.tint }]}>
-          <View style={styles.heroIcon}>
-            <ShieldCheck color={appTheme.primary} size={28} />
-          </View>
-          <Text style={typography.eyebrow}>EULA • 24 Temmuz 2026</Text>
-          <Text style={typography.heading1}>
-            Kullanım Şartları ve Topluluk Kuralları
-          </Text>
-          <Text style={styles.body}>
-            Giriş veya kayıt ekranındaki kutuyu işaretlediğinde bu kuralları
-            okuduğunu ve kabul ettiğini açıkça beyan edersin. Kabul etmezsen giriş
-            veya kayıt işlemi tamamlanmaz.
-          </Text>
-        </View>
+        <PageHeader
+          eyebrow="EULA • 24 Temmuz 2026"
+          icon={ShieldCheck}
+          subtitle="Giriş veya kayıt ekranındaki kutuyu işaretlediğinde bu kuralları okuduğunu ve kabul ettiğini açıkça beyan edersin. Kabul etmezsen giriş veya kayıt işlemi tamamlanmaz."
+          title="Kullanım Şartları ve Topluluk Kuralları"
+        />
 
         <Card>
           <View style={styles.section}>
