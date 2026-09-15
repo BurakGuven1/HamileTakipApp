@@ -78,6 +78,7 @@ import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
 import {
   formatDate,
   getBabyAgeLabel,
+  getBabyAgeMonths,
   getPregnancyProgress,
   getRelativeDayLabel
 } from "@/lib/dates";
@@ -150,7 +151,8 @@ export default function HomeScreen() {
   // Aşı tamamlanma oranı artık Bebek sekmesinde yaşıyor; ana sayfa yalnızca
   // yaklaşan aşıyı soruyor, bu yüzden tam liste burada çekilmiyor.
   const appTheme = useAppTheme();
-  const quickActions = getQuickActions(experienceStage);
+  const babyAgeMonths = getBabyAgeMonths(firstBaby?.birth_date);
+  const quickActions = getQuickActions(experienceStage, babyAgeMonths);
   const toolCount = countTools(experienceStage);
   const pregnancyProgress = getPregnancyProgress(profile?.due_date);
   const week = pregnancyProgress?.week

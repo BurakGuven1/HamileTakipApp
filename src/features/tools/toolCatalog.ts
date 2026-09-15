@@ -359,8 +359,15 @@ function pickTools(source: ToolItem[], keys: string[]): ToolItem[] {
     .filter((item): item is ToolItem => Boolean(item));
 }
 
-/** Ana ekrandaki hızlı eylem satırı: evre başına en fazla dört giriş. */
-export function getQuickActions(stage: ExperienceStage): ToolItem[] {
+/**
+ * Ana ekrandaki hızlı eylem satırı: evre başına en fazla dört giriş.
+ * Bebek ek gıda yaşına yaklaştığında (5 ay ve sonrası) büyüme kısayolunun
+ * yerini ek gıda tarifleri alır.
+ */
+export function getQuickActions(
+  stage: ExperienceStage,
+  babyAgeMonths?: number | null
+): ToolItem[] {
   if (stage === "pregnancy") {
     return [
       ...pickTools(pregnancyTracking, ["pregnancy-health-file"]),
@@ -371,10 +378,11 @@ export function getQuickActions(stage: ExperienceStage): ToolItem[] {
   }
 
   if (stage === "postpartum") {
+    const readyForSolids = typeof babyAgeMonths === "number" && babyAgeMonths >= 5;
     return [
       ...pickTools(babyCare, ["care-journal-record", "sleep-rhythm"]),
       ...pickTools(healthTools(stage), ["symptom-check"]),
-      ...pickTools(babyCare, ["baby-growth"])
+      ...pickTools(babyCare, [readyForSolids ? "solid-food-recipes" : "baby-growth"])
     ];
   }
 

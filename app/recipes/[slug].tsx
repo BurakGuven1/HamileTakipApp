@@ -4,22 +4,25 @@ import {
   ArrowLeft,
   Clock3,
   CookingPot,
+  ExternalLink,
   ShieldAlert,
   Snowflake,
+  TriangleAlert,
   Wheat
 } from "lucide-react-native";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Screen } from "@/components/Screen";
-import { getSolidFoodRecipe } from "@/features/nutrition/solidFoodRecipes";
+import { getSolidFoodAgeBand, getSolidFoodRecipe } from "@/features/nutrition/solidFoodRecipes";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
 export default function SolidFoodRecipeDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const recipe = getSolidFoodRecipe(slug);
+  const ageBand = recipe ? getSolidFoodAgeBand(recipe.minMonth) : undefined;
   const accentColor = useAppTheme();
   const appTheme = accentColor.theme;
 
@@ -65,9 +68,48 @@ export default function SolidFoodRecipeDetailScreen() {
               <View style={styles.metaChip}>
                 <Text style={styles.metaChipText}>{recipe.category}</Text>
               </View>
+              {ageBand ? (
+                <View style={styles.metaChip}>
+                  <Text style={styles.metaChipText}>{ageBand.label}</Text>
+                </View>
+              ) : null}
             </View>
             <Text style={styles.title}>{recipe.title}</Text>
             <Text style={styles.summary}>{recipe.summary}</Text>
+          </View>
+        </View>
+
+        <View
+          style={[
+            styles.allergenCallout,
+            recipe.allergens.length
+              ? { backgroundColor: colors.warningSoft, borderColor: colors.warning }
+              : { backgroundColor: colors.successSoft, borderColor: colors.success }
+          ]}
+        >
+          {recipe.allergens.length ? (
+            <TriangleAlert color={colors.warning} size={24} />
+          ) : (
+            <Wheat color={colors.success} size={24} />
+          )}
+          <View style={styles.calloutCopy}>
+            <Text style={styles.calloutTitle}>
+              {recipe.allergens.length ? "Alerjen uyarısı" : "Yaygın alerjen içermez"}
+            </Text>
+            <Text style={styles.calloutText}>
+              {recipe.allergens.length
+                ? `Bu tarif ${recipe.allergens.join(", ")} içerir. Yeni bir alerjeni tek başına, gündüz saatlerinde ve küçük miktarla tanıt; ardından 2 saat boyunca bebeğini gözle.`
+                : "Tarifte süt, yumurta, buğday, susam, balık gibi başlıca alerjenler bulunmuyor. Yine de her yeni besini tek tek tanıtmayı sürdür."}
+            </Text>
+            {recipe.allergens.length ? (
+              <View style={styles.allergenChips}>
+                {recipe.allergens.map((allergen) => (
+                  <View key={allergen} style={styles.allergenChip}>
+                    <Text style={styles.allergenChipText}>{allergen}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
           </View>
         </View>
 
@@ -123,6 +165,21 @@ export default function SolidFoodRecipeDetailScreen() {
           </View>
         </View>
 
+        {recipe.source ? (
+          <Pressable
+            accessibilityHint="Kaynağı tarayıcıda açar"
+            accessibilityRole="link"
+            onPress={() => Linking.openURL(recipe.source!.url)}
+            style={({ pressed }) => [styles.sourceLink, pressed && styles.pressed]}
+          >
+            <ExternalLink color={appTheme.primary} size={19} />
+            <View style={styles.sourceLinkCopy}>
+              <Text style={styles.sourceLinkLabel}>Kaynak</Text>
+              <Text style={[styles.sourceLinkTitle, { color: appTheme.primary }]}>{recipe.source.label}</Text>
+            </View>
+          </Pressable>
+        ) : null}
+
         <View style={styles.sourceNote}>
           <Text style={styles.sourceText}>
             İçerikler WHO ve CDC tamamlayıcı beslenme güvenlik ilkeleri temel alınarak Anne+ için
@@ -168,6 +225,36 @@ const styles = StyleSheet.create({
   metaChipText: { ...typography.label, color: colors.textMuted, fontSize: 13, lineHeight: 18 },
   title: { ...typography.heading1, color: colors.text, fontSize: 32, lineHeight: 38 },
   summary: { ...typography.body, color: colors.textMuted },
+  allergenCallout: {
+    ...radii.card,
+    alignItems: "flex-start",
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    gap: spacing.md,
+    padding: spacing.lg
+  },
+  allergenChips: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs, marginTop: spacing.xs },
+  allergenChip: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs
+  },
+  allergenChipText: { ...typography.label, color: colors.text, fontSize: 12, lineHeight: 17 },
+  sourceLink: {
+    ...radii.card,
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    gap: spacing.md,
+    minHeight: 64,
+    padding: spacing.lg
+  },
+  sourceLinkCopy: { flex: 1, gap: 2 },
+  sourceLinkLabel: { ...typography.label, color: colors.textMuted, fontSize: 12, lineHeight: 17 },
+  sourceLinkTitle: { ...typography.label, fontSize: 14, lineHeight: 20 },
   safetyCallout: { ...radii.card, alignItems: "flex-start", flexDirection: "row", gap: spacing.md, padding: spacing.lg },
   calloutCopy: { flex: 1, gap: spacing.xs },
   calloutTitle: { ...typography.heading3, color: colors.text },

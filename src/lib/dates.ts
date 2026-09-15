@@ -153,10 +153,11 @@ export function getPregnancyWeek(dueDate?: string | null) {
   return getPregnancyProgress(dueDate)?.week ?? null;
 }
 
-export function getBabyAgeLabel(birthDate?: string | null) {
+/** Bebeğin tamamladığı ay sayısı; doğum tarihi yoksa null. */
+export function getBabyAgeMonths(birthDate?: string | null) {
   const birth = parseDateOnly(birthDate);
   if (!birth) {
-    return "Yaş bilgisi yok";
+    return null;
   }
 
   const today = new Date();
@@ -168,6 +169,18 @@ export function getBabyAgeLabel(birthDate?: string | null) {
   if (today.getDate() < birth.getDate()) {
     months -= 1;
   }
+
+  return Math.max(0, months);
+}
+
+export function getBabyAgeLabel(birthDate?: string | null) {
+  const birth = parseDateOnly(birthDate);
+  const months = getBabyAgeMonths(birthDate);
+  if (!birth || months === null) {
+    return "Yaş bilgisi yok";
+  }
+
+  const today = new Date();
 
   if (months < 1) {
     const days = Math.max(
