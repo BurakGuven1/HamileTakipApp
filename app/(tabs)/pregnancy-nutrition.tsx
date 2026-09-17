@@ -17,6 +17,7 @@ import {
 } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   AppState,
   Pressable,
   ScrollView,
@@ -32,7 +33,6 @@ import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { ExpandableText } from "@/components/ExpandableText";
-import { SkeletonShimmer } from "@/components/motion";
 import { Reveal } from "@/components/Reveal";
 import { Screen } from "@/components/Screen";
 import {
@@ -502,7 +502,7 @@ function DailyWaterTracker({
   if (!intake) {
     return (
       <View style={styles.waterTrackerLoading}>
-        <SkeletonShimmer height={22} width="58%" />
+        <ActivityIndicator color={appTheme.primary} />
         <Text style={styles.smallText}>Bugünkü su hedefin yükleniyor…</Text>
       </View>
     );

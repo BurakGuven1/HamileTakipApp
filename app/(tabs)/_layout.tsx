@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { Tabs } from "expo-router";
-import type { LucideIcon } from "lucide-react-native";
 import {
   Baby,
   CalendarHeart,
@@ -11,17 +10,14 @@ import {
   UserRound
 } from "lucide-react-native";
 import type { ColorValue } from "react-native";
-
 import { listBabies } from "@/api/babies";
 import { isCurrentUserFamilyFather } from "@/api/familyAccess";
-import { AnimatedTabIcon } from "@/components/motion";
 import { getCurrentProfile } from "@/api/profiles";
 import { getExperienceStage } from "@/features/life-stage/lifeStage";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
 type TabIconProps = {
-  activeBackground: string;
   color: ColorValue;
   focused?: boolean;
   size: number;
@@ -51,7 +47,6 @@ export default function TabsLayout() {
     babiesQuery.isPending ||
     babiesQuery.isError ||
     !profileQuery.data;
-  const activeBackground = colors.tabActiveSurface;
   const hideWomensForum =
     fatherRoleQuery.isPending || fatherRoleQuery.isError || fatherRoleQuery.data === true;
 
@@ -60,7 +55,7 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: accentColor.theme.navigationPrimary,
-        tabBarInactiveTintColor: colors.tabInactive,
+        tabBarInactiveTintColor: accentColor.isDark ? "#C8C1CB" : "#655F57",
         tabBarLabelStyle: typography.tabLabel,
         tabBarStyle: {
           backgroundColor: colors.surface,
@@ -86,7 +81,7 @@ export default function TabsLayout() {
         name="home"
         options={{
           title: "Ana",
-          tabBarIcon: (props) => <TabIcon {...props} activeBackground={activeBackground} icon={Home} />
+          tabBarIcon: (props) => <HomeIcon {...props} />
         }}
       />
       <Tabs.Screen
@@ -96,8 +91,8 @@ export default function TabsLayout() {
             lifeStageUnavailable || experienceStage !== "pregnancy"
               ? null
               : undefined,
-          title: "Araçlar",
-          tabBarIcon: (props) => <TabIcon {...props} activeBackground={activeBackground} icon={CalendarHeart} />
+          title: "Gebelik",
+          tabBarIcon: (props) => <PregnancyIcon {...props} />
         }}
       />
       <Tabs.Screen
@@ -108,7 +103,7 @@ export default function TabsLayout() {
               ? null
               : undefined,
           title: "Bebek",
-          tabBarIcon: (props) => <TabIcon {...props} activeBackground={activeBackground} icon={Baby} />
+          tabBarIcon: (props) => <BabyIcon {...props} />
         }}
       />
       <Tabs.Screen
@@ -119,7 +114,7 @@ export default function TabsLayout() {
               ? null
               : undefined,
           title: "Galeri",
-          tabBarIcon: (props) => <TabIcon {...props} activeBackground={activeBackground} icon={Images} />
+          tabBarIcon: (props) => <GalleryIcon {...props} />
         }}
       />
       <Tabs.Screen
@@ -127,7 +122,7 @@ export default function TabsLayout() {
         options={{
           href: null,
           title: "Ninni",
-          tabBarIcon: (props) => <TabIcon {...props} activeBackground={activeBackground} icon={Music2} />
+          tabBarIcon: (props) => <LullabyIcon {...props} />
         }}
       />
       <Tabs.Screen
@@ -135,14 +130,14 @@ export default function TabsLayout() {
         options={{
           href: hideWomensForum ? null : undefined,
           title: "Forum",
-          tabBarIcon: (props) => <TabIcon {...props} activeBackground={activeBackground} icon={MessageCircleHeart} />
+          tabBarIcon: (props) => <ForumIcon {...props} />
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: "Profil",
-          tabBarIcon: (props) => <TabIcon {...props} activeBackground={activeBackground} icon={UserRound} />
+          tabBarIcon: (props) => <ProfileIcon {...props} />
         }}
       />
       <Tabs.Screen
@@ -223,28 +218,40 @@ export default function TabsLayout() {
   );
 }
 
-function TabIcon({
-  activeBackground,
-  color,
-  focused = false,
-  icon,
-  size
-}: TabIconProps & { icon: LucideIcon }) {
+function HomeIcon({ color, focused, size }: TabIconProps) {
+  return <Home color={resolveIconColor(color, focused)} size={size} strokeWidth={2.4} />;
+}
+
+function BabyIcon({ color, focused, size }: TabIconProps) {
+  return <Baby color={resolveIconColor(color, focused)} size={size} strokeWidth={2.4} />;
+}
+
+function PregnancyIcon({ color, focused, size }: TabIconProps) {
   return (
-    <AnimatedTabIcon
-      activeBackground={activeBackground}
+    <CalendarHeart
       color={resolveIconColor(color, focused)}
-      focused={focused}
-      icon={icon}
       size={size}
+      strokeWidth={2.4}
     />
   );
 }
 
+function GalleryIcon({ color, focused, size }: TabIconProps) {
+  return <Images color={resolveIconColor(color, focused)} size={size} strokeWidth={2.4} />;
+}
+
+function LullabyIcon({ color, focused, size }: TabIconProps) {
+  return <Music2 color={resolveIconColor(color, focused)} size={size} strokeWidth={2.4} />;
+}
+
+function ForumIcon({ color, focused, size }: TabIconProps) {
+  return <MessageCircleHeart color={resolveIconColor(color, focused)} size={size} strokeWidth={2.4} />;
+}
+
+function ProfileIcon({ color, focused, size }: TabIconProps) {
+  return <UserRound color={resolveIconColor(color, focused)} size={size} strokeWidth={2.4} />;
+}
+
 function resolveIconColor(color: ColorValue, focused = false) {
-  return typeof color === "string"
-    ? color
-    : focused
-      ? colors.primary
-      : colors.tabInactive;
+  return typeof color === "string" ? color : focused ? "#3F6F59" : "#655F57";
 }

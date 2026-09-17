@@ -3,19 +3,34 @@ import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { Link, router, type Href } from "expo-router";
 import {
+  Activity,
+  Baby,
+  BellRing,
   BookOpen,
+  BookOpenCheck,
+  CalendarHeart,
   Camera,
   ChevronRight,
   Clock3,
   Droplets,
+  FileSearch,
   FileHeart,
   HandHeart,
+  HeartPulse,
+  Images,
+  Music2,
   Milk,
   Moon,
+  Salad,
+  Smile,
+  Ruler,
+  ShieldQuestion,
   Sparkles,
+  Stethoscope,
   Syringe,
-  Wrench,
-  type LucideIcon
+  Timer,
+  Users,
+  Wrench
 } from "lucide-react-native";
 import { useEffect, useState, type ReactNode } from "react";
 import {
@@ -37,7 +52,7 @@ import {
   submitWeeklyCheckIn,
   WEEKLY_CHECKIN_QUERY_KEY
 } from "@/api/dailyExperience";
-import { getCareHandoverSnapshot, getCurrentCareUserId, listCareJournalEntries, subscribeToCareCoordination, takeOverBabyCare, type CareHandoverSnapshot, type CareJournalEntry } from "@/api/careJournal";
+import { getCareHandoverSnapshot, getCurrentCareUserId, listCareJournalEntries, subscribeToCareCoordination, takeOverBabyCare, type CareJournalEntry } from "@/api/careJournal";
 import { getCurrentFamilyMembership } from "@/api/familyAccess";
 import { getFeaturedArticlesForExperience } from "@/api/articles";
 import { getCurrentProfile } from "@/api/profiles";
@@ -55,12 +70,6 @@ import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { MetricCard } from "@/components/MetricCard";
-import {
-  AnimatedNumber,
-  PressableScale,
-  ProgressRing,
-  StaggeredList
-} from "@/components/motion";
 import { QueryState } from "@/components/QueryState";
 import { Reveal } from "@/components/Reveal";
 import { Screen } from "@/components/Screen";
@@ -74,16 +83,13 @@ import { getDailyDestinationPath } from "@/features/daily-experience/dailyExperi
 import { WeeklyCheckInCard } from "@/features/daily-experience/WeeklyCheckInCard";
 import { syncCareQuickWidget } from "@/features/care-journal/widgetSync";
 import type { Article } from "@/features/articles/articles";
-import { getExperienceStage, type ExperienceStage } from "@/features/life-stage/lifeStage";
-import { countTools, getQuickActions } from "@/features/tools/toolCatalog";
-import { ToolQuickAction } from "@/features/tools/ToolShortcutCard";
+import { getExperienceStage } from "@/features/life-stage/lifeStage";
 import { getPregnancyWeekInfo } from "@/features/pregnancy/weekInfo";
 import { showPaywallIfNeeded } from "@/features/subscription/showPaywallIfNeeded";
 import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
 import {
   formatDate,
   getBabyAgeLabel,
-  getBabyAgeMonths,
   getPregnancyProgress,
   getRelativeDayLabel
 } from "@/lib/dates";
@@ -165,9 +171,6 @@ export default function HomeScreen() {
     enabled: Boolean(firstBaby?.id && isMotherhoodMode)
   });
   const appTheme = vibrantTheme;
-  const babyAgeMonths = getBabyAgeMonths(firstBaby?.birth_date);
-  const quickActions = getQuickActions(experienceStage, babyAgeMonths);
-  const toolCount = countTools(experienceStage);
   const pregnancyProgress = getPregnancyProgress(profile?.due_date);
   const week = pregnancyProgress?.week
     ? Math.max(2, Math.min(40, pregnancyProgress.week))
@@ -202,12 +205,6 @@ export default function HomeScreen() {
   const vaccinations: BabyVaccinationWithSchedule[] = vaccinationsQuery.data ?? [];
   const completedVaccines = vaccinations.filter((item) => item.completed).length;
   const babyAge = firstBaby ? getBabyAgeLabel(firstBaby.birth_date) : null;
-  const focus = resolveHomeFocus({
-    babyName: firstBaby?.name ?? null,
-    handover: careHandoverQuery.data ?? null,
-    nextVaccination: nextVaccinationQuery.data ?? null,
-    stage: experienceStage
-  });
   const displayName =
     profile?.mother_name ||
     profile?.display_name ||
@@ -582,28 +579,9 @@ export default function HomeScreen() {
             <Card style={[styles.weekCard, { borderColor: appTheme.primary }]}>
               <View style={{ gap: spacing.lg }}>
                 <View style={styles.weekTopCopy}>
-                  <ProgressRing
-                    accessibilityLabel={`Gebelik ilerlemesi: ${week}. hafta, yüzde ${Math.round(pregnancyProgressRatio * 100)}`}
-                    color={appTheme.primary}
-                    progress={pregnancyProgressRatio}
-                    size={96}
-                    strokeWidth={9}
-                    trackColor={appTheme.primarySoft}
-                  >
-                    <AnimatedNumber
-                      accessibilityLabel={`${week}. hafta`}
-                      style={[styles.weekRingValue, { color: appTheme.primary }]}
-                      value={week}
-                    />
-                    <Text style={styles.weekRingUnit}>hafta</Text>
-                  </ProgressRing>
-                  <View style={styles.weekTopTexts}>
-                    <Text style={[styles.weekNavigatorGreeting, { color: appTheme.primary }]}>
-                      İyi günler, {displayName}
-                    </Text>
-                    <Text style={styles.weekTopTitle}>Bu hafta</Text>
-                    <Text style={styles.weekTopHint}>{heroBody}</Text>
-                  </View>
+                  <Text style={[styles.weekNavigatorGreeting, { color: appTheme.primary }]}>
+                    İyi günler, {displayName}
+                  </Text>
                 </View>
 
                 <WeeklyBabyDevelopmentCard
@@ -656,28 +634,6 @@ export default function HomeScreen() {
           </Reveal>
         ) : null}
 
-        <Reveal delay={60}>
-          <Card style={[styles.focusCard, { borderLeftColor: appTheme.primary }]}>
-            <View style={styles.focusHeader}>
-              <View style={[styles.focusIcon, { backgroundColor: appTheme.primarySoft }]}>
-                <focus.Icon color={appTheme.primary} size={22} strokeWidth={2.4} />
-              </View>
-              <View style={styles.focusCopy}>
-                <Text style={typography.eyebrow}>Şimdi ne önemli?</Text>
-                <Text style={styles.focusTitle}>{focus.title}</Text>
-                <Text style={styles.focusBody}>{focus.body}</Text>
-              </View>
-            </View>
-            <Link href={focus.href} asChild>
-              <Button
-                accessibilityHint={focus.body}
-                label={focus.actionLabel}
-                variant="secondary"
-              />
-            </Link>
-          </Card>
-        </Reveal>
-
         {/* No <Reveal>: the card renders nothing without a family code, and an
             empty wrapper would still take a gap in this column. */}
         <PartnerCard lifeStage={isPregnancyMode ? "pregnancy" : "postpartum"} />
@@ -686,37 +642,268 @@ export default function HomeScreen() {
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleCopy}>
               <Text style={typography.eyebrow}>Tek dokunuşla</Text>
-              <Text style={typography.heading2}>Hızlı eylemler</Text>
+              <Text style={typography.heading2}>Kısayollar</Text>
               <Text style={styles.sectionHint}>En sık kullandıkların önde</Text>
             </View>
             <View style={[styles.shortcutSpark, { backgroundColor: appTheme.accentSoft }]}>
               <Sparkles color={appTheme.accent} size={20} />
             </View>
           </View>
-          <StaggeredList itemStyle={styles.quickActionItem} style={styles.quickActionRow}>
-            {quickActions.map((tool) => (
-              <ToolQuickAction key={tool.key} tool={tool} />
-            ))}
-          </StaggeredList>
-          <Link href="/pregnancy-tools" asChild>
-            <PressableScale
-              accessibilityHint={`${toolCount} aracın kategorilere ayrılmış listesini açar`}
-              accessibilityLabel="Tüm araçlar"
-              accessibilityRole="button"
-              style={styles.allToolsCard}
-            >
-              <View style={[styles.allToolsIcon, { backgroundColor: appTheme.primarySoft }]}>
-                <Wrench color={appTheme.primary} size={22} strokeWidth={2.4} />
+          <View style={styles.shortcutGroups}>
+            <View style={styles.shortcutGroup}>
+              <Text style={styles.shortcutGroupTitle}>
+                {isPregnancyMode
+                  ? "Gebelik takibi"
+                  : isMotherhoodMode
+                    ? "Bebek bakımı"
+                    : "Takibini başlat"}
+              </Text>
+              <View style={styles.shortcutPanel}>
+                {isPregnancyMode ? (
+                  <>
+                    <ShortcutCard
+                      accent={vibrantColors.primary}
+                      featured
+                      href="/pregnancy-health-file"
+                      icon={<FileHeart color={vibrantColors.primary} fill={vibrantColors.primaryLight} size={25} strokeWidth={2.6} />}
+                      subtitle="Kayıt, tahlil ve randevular tek yerde"
+                      title="Sağlık Dosyam"
+                      tint={vibrantColors.primaryLight}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.primary}
+                      href="/pregnancy-tools"
+                      icon={<Wrench color={vibrantColors.primary} fill={vibrantColors.primaryLight} size={25} strokeWidth={2.6} />}
+                      subtitle="Tekme, su ve ölçümler"
+                      title="Takip araçları"
+                      tint={vibrantColors.primaryLight}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.secondary}
+                      href={{ pathname: "/doctor-visit", params: { subject: "pregnancy" } }}
+                      icon={<Stethoscope color={vibrantColors.secondary} fill={vibrantColors.secondarySoft} size={23} strokeWidth={2.6} />}
+                      subtitle="Soruların ve kayıtların hazır"
+                      title="Doktora hazırlan"
+                      tint={vibrantColors.secondarySoft}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.mint}
+                      href="/family-planner"
+                      icon={<Users color={vibrantColors.mint} fill={vibrantColors.mintSoft} size={23} strokeWidth={2.6} />}
+                      subtitle="Görevler ve ortak destek"
+                      title="Aile görevleri"
+                      tint={vibrantColors.mintSoft}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.blue}
+                      href="/pregnancy-nutrition"
+                      icon={<Salad color={vibrantColors.blue} fill={vibrantColors.blueSoft} size={23} strokeWidth={2.6} />}
+                      subtitle="Haftana uygun beslenme"
+                      title="Beslenme & su"
+                      tint={vibrantColors.blueSoft}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.secondary}
+                      href="/baby-names"
+                      icon={<Sparkles color={vibrantColors.secondary} fill={vibrantColors.secondarySoft} size={23} strokeWidth={2.6} />}
+                      subtitle="Renkli isim keşfi"
+                      title="Bebek isimleri"
+                      tint={vibrantColors.secondarySoft}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.primary}
+                      href="/pregnancy-exercise"
+                      icon={<Activity color={vibrantColors.primary} fill={vibrantColors.primaryLight} size={23} strokeWidth={2.6} />}
+                      subtitle="Haftana uygun egzersiz"
+                      title="Hareket"
+                      tint={vibrantColors.primaryLight}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.secondary}
+                      href="/symptom-check"
+                      icon={<ShieldQuestion color={vibrantColors.secondary} fill={vibrantColors.secondarySoft} size={23} strokeWidth={2.6} />}
+                      subtitle="Beklemeli mi, aramalı mısın"
+                      title="Bu normal mi?"
+                      tint={vibrantColors.secondarySoft}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.peach}
+                      href="/contraction-timer"
+                      icon={<Timer color={vibrantColors.peach} fill={vibrantColors.peachSoft} size={23} strokeWidth={2.6} />}
+                      subtitle="Süre, aralık ve 5-1-1 kuralı"
+                      title="Kasılma sayacı"
+                      tint={vibrantColors.peachSoft}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.peach}
+                      href="/birth-preparation"
+                      icon={<BookOpenCheck color={vibrantColors.peach} fill={vibrantColors.peachSoft} size={23} strokeWidth={2.6} />}
+                      subtitle="Çanta, plan ve hazırlık"
+                      title="Doğuma hazırlık"
+                      tint={vibrantColors.peachSoft}
+                    />
+                  </>
+                ) : isMotherhoodMode ? (
+                  <>
+                    <ShortcutCard
+                      accent={vibrantColors.secondary}
+                      featured
+                      href={{ pathname: "/sleep-rhythm", params: firstBaby?.id ? { babyId: firstBaby.id } : undefined }}
+                      icon={<Moon color={vibrantColors.secondary} fill={vibrantColors.secondarySoft} size={25} strokeWidth={2.6} />}
+                      subtitle="Tek dokunuşla kaydet, ritmini gör"
+                      title="Uyku Ritmi"
+                      tint={vibrantColors.secondarySoft}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.primary}
+                      href={{ pathname: "/care-journal", params: { section: "record" } }}
+                      icon={<CalendarHeart color={vibrantColors.primary} fill={vibrantColors.primaryLight} size={25} strokeWidth={2.6} />}
+                      subtitle="Beslenme, uyku veya bez kaydını hemen ekle"
+                      title="Şimdi bakım kaydet"
+                      tint={vibrantColors.primaryLight}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.secondary}
+                      href="/symptom-check"
+                      icon={<ShieldQuestion color={vibrantColors.secondary} fill={vibrantColors.secondarySoft} size={23} strokeWidth={2.6} />}
+                      subtitle="Beklemeli mi, aramalı mısın"
+                      title="Bu normal mi?"
+                      tint={vibrantColors.secondarySoft}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.peach}
+                      href={{ pathname: "/care-journal", params: { section: "plan" } }}
+                      icon={<BellRing color={vibrantColors.peach} fill={vibrantColors.peachSoft} size={23} strokeWidth={2.6} />}
+                      subtitle="Alarm, uyku tahmini, sağım ve süt stoğu"
+                      title="Bakım planı"
+                      tint={vibrantColors.peachSoft}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.secondary}
+                      href={{ pathname: "/care-journal", params: { section: "family" } }}
+                      icon={<Users color={vibrantColors.secondary} fill={vibrantColors.secondarySoft} size={23} strokeWidth={2.6} />}
+                      subtitle="Canlı vardiya, görevler ve anne desteği"
+                      title="Aile vardiyası"
+                      tint={vibrantColors.secondarySoft}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.mint}
+                      href="/family-planner"
+                      icon={<Users color={vibrantColors.mint} fill={vibrantColors.mintSoft} size={23} strokeWidth={2.6} />}
+                      subtitle="Kime, ne zaman: ortak görev ve alarmlar"
+                      title="Aile görevleri"
+                      tint={vibrantColors.mintSoft}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.blue}
+                      href={{ pathname: "/doctor-visit", params: { subject: "baby" } }}
+                      icon={<Stethoscope color={vibrantColors.blue} fill={vibrantColors.blueSoft} size={23} strokeWidth={2.6} />}
+                      subtitle="Bebek veya anne için ayrı, gerçek veri özeti"
+                      title="Doktora hazırlan"
+                      tint={vibrantColors.blueSoft}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.mint}
+                      href="/baby"
+                      icon={<Ruler color={vibrantColors.mint} fill={vibrantColors.mintSoft} size={23} strokeWidth={2.6} />}
+                      subtitle="Ölçümler ve yaklaşan aşılar"
+                      title="Büyüme & aşı"
+                      tint={vibrantColors.mintSoft}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.yellow}
+                      href="/teething"
+                      icon={<Smile color={vibrantColors.yellow} fill={vibrantColors.yellowSoft} size={23} strokeWidth={2.6} />}
+                      subtitle="20 süt dişini ailece işaretle"
+                      title="Diş takibi"
+                      tint={vibrantColors.yellowSoft}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.blue}
+                      href="/solid-food-recipes"
+                      icon={<Salad color={vibrantColors.blue} fill={vibrantColors.blueSoft} size={23} strokeWidth={2.6} />}
+                      subtitle="Yaşa ve dokuya uygun güvenli tarifler"
+                      title="Ek gıda tarifleri"
+                      tint={vibrantColors.blueSoft}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.primary}
+                      href="/lullaby"
+                      icon={<Music2 color={vibrantColors.primary} fill={vibrantColors.primaryLight} size={23} strokeWidth={2.6} />}
+                      subtitle="Sakinleştiren uyku sesleri"
+                      title="Ninniler"
+                      tint={vibrantColors.primaryLight}
+                    />
+                  </>
+                ) : (
+                  <>
+                    {membershipQuery.data ? (
+                      <ShortcutCard
+                        accent={vibrantColors.mint}
+                        featured
+                        href="/family-planner"
+                        icon={<Users color={vibrantColors.mint} fill={vibrantColors.mintSoft} size={25} strokeWidth={2.6} />}
+                        subtitle="Sana atanan görev, alarm ve vardiya burada"
+                        title="Aile görevleri"
+                        tint={vibrantColors.mintSoft}
+                      />
+                    ) : null}
+                    <ShortcutCard
+                      accent={vibrantColors.primary}
+                      featured={!membershipQuery.data}
+                      href="/settings"
+                      icon={<CalendarHeart color={vibrantColors.primary} fill={vibrantColors.primaryLight} size={25} strokeWidth={2.6} />}
+                      subtitle="Hafta ve gününü girerek takibe başla"
+                      title="Hamilelik akışı"
+                      tint={vibrantColors.primaryLight}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.blue}
+                      href="/baby"
+                      icon={<Baby color={vibrantColors.blue} fill={vibrantColors.blueSoft} size={23} strokeWidth={2.6} />}
+                      subtitle="Doğum bilgileriyle bakım alanını hazırla"
+                      title="Bebek profili"
+                      tint={vibrantColors.blueSoft}
+                    />
+                  </>
+                )}
               </View>
-              <View style={styles.allToolsCopy}>
-                <Text style={styles.allToolsTitle}>Tüm araçlar</Text>
-                <Text style={styles.allToolsHint}>
-                  {`${toolCount} araç, kategorilere ayrılmış`}
-                </Text>
+            </View>
+
+            <View style={styles.shortcutGroup}>
+              <Text style={styles.shortcutGroupTitle}>Aile alanları</Text>
+              <View style={styles.shortcutPanel}>
+                <ShortcutCard
+                  accent={vibrantColors.peach}
+                  href="/document-insight"
+                  icon={<FileSearch color={vibrantColors.peach} fill={vibrantColors.peachSoft} size={23} strokeWidth={2.6} />}
+                  subtitle="Sağlık belgelerini sadeleştir"
+                  title="Belgeyi Anla"
+                  tint={vibrantColors.peachSoft}
+                />
+                {isMotherhoodMode ? (
+                  <ShortcutCard
+                    accent={vibrantColors.secondary}
+                    href="/gallery"
+                    icon={<Images color={vibrantColors.secondary} fill={vibrantColors.secondarySoft} size={23} strokeWidth={2.6} />}
+                    subtitle="İlk 5 anıyı ücretsiz, devamını Premium ile sakla"
+                    title="Anı galerisi"
+                    tint={vibrantColors.secondarySoft}
+                  />
+                ) : null}
+                {!membershipQuery.data ? (
+                  <ShortcutCard
+                    accent={vibrantColors.mint}
+                    href="/forum"
+                    icon={<HeartPulse color={vibrantColors.mint} fill={vibrantColors.mintSoft} size={23} strokeWidth={2.6} />}
+                    subtitle="Deneyimlerini toplulukla paylaş"
+                    title="Anne forumu"
+                    tint={vibrantColors.mintSoft}
+                  />
+                ) : null}
               </View>
-              <ChevronRight color={colors.textMuted} size={20} strokeWidth={2.2} />
-            </PressableScale>
-          </Link>
+            </View>
+          </View>
         </Reveal>
 
         {isMotherhoodMode && firstBaby && careHandoverQuery.isLoading ? (
@@ -799,6 +986,34 @@ export default function HomeScreen() {
           </View>
         ) : null}
 
+        {experienceStage !== "general" ? <Card>
+          <View style={{ gap: spacing.md }}>
+            <View style={styles.cardHeader}>
+              <View style={{ gap: spacing.xs, flex: 1 }}>
+                <Text style={typography.heading2}>Sıradaki aşı</Text>
+                {nextVaccinationQuery.isLoading ? (
+                  <Text style={typography.body}>Aşı bilgileri yükleniyor…</Text>
+                ) : nextVaccinationQuery.isError ? (
+                  <Text style={typography.body}>Aşı bilgileri şu anda alınamadı.</Text>
+                ) : nextVaccinationQuery.data ? (
+                  <Text style={typography.body}>
+                    {nextVaccinationQuery.data.subjectName} · {nextVaccinationQuery.data.vaccineName} ·{" "}
+                    {getRelativeDayLabel(nextVaccinationQuery.data.scheduledDate)} ·{" "}
+                    {formatDate(nextVaccinationQuery.data.scheduledDate)}
+                  </Text>
+                ) : (
+                  <Text style={typography.body}>
+                    Şu an yaklaşan aşı yok. Yeni kayıt ekledikçe burada görünür.
+                  </Text>
+                )}
+              </View>
+              <Syringe color={appTheme.primary} size={28} />
+            </View>
+            <Link href="/vaccines" asChild>
+              <Button label="Aşı merkezini aç" variant="secondary" />
+            </Link>
+          </View>
+        </Card> : null}
 
         <View style={styles.sectionHeader}>
           <View>
@@ -854,81 +1069,6 @@ export default function HomeScreen() {
       </View>
     </Screen>
   );
-}
-
-type HomeFocus = {
-  actionLabel: string;
-  body: string;
-  href: Href;
-  Icon: LucideIcon;
-  title: string;
-};
-
-/**
- * Ana ekrandaki tek eylem kartının içeriğini belirler: şu anda gerçekten
- * önemli olan tek şey. Sıra: süren bakım → yaklaşan aşı → evreye göre
- * sıradaki anlamlı adım.
- */
-function resolveHomeFocus({
-  babyName,
-  handover,
-  nextVaccination,
-  stage
-}: {
-  babyName: string | null;
-  handover: CareHandoverSnapshot | null;
-  nextVaccination: { scheduledDate: string; subjectName: string; vaccineName: string } | null;
-  stage: ExperienceStage;
-}): HomeFocus {
-  if (handover?.active_timer?.timer_type === "sleep") {
-    return {
-      actionLabel: "Bakım günlüğünü aç",
-      body: `${babyName ?? "Bebeğin"} ${careHomeRelativeTimeValue(handover.active_timer.started_at, false)} önce uyudu. Uyanınca kaydı kapatabilirsin.`,
-      href: "/care-journal",
-      Icon: Moon,
-      title: "Uyku sürüyor"
-    };
-  }
-
-  if (nextVaccination) {
-    return {
-      actionLabel: "Aşı merkezini aç",
-      body: `${nextVaccination.subjectName} · ${nextVaccination.vaccineName} · ${getRelativeDayLabel(nextVaccination.scheduledDate)} (${formatDate(nextVaccination.scheduledDate)})`,
-      href: "/vaccines",
-      Icon: Syringe,
-      title: "Yaklaşan aşı"
-    };
-  }
-
-  if (stage === "postpartum") {
-    return {
-      actionLabel: "Bakım kaydet",
-      body: handover?.last_feed
-        ? `Son beslenme ${careHomeRelativeTime(handover.last_feed)}. Yeni kaydı tek dokunuşla ekleyebilirsin.`
-        : "Bugün için henüz bakım kaydın yok. İlk kaydı eklediğinde ritmi burada göreceksin.",
-      href: { pathname: "/care-journal", params: { section: "record" } },
-      Icon: Milk,
-      title: handover?.last_feed ? "Sıradaki beslenme" : "İlk bakım kaydın"
-    };
-  }
-
-  if (stage === "pregnancy") {
-    return {
-      actionLabel: "Sağlık dosyanı aç",
-      body: "Tahlil, randevu ve ölçümlerini güncel tutarsan doktor görüşmesine hazır gidersin.",
-      href: "/pregnancy-health-file",
-      Icon: FileHeart,
-      title: "Sağlık dosyanı güncel tut"
-    };
-  }
-
-  return {
-    actionLabel: "Takibini kur",
-    body: "Gebelik veya bebek bilgisi eklediğinde ana sayfa tamamen sana göre hazırlanır.",
-    href: "/settings",
-    Icon: Sparkles,
-    title: "Deneyimini kişiselleştir"
-  };
 }
 
 function HomeCareRow({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
@@ -1013,101 +1153,72 @@ function ArticlePreview({ article }: { article: Article }) {
   );
 }
 
+function ShortcutCard({
+  accent,
+  featured = false,
+  href,
+  icon,
+  premium = false,
+  subtitle,
+  title,
+  tint
+}: {
+  accent?: string;
+  featured?: boolean;
+  href: Href;
+  icon: ReactNode;
+  premium?: boolean;
+  subtitle: string;
+  title: string;
+  tint: string;
+}) {
+  return (
+    <Link href={href} asChild>
+      <Pressable
+        accessibilityLabel={`${title}${premium ? ", Premium" : ""}`}
+        accessibilityHint={subtitle}
+        accessibilityRole="button"
+        style={({ pressed }) => [
+          styles.shortcutPressable,
+          pressed && styles.shortcutPressed
+        ]}
+      >
+        <View
+          style={[
+            styles.shortcutCard,
+            featured && styles.shortcutFeaturedCard,
+            { borderLeftColor: accent ?? tint }
+          ]}
+        >
+          <View style={[styles.shortcutIcon, { backgroundColor: tint }]}>
+            {icon}
+          </View>
+          <View style={styles.shortcutCopy}>
+            <View style={styles.shortcutTitleRow}>
+              <Text style={styles.shortcutTitle}>
+                {title}
+              </Text>
+              {premium ? (
+                <View style={styles.premiumBadge}>
+                  <Sparkles color={colors.honeyGold} size={11} strokeWidth={2.4} />
+                  <Text style={styles.premiumBadgeText}>Premium</Text>
+                </View>
+              ) : null}
+            </View>
+            <Text numberOfLines={2} style={styles.shortcutSubtitle}>
+              {subtitle}
+            </Text>
+          </View>
+          <View style={styles.shortcutChevron}>
+            <ChevronRight color={colors.textMuted} size={20} strokeWidth={2.2} />
+          </View>
+        </View>
+      </Pressable>
+    </Link>
+  );
+}
+
 const styles = StyleSheet.create({
-  focusCard: {
-    borderLeftWidth: 5,
-    gap: spacing.lg
-  },
-  focusHeader: {
-    alignItems: "flex-start",
-    flexDirection: "row",
-    gap: spacing.md
-  },
-  focusIcon: {
-    alignItems: "center",
-    borderRadius: radii.md,
-    justifyContent: "center",
-    minHeight: 44,
-    minWidth: 44
-  },
-  focusCopy: {
-    flex: 1,
-    gap: spacing.xs
-  },
-  focusTitle: {
-    ...typography.heading3,
-    color: colors.text
-  },
-  focusBody: {
-    ...typography.body,
-    color: colors.textMuted,
-    fontSize: 15,
-    lineHeight: 21
-  },
-  weekTopTexts: {
-    flex: 1,
-    gap: spacing.xs
-  },
-  weekTopTitle: {
-    ...typography.heading2,
-    color: colors.text
-  },
-  weekTopHint: {
-    ...typography.body,
-    color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 20
-  },
-  weekRingValue: {
-    ...typography.dataStrong,
-    fontSize: 28,
-    lineHeight: 34
-  },
-  weekRingUnit: {
-    ...typography.body,
-    color: colors.textMuted,
-    fontSize: 12,
-    lineHeight: 16
-  },
-  quickActionRow: {
-    flexDirection: "row",
-    gap: spacing.sm
-  },
-  quickActionItem: {
-    flex: 1
-  },
-  allToolsCard: {
-    alignItems: "center",
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    ...radii.card,
-    borderWidth: StyleSheet.hairlineWidth,
-    flexDirection: "row",
-    gap: spacing.md,
-    minHeight: 68,
-    padding: spacing.md
-  },
-  allToolsIcon: {
-    alignItems: "center",
-    borderRadius: radii.md,
-    justifyContent: "center",
-    minHeight: 44,
-    minWidth: 44
-  },
-  allToolsCopy: {
-    flex: 1,
-    gap: spacing.xs
-  },
-  allToolsTitle: {
-    ...typography.bodyStrong,
-    color: colors.text
-  },
-  allToolsHint: {
-    ...typography.body,
-    color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 19
-  },
   latestCareList: {
     backgroundColor: colors.surface,
     borderRadius: radii.md,
@@ -1347,9 +1458,8 @@ const styles = StyleSheet.create({
     borderWidth: 1
   },
   weekTopCopy: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: spacing.lg
+    flex: 1,
+    gap: spacing.xs
   },
   primaryCard: {
     backgroundColor: colors.surface

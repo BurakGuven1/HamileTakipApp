@@ -1,9 +1,17 @@
 import { AlertCircle } from "lucide-react-native";
+import { useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withRepeat,
+  withTiming
+} from "react-native-reanimated";
 
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
-import { SkeletonShimmer } from "@/components/motion";
 import { Thread } from "@/components/Thread";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { colors, radii, spacing, typography } from "@/theme";
@@ -79,6 +87,23 @@ function LoadingSilhouette({
   description: string;
   shape: QueryStateShape;
 }) {
+  const reducedMotion = useReducedMotion();
+  const pulse = useSharedValue(0.62);
+
+  useEffect(() => {
+    if (reducedMotion) {
+      pulse.value = withTiming(0.78, { duration: 180 });
+      return;
+    }
+    pulse.value = withRepeat(
+      withTiming(1, { duration: 820, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      true
+    );
+  }, [pulse, reducedMotion]);
+
+  const animatedStyle = useAnimatedStyle(() => ({ opacity: pulse.value }));
+
   return (
     <View
       accessibilityLabel={description}
@@ -86,17 +111,17 @@ function LoadingSilhouette({
       accessibilityRole="progressbar"
       style={[styles.loading, compact && styles.compact]}
     >
-      <View
+      <Animated.View
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
-        style={styles.skeleton}
+        style={[styles.skeleton, animatedStyle]}
       >
         {shape === "home" ? <HomeSkeleton color={color} /> : null}
         {shape === "baby" ? <BabySkeleton color={color} /> : null}
         {shape === "forum" ? <ForumSkeleton color={color} /> : null}
         {shape === "paywall" ? <PaywallSkeleton color={color} /> : null}
         {shape === "generic" ? <GenericSkeleton color={color} /> : null}
-      </View>
+      </Animated.View>
       <Text style={styles.loadingLabel}>{description}</Text>
     </View>
   );
@@ -105,12 +130,12 @@ function LoadingSilhouette({
 function HomeSkeleton({ color }: { color: string }) {
   return (
     <>
-      <SkeletonShimmer height={24} width="52%" />
+      <View style={styles.skeletonHeading} />
       <Thread color={color} height={58} progress={0.64} variant="progress" />
       <View style={styles.skeletonHero} />
       <View style={styles.skeletonRow}>
-        <SkeletonShimmer delay={90} height={58} radius={radii.md} style={styles.skeletonFlex} />
-        <SkeletonShimmer delay={180} height={58} radius={radii.md} style={styles.skeletonFlex} />
+        <View style={styles.skeletonAction} />
+        <View style={styles.skeletonAction} />
       </View>
     </>
   );
@@ -119,11 +144,11 @@ function HomeSkeleton({ color }: { color: string }) {
 function BabySkeleton({ color }: { color: string }) {
   return (
     <>
-      <SkeletonShimmer height={24} width="52%" />
+      <View style={styles.skeletonHeading} />
       <View style={styles.skeletonTabs}>
-        <SkeletonShimmer height={42} radius={radii.pill} style={styles.skeletonFlex} />
-        <SkeletonShimmer delay={90} height={42} radius={radii.pill} style={styles.skeletonFlex} />
-        <SkeletonShimmer delay={180} height={42} radius={radii.pill} style={styles.skeletonFlex} />
+        <View style={styles.skeletonTab} />
+        <View style={styles.skeletonTab} />
+        <View style={styles.skeletonTab} />
       </View>
       <View style={styles.skeletonHero}>
         <Thread color={color} height={64} progress={0.72} variant="chart" />
@@ -140,9 +165,9 @@ function ForumSkeleton({ color }: { color: string }) {
         <View key={item} style={styles.forumSkeletonRow}>
           <View style={[styles.forumKnot, { borderColor: color }]} />
           <View style={styles.skeletonPost}>
-            <SkeletonShimmer height={12} width="34%" />
-            <SkeletonShimmer delay={90} width="92%" />
-            <SkeletonShimmer delay={180} width="68%" />
+            <View style={styles.skeletonShortLine} />
+            <View style={styles.skeletonLongLine} />
+            <View style={styles.skeletonMediumLine} />
           </View>
         </View>
       ))}
@@ -153,7 +178,7 @@ function ForumSkeleton({ color }: { color: string }) {
 function PaywallSkeleton({ color }: { color: string }) {
   return (
     <>
-      <SkeletonShimmer height={24} width="52%" />
+      <View style={styles.skeletonHeading} />
       <Thread
         color={color}
         height={58}
@@ -164,8 +189,8 @@ function PaywallSkeleton({ color }: { color: string }) {
         progress={0.72}
         variant="progress"
       />
-      <SkeletonShimmer height={94} radius={radii.lg} />
-      <SkeletonShimmer height={50} radius={radii.md} />
+      <View style={styles.skeletonPlan} />
+      <View style={styles.skeletonButton} />
     </>
   );
 }
@@ -174,8 +199,8 @@ function GenericSkeleton({ color }: { color: string }) {
   return (
     <>
       <Thread color={color} height={58} progress={0.54} variant="progress" />
-      <SkeletonShimmer delay={90} width="92%" />
-      <SkeletonShimmer delay={180} width="68%" />
+      <View style={styles.skeletonLongLine} />
+      <View style={styles.skeletonMediumLine} />
     </>
   );
 }
@@ -207,22 +232,37 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     textAlign: "center"
   },
+  skeletonHeading: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.sm,
+    height: 24,
+    width: "52%"
+  },
   skeletonHero: {
     backgroundColor: colors.surfaceMuted,
     ...radii.card,
     minHeight: 86,
     padding: spacing.sm
   },
-  skeletonFlex: {
-    flex: 1
-  },
   skeletonRow: {
     flexDirection: "row",
     gap: spacing.sm
   },
+  skeletonAction: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.md,
+    flex: 1,
+    height: 58
+  },
   skeletonTabs: {
     flexDirection: "row",
     gap: spacing.sm
+  },
+  skeletonTab: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.pill,
+    flex: 1,
+    height: 42
   },
   forumSkeleton: {
     gap: spacing.md,
@@ -257,6 +297,34 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     minHeight: 104,
     padding: spacing.md
+  },
+  skeletonShortLine: {
+    backgroundColor: colors.border,
+    borderRadius: radii.sm,
+    height: 12,
+    width: "34%"
+  },
+  skeletonLongLine: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.sm,
+    height: 14,
+    width: "92%"
+  },
+  skeletonMediumLine: {
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radii.sm,
+    height: 14,
+    width: "68%"
+  },
+  skeletonPlan: {
+    backgroundColor: colors.surfaceMuted,
+    ...radii.card,
+    height: 94
+  },
+  skeletonButton: {
+    backgroundColor: colors.surfaceMuted,
+    ...radii.button,
+    height: 50
   },
   errorCard: {
     gap: spacing.lg

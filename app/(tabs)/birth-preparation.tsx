@@ -14,6 +14,7 @@ import {
 } from "lucide-react-native";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
@@ -35,7 +36,6 @@ import { getCurrentProfile } from "@/api/profiles";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
-import { SkeletonList } from "@/components/motion";
 import { Screen } from "@/components/Screen";
 import { TextField } from "@/components/TextField";
 import { trackEvent } from "@/lib/analytics";
@@ -181,7 +181,9 @@ export default function BirthPreparationScreen() {
   if (profileQuery.isPending) {
     return (
       <Screen scroll={false}>
-        <SkeletonList count={3} />
+        <View style={styles.loading}>
+          <ActivityIndicator color={appTheme.primary} />
+        </View>
       </Screen>
     );
   }
@@ -269,7 +271,7 @@ export default function BirthPreparationScreen() {
         </Card>
 
         {itemsQuery.isPending ? (
-          <SkeletonList count={3} />
+          <ActivityIndicator color={appTheme.primary} />
         ) : itemsQuery.isError ? (
           <EmptyState
             title="Hazırlık listesi yüklenemedi"
