@@ -3,7 +3,7 @@ import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import { Camera, Images } from "lucide-react-native";
+import { Camera, Images, Sparkles } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -280,6 +280,23 @@ function GalleryContent() {
           </View>
         </View>
 
+        <Pressable
+          accessibilityHint="Foto Stüdyo'da aylık anı kartı hazırlar"
+          accessibilityRole="button"
+          onPress={() => router.push("/photo-studio/milestone")}
+          style={[styles.studioCard, { borderColor: accentColor.primary }]}
+        >
+          <View style={[styles.iconBubble, { backgroundColor: accentColor.accentSoft }]}>
+            <Sparkles color={accentColor.primary} size={22} />
+          </View>
+          <View style={styles.studioCopy}>
+            <Text style={typography.label}>Aylık anı kartı yap</Text>
+            <Text style={styles.studioHint}>
+              Fotoğrafına kaç aylık olduğunu, kilo ve boyunu tatlı tabelalarla ekle.
+            </Text>
+          </View>
+        </Pressable>
+
         {babies.length > 0 ? (
           <View style={styles.babyChips}>
             {babies.map((baby) => (
@@ -512,6 +529,25 @@ const styles = StyleSheet.create({
   heroText: {
     ...typography.body,
     color: colors.text
+  },
+  studioCard: {
+    ...radii.card,
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+    padding: spacing.md
+  },
+  studioCopy: {
+    flex: 1,
+    gap: spacing.xs
+  },
+  studioHint: {
+    ...typography.body,
+    fontSize: 13,
+    lineHeight: 19
   },
   babyChips: {
     flexDirection: "row",

@@ -679,6 +679,14 @@ export default function HomeScreen() {
                       tint={vibrantColors.primaryLight}
                     />
                     <ShortcutCard
+                      accent={vibrantColors.peach}
+                      href="/photo-studio/belly"
+                      icon={<Sparkles color={vibrantColors.peach} fill={vibrantColors.peachSoft} size={23} strokeWidth={2.6} />}
+                      subtitle="Karnına ışıltılı yapıştırmalar ekle"
+                      title="Karın ışıltısı"
+                      tint={vibrantColors.peachSoft}
+                    />
+                    <ShortcutCard
                       accent={vibrantColors.secondary}
                       href={{ pathname: "/doctor-visit", params: { subject: "pregnancy" } }}
                       icon={<Stethoscope color={vibrantColors.secondary} fill={vibrantColors.secondarySoft} size={23} strokeWidth={2.6} />}
@@ -761,6 +769,14 @@ export default function HomeScreen() {
                       subtitle="Beslenme, uyku veya bez kaydını hemen ekle"
                       title="Şimdi bakım kaydet"
                       tint={vibrantColors.primaryLight}
+                    />
+                    <ShortcutCard
+                      accent={vibrantColors.peach}
+                      href="/photo-studio/milestone"
+                      icon={<Sparkles color={vibrantColors.peach} fill={vibrantColors.peachSoft} size={23} strokeWidth={2.6} />}
+                      subtitle="Kaç aylık, kaç kilo — tek karede"
+                      title="Aylık anı kartı"
+                      tint={vibrantColors.peachSoft}
                     />
                     <ShortcutCard
                       accent={vibrantColors.secondary}
