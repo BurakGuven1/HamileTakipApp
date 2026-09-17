@@ -1,6 +1,7 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import {
+  ArrowLeft,
   ChevronRight,
   Clock3,
   Search,
@@ -19,7 +20,6 @@ import {
 } from "react-native";
 
 import { Screen } from "@/components/Screen";
-import { PageHeader } from "@/components/PageHeader";
 import {
   getSolidFoodAgeBand,
   solidFoodAgeBands,
@@ -59,7 +59,19 @@ export default function SolidFoodRecipesScreen() {
   return (
     <Screen>
       <View style={styles.container}>
-        <PageHeader back title="Ek gıda tarifleri" />
+        <View style={styles.headerRow}>
+          <Pressable
+            accessibilityLabel="Geri dön"
+            accessibilityRole="button"
+            hitSlop={8}
+            onPress={() => router.back()}
+            style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
+          >
+            <ArrowLeft color={colors.text} size={24} />
+          </Pressable>
+          <Text style={styles.screenTitle}>Ek gıda tarifleri</Text>
+          <View style={styles.headerSpacer} />
+        </View>
 
         <View style={[styles.intro, { backgroundColor: appTheme.primarySoft }]}>
           <View style={[styles.introIcon, { backgroundColor: colors.surfaceStrong }]}>
@@ -243,7 +255,7 @@ function RecipeRow({ recipe }: { recipe: SolidFoodRecipe }) {
         <View style={styles.allergenRow}>
           {recipe.allergens.length ? (
             <>
-              <TriangleAlert color={colors.warning} size={13} />
+              <TriangleAlert color={colors.highlight} size={13} />
               <Text numberOfLines={1} style={styles.allergenText}>
                 {recipe.allergens.join(" · ")}
               </Text>
@@ -310,7 +322,7 @@ const styles = StyleSheet.create({
   filterContent: { gap: spacing.sm, paddingRight: spacing.lg },
   ageBandNote: { ...typography.body, color: colors.textMuted, fontSize: 13, lineHeight: 19 },
   allergenRow: { alignItems: "center", flexDirection: "row", gap: spacing.xs },
-  allergenText: { ...typography.label, color: colors.warning, flex: 1, fontSize: 11, lineHeight: 16 },
+  allergenText: { ...typography.label, color: colors.highlight, flex: 1, fontSize: 11, lineHeight: 16 },
   filterChip: {
     alignItems: "center",
     borderColor: colors.border,

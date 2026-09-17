@@ -33,9 +33,7 @@ export function resolveAccentColor({ babies, profile }: AccentInput) {
   return {
     accent: theme.accent,
     accentSoft: theme.accentSoft,
-    gradient: theme.gradient,
     primary: theme.primary,
-    primarySoft: theme.primarySoft,
     isDark: profile?.theme_preference === "dark",
     theme,
     tint: theme.primarySoft

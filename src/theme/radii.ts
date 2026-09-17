@@ -1,33 +1,31 @@
-/**
- * Köşe token'ları.
- *
- * Asimetrik "yön veren" köşeler bırakıldı: cam yüzeyler yumuşak ve simetrik
- * squircle'lar olarak okunur. Nesne biçimindeki token'lar korunuyor çünkü
- * ekranlar bunları `...radii.card` diye yayıyor; dört köşe artık eşit.
- */
-
-const corners = (value: number) =>
-  ({
-    borderTopLeftRadius: value,
-    borderTopRightRadius: value,
-    borderBottomLeftRadius: value,
-    borderBottomRightRadius: value
-  }) as const;
-
 export const radii = {
-  xs: 8,
-  sm: 12,
-  md: 16,
-  lg: 22,
-  xl: 28,
+  xs: 4,
+  sm: 8,
+  md: 14,
+  lg: 20,
   pill: 999,
-
-  /** Skaler karşılıklar — yeni bileşenler bunları kullanır. */
-  tile: 22,
-  sheet: 34,
-
-  card: corners(26),
-  cardLarge: corners(34),
-  button: corners(22),
-  input: corners(16)
+  card: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 14,
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 20
+  },
+  cardLarge: {
+    borderTopLeftRadius: 36,
+    borderTopRightRadius: 18,
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 28
+  },
+  button: {
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 10,
+    borderBottomLeftRadius: 10,
+    borderBottomRightRadius: 18
+  },
+  input: {
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0
+  }
 } as const;

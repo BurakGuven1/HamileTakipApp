@@ -2,141 +2,129 @@ import { Link } from "expo-router";
 import { ChevronRight } from "lucide-react-native";
 import { StyleSheet, Text, View } from "react-native";
 
-import { PressableGlass } from "@/components/glass";
+import { PressableScale } from "@/components/motion";
 import type { ToolItem } from "@/features/tools/toolCatalog";
 import { colors, radii, spacing, typography } from "@/theme";
 
 type ToolShortcutCardProps = {
-  /** Kategorinin ilk aracı: biraz daha yüksek ve ikonu daha belirgin. */
+  /** Kategorinin ilk aracı: biraz daha yüksek ve kalın kenarlı. */
   featured?: boolean;
   tool: ToolItem;
 };
 
-/** Araç listelerinde kullanılan tek satırlık cam araç kartı. */
+/** Araç listelerinde ve ana ekranda kullanılan tek satırlık araç kartı. */
 export function ToolShortcutCard({ featured = false, tool }: ToolShortcutCardProps) {
   const Icon = tool.icon;
 
   return (
     <Link href={tool.href} asChild>
-      <PressableGlass
+      <PressableScale
         accessibilityHint={tool.subtitle}
         accessibilityLabel={tool.title}
         accessibilityRole="button"
-        contentStyle={[styles.row, featured && styles.rowFeatured]}
-        elevation="soft"
-        radius={radii.tile}
-        tint={featured ? tool.tint : undefined}
-        tone={featured ? "tinted" : "regular"}
+        style={[
+          styles.card,
+          featured && styles.featured,
+          { borderLeftColor: tool.accent }
+        ]}
       >
-        <View
-          style={[
-            styles.icon,
-            featured && styles.iconFeatured,
-            { backgroundColor: tool.tint }
-          ]}
-        >
-          <Icon color={tool.accent} size={featured ? 25 : 22} strokeWidth={2.3} />
+        <View style={[styles.icon, { backgroundColor: tool.tint }]}>
+          <Icon color={tool.accent} size={23} strokeWidth={2.4} />
         </View>
         <View style={styles.copy}>
-          <Text numberOfLines={1} style={styles.title}>
-            {tool.title}
-          </Text>
+          <Text style={styles.title}>{tool.title}</Text>
           <Text numberOfLines={2} style={styles.subtitle}>
             {tool.subtitle}
           </Text>
         </View>
         <ChevronRight color={colors.textMuted} size={20} strokeWidth={2.2} />
-      </PressableGlass>
+      </PressableScale>
     </Link>
   );
 }
 
-/**
- * Ana ekrandaki hızlı eylem karesi.
- *
- * İkon kapsülü ve başlık aynı karenin içinde, ikisi de yatayda ortalanmış ve
- * kare sabit yükseklikte. Önceki sürümde başlık kutunun dışında ve sola
- * yaslıydı; ikonla hizası kayıyordu. Sabit yükseklik, başlığın iki satıra
- * çıktığı yerlerde ızgaranın basamaklanmasını da engelliyor.
- */
+/** Ana ekrandaki hızlı eylem satırı için kompakt, dikey kart. */
 export function ToolQuickAction({ tool }: { tool: ToolItem }) {
   const Icon = tool.icon;
 
   return (
     <Link href={tool.href} asChild>
-      <PressableGlass
+      <PressableScale
         accessibilityHint={tool.subtitle}
         accessibilityLabel={tool.title}
         accessibilityRole="button"
-        contentStyle={styles.quickAction}
-        elevation="soft"
-        radius={radii.tile}
-        tint={tool.tint}
-        tone="tinted"
+        style={[styles.quickAction, { backgroundColor: tool.tint }]}
       >
         <View style={[styles.quickIcon, { backgroundColor: colors.surface }]}>
-          <Icon color={tool.accent} size={22} strokeWidth={2.4} />
+          <Icon color={tool.accent} size={21} strokeWidth={2.4} />
         </View>
         <Text numberOfLines={2} style={styles.quickTitle}>
           {tool.title}
         </Text>
-      </PressableGlass>
+      </PressableScale>
     </Link>
   );
 }
 
 const styles = StyleSheet.create({
-  row: {
+  card: {
     alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    ...radii.card,
+    borderLeftWidth: 4,
+    borderWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
     gap: spacing.md,
     minHeight: 72,
     padding: spacing.md
   },
-  rowFeatured: {
-    minHeight: 82
+  featured: {
+    borderLeftWidth: 6,
+    minHeight: 80
   },
   icon: {
     alignItems: "center",
     borderRadius: radii.md,
-    height: 46,
     justifyContent: "center",
-    width: 46
-  },
-  iconFeatured: {
-    borderRadius: radii.lg,
-    height: 52,
-    width: 52
+    minHeight: 44,
+    minWidth: 44
   },
   copy: {
     flex: 1,
-    gap: 2
+    gap: spacing.xs
   },
   title: {
-    ...typography.bodyStrong
+    ...typography.bodyStrong,
+    color: colors.text
   },
   subtitle: {
-    ...typography.caption
+    ...typography.body,
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 19
   },
   quickAction: {
-    alignItems: "center",
+    ...radii.card,
+    alignItems: "flex-start",
+    flex: 1,
     gap: spacing.sm,
-    // Sabit yükseklik: başlığı iki satır olan kare, tek satırlıkla aynı
-    // boyda kalsın ki ızgara basamaklanmasın.
-    height: 112,
-    justifyContent: "center",
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.md
+    justifyContent: "space-between",
+    minHeight: 104,
+    minWidth: 84,
+    padding: spacing.md
   },
   quickIcon: {
     alignItems: "center",
     borderRadius: radii.md,
-    height: 42,
     justifyContent: "center",
-    width: 42
+    minHeight: 40,
+    minWidth: 40
   },
   quickTitle: {
-    ...typography.captionStrong,
-    textAlign: "center"
+    ...typography.label,
+    color: colors.text,
+    fontSize: 14,
+    lineHeight: 19
   }
 });

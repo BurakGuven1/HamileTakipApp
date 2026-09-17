@@ -83,12 +83,12 @@ export default function SolidFoodRecipeDetailScreen() {
           style={[
             styles.allergenCallout,
             recipe.allergens.length
-              ? { backgroundColor: colors.warningSoft, borderColor: colors.warning }
-              : { backgroundColor: colors.successSoft, borderColor: colors.success }
+              ? { backgroundColor: colors.highlightSoft, borderColor: colors.highlight }
+              : { backgroundColor: colors.feedbackSuccessBackground, borderColor: colors.success }
           ]}
         >
           {recipe.allergens.length ? (
-            <TriangleAlert color={colors.warning} size={24} />
+            <TriangleAlert color={colors.highlight} size={24} />
           ) : (
             <Wheat color={colors.success} size={24} />
           )}

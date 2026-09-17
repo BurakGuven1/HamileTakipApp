@@ -25,7 +25,6 @@ import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { Screen } from "@/components/Screen";
-import { PageHeader } from "@/components/PageHeader";
 import { QueryState } from "@/components/QueryState";
 import { useAppTheme } from "@/providers/AppThemeProvider";
 import { colors, radii, spacing, typography } from "@/theme";
@@ -270,12 +269,17 @@ export default function PregnancyExerciseScreen() {
   return (
     <Screen>
       <View style={styles.container}>
-        <PageHeader
-          back
-          eyebrow="Kontrollü egzersiz"
-          subtitle="Hareketler genel hamilelik konforu için nazik tutuldu. Riskli gebelik, ağrı, kanama, baş dönmesi veya doktor kısıtlaması varsa başlamadan önce doktor onayı almalısın."
-          title={programs[programId].label}
-        />
+        <BackButton />
+
+        <View style={[styles.hero, { backgroundColor: appTheme.primarySoft }]}>
+          <Text style={typography.eyebrow}>Kontrollü egzersiz</Text>
+          <Text style={typography.heading1}>{programs[programId].label}</Text>
+          <Text style={styles.heroText}>
+            Hareketler genel hamilelik konforu için nazik tutuldu. Riskli gebelik,
+            ağrı, kanama, baş dönmesi veya doktor kısıtlaması varsa başlamadan önce
+            doktor onayı almalısın.
+          </Text>
+        </View>
 
         <View style={styles.segmentRow}>
           <SegmentButton

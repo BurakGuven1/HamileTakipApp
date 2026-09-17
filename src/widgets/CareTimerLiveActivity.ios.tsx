@@ -51,19 +51,13 @@ function CareTimerLiveActivity(
 ) {
   "widget";
 
-  // SwiftUI'da `.frame(maxWidth: .infinity)` karşılığı. Doğrudan `Infinity`
-  // yazılamaz: modifier'lar yerel tarafa JSON ile geçiyor ve
-  // `JSON.stringify(Infinity)` "null" üretiyor, bu da çerçeveyi sıfır
-  // genişliğe düşürüp rozeti boş bir kutuya çeviriyor.
-  const EXPAND = 100000;
-
-  // Kilit ekranı Live Activity'yi kendi koyu zemininde çizer, bu yüzden
-  // `colorScheme` açık gelse bile metnin koyu zeminde okunur kalması gerekir.
-  // Rozet tek bir koyu yüzey kullanır ve kontrastı kendisi garanti eder.
-  const accent = "#FF9BBE"; // Gül
-  const primary = "#F4F0FF"; // Açık mürekkep
-  const secondary = "#A9A2BF"; // Soluk mürekkep
-  const backgroundColor = "#1A1426"; // Koyu yüzey
+  const isDark = environment.colorScheme === "dark";
+  // DESIGN.md token'ları. Koyu tema bir ters çevirme değil: Gece Eriği
+  // yüzeyleri ve aynı rollerin ışıklılığı yükseltilmiş karşılıkları.
+  const accent = isDark ? "#E7A9B6" : "#A94F60"; // Toz Gül
+  const primary = isDark ? "#F5F1EC" : "#372F3D"; // Gece Eriği / krem üstü metin
+  const secondary = isDark ? "#C3BAC2" : "#655F57"; // Sis Grisi
+  const backgroundColor = isDark ? "#211D24" : "#F9F4F0"; // koyu yüzey / Krem Zemin
 
   const startedAt = new Date(props?.startedAtMs || Date.now());
   const openEndedUpper = new Date(
@@ -91,7 +85,7 @@ function CareTimerLiveActivity(
           activityBackgroundTint(backgroundColor)
         ]}
       >
-        <HStack spacing={6} modifiers={[frame({ maxWidth: EXPAND, alignment: "leading" })]}>
+        <HStack spacing={6} modifiers={[frame({ maxWidth: Infinity, alignment: "leading" })]}>
           <Image systemName={icon} color={accent} />
           <Text
             modifiers={[
@@ -114,10 +108,10 @@ function CareTimerLiveActivity(
             </Text>
           ) : null}
         </HStack>
-        <HStack spacing={12} modifiers={[frame({ maxWidth: EXPAND })]}>
+        <HStack spacing={12} modifiers={[frame({ maxWidth: Infinity })]}>
           <VStack
             spacing={3}
-            modifiers={[frame({ maxWidth: EXPAND, alignment: "topLeading" })]}
+            modifiers={[frame({ maxWidth: Infinity, alignment: "topLeading" })]}
           >
             <Text
               modifiers={[

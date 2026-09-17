@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { Link, router, type Href } from "expo-router";
 import {
@@ -47,11 +46,15 @@ import {
   removeBabyHomePhoto,
   uploadBabyHomePhoto
 } from "@/api/gallery";
-import { getNextUpcomingVaccination } from "@/api/vaccinations";
+import {
+  getNextUpcomingVaccination,
+  listVaccinationsForBaby,
+  type BabyVaccinationWithSchedule
+} from "@/api/vaccinations";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
-import { GlassSurface, PressableGlass } from "@/components/glass";
+import { MetricCard } from "@/components/MetricCard";
 import {
   AnimatedNumber,
   PressableScale,
@@ -61,6 +64,8 @@ import {
 import { QueryState } from "@/components/QueryState";
 import { Reveal } from "@/components/Reveal";
 import { Screen } from "@/components/Screen";
+import { Thread } from "@/components/Thread";
+import { VibrantBackdrop } from "@/components/VibrantBackdrop";
 import { WeeklyBabyDevelopmentCard } from "@/components/WeeklyBabyDevelopmentCard";
 import { DailyForYouCard } from "@/features/daily-experience/DailyForYouCard";
 import { PartnerCard } from "@/features/family/PartnerCard";
@@ -82,10 +87,16 @@ import {
   getPregnancyProgress,
   getRelativeDayLabel
 } from "@/lib/dates";
-import { useAppTheme } from "@/providers/AppThemeProvider";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { trackProductEvent } from "@/services/analytics/productAnalytics";
-import { colors, radii, spacing, typography, vibrantColors } from "@/theme";
+import {
+  colors,
+  radii,
+  spacing,
+  typography,
+  vibrantColors,
+  vibrantTheme
+} from "@/theme";
 
 let homeWelcomeToastShown = false;
 const motherBabyIllustration = require("../../../assets/illustrations/mother-baby-connection.jpg");
@@ -148,9 +159,12 @@ export default function HomeScreen() {
     enabled: Boolean(firstBaby?.id && isMotherhoodMode)
   });
 
-  // Aşı tamamlanma oranı artık Bebek sekmesinde yaşıyor; ana sayfa yalnızca
-  // yaklaşan aşıyı soruyor, bu yüzden tam liste burada çekilmiyor.
-  const appTheme = useAppTheme();
+  const vaccinationsQuery = useQuery({
+    queryKey: ["baby-vaccinations", firstBaby?.id],
+    queryFn: () => listVaccinationsForBaby(firstBaby?.id as string),
+    enabled: Boolean(firstBaby?.id && isMotherhoodMode)
+  });
+  const appTheme = vibrantTheme;
   const babyAgeMonths = getBabyAgeMonths(firstBaby?.birth_date);
   const quickActions = getQuickActions(experienceStage, babyAgeMonths);
   const toolCount = countTools(experienceStage);
@@ -185,6 +199,8 @@ export default function HomeScreen() {
     enabled: Boolean(profile)
   });
   const featuredArticles = featuredArticlesQuery.data ?? [];
+  const vaccinations: BabyVaccinationWithSchedule[] = vaccinationsQuery.data ?? [];
+  const completedVaccines = vaccinations.filter((item) => item.completed).length;
   const babyAge = firstBaby ? getBabyAgeLabel(firstBaby.birth_date) : null;
   const focus = resolveHomeFocus({
     babyName: firstBaby?.name ?? null,
@@ -421,7 +437,7 @@ export default function HomeScreen() {
   return (
     <Screen>
       <View style={styles.container}>
-        <HomeGreeting name={displayName} stage={experienceStage} />
+        <VibrantBackdrop />
         {/* Rendered without <Reveal> because the banner returns null outside the
             trial, and an empty wrapper would still take a gap in this column. */}
         <IntroTrialBanner
@@ -476,79 +492,94 @@ export default function HomeScreen() {
         ) : null}
         {!isPregnancyMode ? (
           <Reveal>
-            <GlassSurface contentStyle={styles.heroContent} elevation="lifted" radius={34}>
-              {firstBaby ? (
-                <View style={styles.familyVisual}>
-                  <Image
-                    accessibilityLabel={
-                      homePhotoQuery.data
-                        ? "Ana sayfada seçtiğin kişisel fotoğraf"
-                        : "Bebeğini sevgiyle kucağında tutan anne illüstrasyonu"
-                    }
-                    accessibilityRole="image"
-                    accessible
-                    contentFit="cover"
-                    source={homePhotoQuery.data ? { uri: homePhotoQuery.data } : motherBabyIllustration}
-                    style={styles.familyHeroImage}
-                    transition={reducedMotion ? 0 : 260}
-                  />
-                  <LinearGradient
-                    colors={["transparent", "rgba(12, 8, 22, 0.72)"]}
-                    pointerEvents="none"
-                    style={styles.familyScrim}
-                  />
-                  <Pressable
-                    accessibilityHint="Galeriden yeni bir fotoğraf seçmeyi veya varsayılan görsele dönmeyi sağlar"
-                    accessibilityLabel="Ana sayfa fotoğrafını değiştir"
-                    accessibilityRole="button"
-                    disabled={homePhotoMutation.isPending}
-                    onPress={openHomePhotoMenu}
-                    style={({ pressed }) => [
-                      styles.photoEditButton,
-                      pressed && styles.photoEditButtonPressed
-                    ]}
-                  >
-                    <Camera color="#FFFFFF" size={17} />
-                    <Text style={styles.photoEditText}>
-                      {homePhotoMutation.isPending ? "Yükleniyor…" : "Değiştir"}
-                    </Text>
-                  </Pressable>
-                  <View style={styles.familyCaption}>
-                    <Text style={styles.familyCaptionName}>{firstBaby.name}</Text>
-                    <Text style={styles.familyCaptionAge}>{getBabyAgeLabel(firstBaby.birth_date)}</Text>
+            <View style={[styles.hero, { backgroundColor: appTheme.primarySoft }]}>
+              <View style={[styles.visualStage, { backgroundColor: appTheme.accentSoft }]}>
+                {firstBaby ? (
+                  <View style={styles.familyVisual}>
+                    <Image
+                      accessibilityLabel={
+                        homePhotoQuery.data
+                          ? "Ana sayfada seçtiğin kişisel fotoğraf"
+                          : "Bebeğini sevgiyle kucağında tutan anne illüstrasyonu"
+                      }
+                      accessibilityRole="image"
+                      accessible
+                      contentFit="cover"
+                      source={homePhotoQuery.data ? { uri: homePhotoQuery.data } : motherBabyIllustration}
+                      style={styles.familyHeroImage}
+                      transition={reducedMotion ? 0 : 220}
+                    />
+                    <Pressable
+                      accessibilityHint="Galeriden yeni bir fotoğraf seçmeyi veya varsayılan görsele dönmeyi sağlar"
+                      accessibilityLabel="Ana sayfa fotoğrafını değiştir"
+                      accessibilityRole="button"
+                      disabled={homePhotoMutation.isPending}
+                      onPress={openHomePhotoMenu}
+                      style={({ pressed }) => [
+                        styles.photoEditButton,
+                        pressed && styles.photoEditButtonPressed
+                      ]}
+                    >
+                      <Camera color={colors.text} size={17} />
+                      <Text style={styles.photoEditText}>
+                        {homePhotoMutation.isPending ? "Yükleniyor…" : "Fotoğrafı değiştir"}
+                      </Text>
+                    </Pressable>
+                    <View style={styles.familyStoryBadge}>
+                      <HandHeart color={appTheme.primary} size={17} strokeWidth={2.3} />
+                      <Text style={styles.familyStoryBadgeText}>Birlikte büyüyen anlar</Text>
+                    </View>
                   </View>
-                </View>
-              ) : (
-                <View style={[styles.emptyHeroVisual, { backgroundColor: appTheme.primarySoft }]}>
-                  <View style={[styles.sizeEmojiOrb, { backgroundColor: appTheme.accentSoft }]}>
-                    <Sparkles color={appTheme.primary} size={34} />
+                ) : (
+                  <>
+                    <View style={styles.visualThread}>
+                      <Thread
+                        accessibilityLabel="İlk aile düğümünü eklemek için açık ilmek"
+                        color={appTheme.primary}
+                        height={126}
+                        markers={[{ kind: "loop", position: 0.18 }]}
+                        mutedColor={appTheme.accentSoft}
+                        progress={0.19}
+                        semantic="timeline"
+                        variant="progress"
+                      />
+                    </View>
+                    <View style={styles.sizeVisual}>
+                      <View
+                        style={[
+                          styles.sizeEmojiOrb,
+                          { backgroundColor: appTheme.primarySoft }
+                        ]}
+                      >
+                        <Sparkles color={appTheme.primary} size={34} />
+                      </View>
+                      <View style={styles.sizeVisualCopy}>
+                        <Text style={[styles.sizeVisualEyebrow, { color: appTheme.primary }]}>Bugün</Text>
+                        <Text style={styles.sizeVisualTitle}>Kişisel takip alanın</Text>
+                      </View>
+                    </View>
+                  </>
+                )}
+                <View style={styles.visualFooter}>
+                  <View style={styles.heroFooterCopy}>
+                    <Text style={styles.heroTitle}>{heroTitle}</Text>
+                    <Text style={styles.heroText}>{heroBody}</Text>
                   </View>
-                  <Text style={[styles.sizeVisualEyebrow, { color: appTheme.primary }]}>Bugün</Text>
-                  <Text style={styles.sizeVisualTitle}>Kişisel takip alanın</Text>
+                  <Link href="/articles" asChild>
+                    <Pressable accessibilityRole="button" style={styles.openArticlesButton}>
+                      <Text style={styles.openArticlesText}>Aç</Text>
+                      <ChevronRight color={colors.text} size={18} />
+                    </Pressable>
+                  </Link>
                 </View>
-              )}
-              <View style={styles.visualFooter}>
-                <View style={styles.heroFooterCopy}>
-                  <Text style={styles.heroTitle}>{heroTitle}</Text>
-                  <Text numberOfLines={2} style={styles.heroText}>{heroBody}</Text>
-                </View>
-                <Link href="/articles" asChild>
-                  <PressableScale
-                    accessibilityLabel="Rehberleri aç"
-                    accessibilityRole="button"
-                    style={[styles.openArticlesButton, { backgroundColor: appTheme.primarySoft }]}
-                  >
-                    <ChevronRight color={appTheme.primary} size={22} strokeWidth={2.6} />
-                  </PressableScale>
-                </Link>
               </View>
-            </GlassSurface>
+            </View>
           </Reveal>
         ) : null}
 
         {profile?.is_pregnant && weekInfo && week ? (
           <Reveal>
-            <Card elevation="lifted" large style={styles.weekCard}>
+            <Card style={[styles.weekCard, { borderColor: appTheme.primary }]}>
               <View style={{ gap: spacing.lg }}>
                 <View style={styles.weekTopCopy}>
                   <ProgressRing
@@ -626,7 +657,7 @@ export default function HomeScreen() {
         ) : null}
 
         <Reveal delay={60}>
-          <Card style={styles.focusCard} tint={appTheme.primarySoft} tone="tinted">
+          <Card style={[styles.focusCard, { borderLeftColor: appTheme.primary }]}>
             <View style={styles.focusHeader}>
               <View style={[styles.focusIcon, { backgroundColor: appTheme.primarySoft }]}>
                 <focus.Icon color={appTheme.primary} size={22} strokeWidth={2.4} />
@@ -653,7 +684,14 @@ export default function HomeScreen() {
 
         <Reveal delay={90} style={styles.shortcutsSection}>
           <View style={styles.sectionHeader}>
-            <Text style={typography.heading2}>Hızlı eylemler</Text>
+            <View style={styles.sectionTitleCopy}>
+              <Text style={typography.eyebrow}>Tek dokunuşla</Text>
+              <Text style={typography.heading2}>Hızlı eylemler</Text>
+              <Text style={styles.sectionHint}>En sık kullandıkların önde</Text>
+            </View>
+            <View style={[styles.shortcutSpark, { backgroundColor: appTheme.accentSoft }]}>
+              <Sparkles color={appTheme.accent} size={20} />
+            </View>
           </View>
           <StaggeredList itemStyle={styles.quickActionItem} style={styles.quickActionRow}>
             {quickActions.map((tool) => (
@@ -661,11 +699,11 @@ export default function HomeScreen() {
             ))}
           </StaggeredList>
           <Link href="/pregnancy-tools" asChild>
-            <PressableGlass
+            <PressableScale
               accessibilityHint={`${toolCount} aracın kategorilere ayrılmış listesini açar`}
               accessibilityLabel="Tüm araçlar"
               accessibilityRole="button"
-              contentStyle={styles.allToolsCard}
+              style={styles.allToolsCard}
             >
               <View style={[styles.allToolsIcon, { backgroundColor: appTheme.primarySoft }]}>
                 <Wrench color={appTheme.primary} size={22} strokeWidth={2.4} />
@@ -677,7 +715,7 @@ export default function HomeScreen() {
                 </Text>
               </View>
               <ChevronRight color={colors.textMuted} size={20} strokeWidth={2.2} />
-            </PressableGlass>
+            </PressableScale>
           </Link>
         </Reveal>
 
@@ -690,7 +728,7 @@ export default function HomeScreen() {
             retrying={careHandoverQuery.isFetching}
           />
         ) : isMotherhoodMode && firstBaby ? (
-          <Card elevation="lifted" style={styles.toolsCard} tint={appTheme.primarySoft} tone="tinted">
+          <Card style={[styles.toolsCard, { backgroundColor: appTheme.primarySoft }]}>
             <View style={{ gap: spacing.md }}>
               <View style={styles.cardHeader}>
                 <View style={{ flex: 1, gap: spacing.xs }}>
@@ -720,7 +758,7 @@ export default function HomeScreen() {
         ) : null}
 
         {experienceStage === "general" ? (
-          <Card style={styles.primaryCard} tint={appTheme.primarySoft} tone="tinted">
+          <Card style={[styles.primaryCard, { backgroundColor: appTheme.primarySoft }]}>
             <View style={{ gap: spacing.md }}>
               <View style={styles.cardHeader}>
                 <View style={{ gap: spacing.xs, flex: 1 }}>
@@ -743,6 +781,22 @@ export default function HomeScreen() {
               />
             </View>
           </Card>
+        ) : null}
+
+        {isMotherhoodMode ? (
+          <View style={styles.metricRow}>
+            <MetricCard label="Bebek profili" value={`${babies.length}`} />
+            <MetricCard
+              label="Bebek aşıları"
+              value={
+                vaccinationsQuery.isError
+                  ? "—"
+                  : vaccinations.length > 0
+                  ? `${completedVaccines}/${vaccinations.length}`
+                  : "0"
+              }
+            />
+          </View>
         ) : null}
 
 
@@ -799,33 +853,6 @@ export default function HomeScreen() {
 
       </View>
     </Screen>
-  );
-}
-
-/**
- * Ekranın ilk satırı: günün saatine göre selam ve kullanıcının adı.
- *
- * Eskiden ana sayfa doğrudan bir karta başlıyordu; kim olduğunu ve hangi
- * günde olduğunu söyleyen bir çapa yoktu. Selamlama o çapayı veriyor ve
- * altındaki kartların hepsi ondan sonra gelen ayrıntı olarak okunuyor.
- */
-function HomeGreeting({ name, stage }: { name: string; stage: ExperienceStage }) {
-  const hour = new Date().getHours();
-  const salutation =
-    hour < 6 ? "İyi geceler" : hour < 12 ? "Günaydın" : hour < 18 ? "İyi günler" : "İyi akşamlar";
-  const subtitle =
-    stage === "pregnancy"
-      ? "Bugün bebeğinle nasılsın?"
-      : stage === "postpartum"
-        ? "Bugünün küçük anlarını birlikte biriktirelim."
-        : "Takibini kurduğunda burası tamamen sana göre olacak.";
-
-  return (
-    <View style={styles.greetingBlock}>
-      <Text style={styles.greetingSalutation}>{`${salutation},`}</Text>
-      <Text style={styles.greetingName}>{name}</Text>
-      <Text style={styles.greetingSubtitle}>{subtitle}</Text>
-    </View>
   );
 }
 
@@ -988,6 +1015,7 @@ function ArticlePreview({ article }: { article: Article }) {
 
 const styles = StyleSheet.create({
   focusCard: {
+    borderLeftWidth: 5,
     gap: spacing.lg
   },
   focusHeader: {
@@ -1045,17 +1073,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.sm
   },
-  greetingSpacer: {
-    height: spacing.xs
-  },
   quickActionItem: {
     flex: 1
   },
   allToolsCard: {
     alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    ...radii.card,
+    borderWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
     gap: spacing.md,
-    minHeight: 72,
+    minHeight: 68,
     padding: spacing.md
   },
   allToolsIcon: {
@@ -1074,14 +1103,15 @@ const styles = StyleSheet.create({
     color: colors.text
   },
   allToolsHint: {
-    ...typography.caption
+    ...typography.body,
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 19
   },
   latestCareList: {
-    backgroundColor: colors.glassStrong,
-    borderColor: colors.glassBorder,
-    borderRadius: radii.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
+    gap: spacing.xs,
     padding: spacing.md
   },
   latestCareRow: {
@@ -1144,65 +1174,48 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     padding: spacing.md
   },
-  greetingBlock: {
-    gap: 2,
-    paddingHorizontal: spacing.xs,
-    paddingTop: spacing.sm
-  },
-  greetingSalutation: {
-    ...typography.body,
-    color: colors.textMuted
-  },
-  greetingName: {
-    ...typography.display
-  },
-  greetingSubtitle: {
-    ...typography.caption,
-    marginTop: spacing.xs
-  },
-  heroContent: {
-    gap: spacing.lg,
-    padding: spacing.md
+  visualThread: {
+    bottom: 48,
+    left: -spacing.lg,
+    opacity: 0.36,
+    position: "absolute",
+    right: -spacing.lg
   },
   familyVisual: {
     borderRadius: radii.lg,
-    height: 236,
+    minHeight: 210,
     overflow: "hidden",
     position: "relative"
   },
   familyHeroImage: {
-    height: "100%",
+    height: 210,
     width: "100%"
   },
-  familyScrim: {
-    bottom: 0,
-    height: 120,
-    left: 0,
-    position: "absolute",
-    right: 0
+  familyStoryBadge: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceStrong,
+    borderRadius: radii.pill,
+    bottom: spacing.sm,
+    flexDirection: "row",
+    gap: spacing.xs,
+    left: spacing.sm,
+    minHeight: 48,
+    paddingHorizontal: spacing.md,
+    position: "absolute"
   },
-  familyCaption: {
-    bottom: spacing.md,
-    gap: 2,
-    left: spacing.md,
-    position: "absolute",
-    right: spacing.md
-  },
-  familyCaptionName: {
-    ...typography.heading2,
-    color: "#FFFFFF"
-  },
-  familyCaptionAge: {
-    ...typography.caption,
-    color: "rgba(255, 255, 255, 0.86)"
+  familyStoryBadgeText: {
+    ...typography.label,
+    color: colors.text,
+    fontSize: 13,
+    lineHeight: 18
   },
   photoEditButton: {
     alignItems: "center",
-    backgroundColor: "rgba(20, 14, 32, 0.52)",
+    backgroundColor: colors.surfaceStrong,
     borderRadius: radii.pill,
     flexDirection: "row",
     gap: spacing.xs,
-    minHeight: 38,
+    minHeight: 40,
     paddingHorizontal: spacing.md,
     position: "absolute",
     right: spacing.sm,
@@ -1212,56 +1225,78 @@ const styles = StyleSheet.create({
     opacity: 0.72
   },
   photoEditText: {
-    ...typography.captionStrong,
-    color: "#FFFFFF"
+    ...typography.label,
+    color: colors.text,
+    fontSize: 12,
+    lineHeight: 17
   },
-  emptyHeroVisual: {
+  sizeVisual: {
     alignItems: "center",
-    borderRadius: radii.lg,
-    gap: spacing.sm,
-    justifyContent: "center",
-    minHeight: 200,
-    padding: spacing.lg
+    flexDirection: "row",
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+    minHeight: 118,
+    paddingTop: spacing.sm
   },
   sizeEmojiOrb: {
     alignItems: "center",
     borderRadius: radii.pill,
     height: 96,
     justifyContent: "center",
-    marginBottom: spacing.sm,
     width: 96
+  },
+  heroSizeEmoji: {
+    fontSize: 54,
+    lineHeight: 62
+  },
+  sizeVisualCopy: {
+    flex: 1,
+    gap: spacing.xs
   },
   sizeVisualEyebrow: {
     ...typography.eyebrow
   },
   sizeVisualTitle: {
     ...typography.heading2,
-    textAlign: "center"
+    color: colors.text
+  },
+  sizeVisualText: {
+    ...typography.body,
+    color: colors.textMuted
   },
   visualFooter: {
-    alignItems: "center",
+    alignItems: "flex-end",
     flexDirection: "row",
     gap: spacing.md,
     justifyContent: "space-between",
-    paddingHorizontal: spacing.xs,
-    paddingBottom: spacing.xs
+    marginTop: "auto"
   },
   heroFooterCopy: {
     flex: 1,
     gap: spacing.xs
   },
   heroTitle: {
-    ...typography.heading2
+    ...typography.heading1,
+    fontSize: 32,
+    lineHeight: 38
   },
   heroText: {
-    ...typography.caption
+    ...typography.body,
+    color: colors.text,
+    maxWidth: 230
   },
   openArticlesButton: {
     alignItems: "center",
+    backgroundColor: colors.surface,
     borderRadius: radii.pill,
-    height: 48,
-    justifyContent: "center",
-    width: 48
+    flexDirection: "row",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm
+  },
+  openArticlesText: {
+    ...typography.label,
+    color: colors.text
   },
   livingThreadStage: {
     ...radii.card,
@@ -1308,13 +1343,17 @@ const styles = StyleSheet.create({
   },
   livingThreadMetaStart: { flex: 1 },
   livingThreadMetaEnd: { flex: 1, textAlign: "right" },
-  weekCard: {},
+  weekCard: {
+    borderWidth: 1
+  },
   weekTopCopy: {
     alignItems: "center",
     flexDirection: "row",
     gap: spacing.lg
   },
-  primaryCard: {},
+  primaryCard: {
+    backgroundColor: colors.surface
+  },
   offerCard: {
     borderColor: colors.transparent
   },
@@ -1322,7 +1361,9 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.text
   },
-  toolsCard: {},
+  toolsCard: {
+    borderColor: colors.transparent
+  },
   cardHeader: {
     alignItems: "center",
     flexDirection: "row",

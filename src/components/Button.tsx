@@ -1,141 +1,153 @@
-import { LinearGradient } from "expo-linear-gradient";
-import type { ComponentProps, ReactNode } from "react";
-import { forwardRef } from "react";
+import * as Haptics from "expo-haptics";
+import type { ComponentProps } from "react";
+import { forwardRef, useEffect } from "react";
 import type { StyleProp, ViewStyle } from "react-native";
-import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, type View } from "react-native";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming
+} from "react-native-reanimated";
 
-import { PressableScale } from "@/components/motion/PressableScale";
 import { useAppTheme } from "@/providers/AppThemeProvider";
-import { colors, radii, shadows, spacing, typography } from "@/theme";
+import { colors, radii, spacing, typography } from "@/theme";
 
 type ButtonVariant = "primary" | "secondary" | "ghost";
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-type ButtonProps = Omit<ComponentProps<typeof PressableScale>, "style" | "children"> & {
-  /** Geçmişten kalan prop; sürekli nefes animasyonu artık kullanılmıyor. */
+type ButtonProps = Omit<ComponentProps<typeof Pressable>, "style"> & {
   breathing?: boolean;
-  icon?: ReactNode;
   label: string;
-  loading?: boolean;
   style?: StyleProp<ViewStyle>;
   variant?: ButtonVariant;
 };
 
-/**
- * Standart eylem butonu.
- *
- * Birincil varyant temanın gradyanını taşır, ikincil varyant cam bir
- * yüzey üstünde renkli kenarlıkla durur. Geri bildirim tek bir yay
- * ölçeğidir — sürekli nefes alan buton kaldırıldı, dikkat gerçek
- * durum değişimlerine ayrıldı.
- */
-export const Button = forwardRef<View, ButtonProps>(function Button(
-  {
-    disabled,
-    icon,
-    label,
-    loading = false,
-    style,
-    variant = "primary",
-    ...pressableProps
-  }: ButtonProps,
-  ref
-) {
+export const Button = forwardRef<View, ButtonProps>(function Button({
+  breathing = false,
+  label,
+  variant = "primary",
+  style,
+  disabled,
+  onPress,
+  onPressIn,
+  onPressOut,
+  ...pressableProps
+}: ButtonProps, ref) {
   const appTheme = useAppTheme();
-  const isDisabled = Boolean(disabled) || loading;
+  const reducedMotion = useReducedMotion();
+  const breathScale = useSharedValue(1);
+  const pressScale = useSharedValue(1);
+  const themedVariantStyle =
+    variant === "primary"
+      ? { backgroundColor: appTheme.primary, borderColor: appTheme.primary }
+      : variant === "secondary"
+        ? { borderColor: appTheme.primary }
+        : null;
 
-  const body = (
-    <View style={styles.content}>
-      {icon}
-      <Text
-        numberOfLines={1}
-        style={[
-          styles.label,
-          variant === "primary"
-            ? styles.primaryLabel
-            : { color: isDisabled ? colors.textMuted : appTheme.primary }
-        ]}
-      >
-        {label}
-      </Text>
-      {loading ? (
-        <ActivityIndicator
-          color={variant === "primary" ? "#FFFFFF" : appTheme.primary}
-          size="small"
-        />
-      ) : null}
-    </View>
-  );
+  useEffect(() => {
+    if (!breathing || disabled || reducedMotion) {
+      breathScale.value = withTiming(1, { duration: 180 });
+      return;
+    }
+
+    breathScale.value = withRepeat(
+      withSequence(
+        withTiming(1.015, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      false
+    );
+  }, [breathing, breathScale, disabled, reducedMotion]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: breathScale.value * pressScale.value }]
+  }));
 
   return (
-    <PressableScale
+    <AnimatedPressable
       ref={ref}
-      accessibilityState={{ busy: loading, disabled: isDisabled }}
-      disabled={isDisabled}
-      haptic={variant === "primary" ? "medium" : "light"}
-      scaleTo={0.96}
+      accessibilityRole="button"
+      disabled={disabled}
+      onPress={(event) => {
+        if (!disabled) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+        }
+        onPress?.(event);
+      }}
+      onPressIn={(event) => {
+        pressScale.value = reducedMotion ? 1 : withTiming(0.98, { duration: 110 });
+        onPressIn?.(event);
+      }}
+      onPressOut={(event) => {
+        pressScale.value = reducedMotion ? 1 : withTiming(1, { duration: 140 });
+        onPressOut?.(event);
+      }}
       style={[
         styles.base,
-        variant === "primary" && !isDisabled && shadows.soft,
-        variant === "secondary" && {
-          backgroundColor: colors.glass,
-          borderColor: isDisabled ? colors.border : appTheme.primary,
-          borderWidth: 1.5
-        },
-        variant === "ghost" && styles.ghost,
-        isDisabled && styles.disabled,
+        styles[variant],
+        themedVariantStyle,
+        disabled && styles.disabled,
+        animatedStyle,
         style
       ]}
       {...pressableProps}
     >
-      {variant === "primary" && !isDisabled ? (
-        <LinearGradient
-          colors={appTheme.gradient as readonly [string, string, ...string[]]}
-          end={{ x: 1, y: 1 }}
-          start={{ x: 0, y: 0 }}
-          style={styles.fill}
-        >
-          {body}
-        </LinearGradient>
-      ) : (
-        <View style={styles.fill}>{body}</View>
-      )}
-    </PressableScale>
+      <Text
+        style={[
+          typography.button,
+          variant === "primary" && styles.primaryText,
+          variant === "secondary" && { color: appTheme.primary },
+          variant === "ghost" && { color: appTheme.primary },
+          disabled && styles.disabledText
+        ]}
+      >
+        {label}
+      </Text>
+    </AnimatedPressable>
   );
 });
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: radii.lg,
-    minHeight: 52,
-    overflow: "hidden"
-  },
-  fill: {
+    minHeight: 48,
     alignItems: "center",
-    flex: 1,
     justifyContent: "center",
-    minHeight: 52,
-    paddingHorizontal: spacing.xl,
+    ...radii.button,
+    borderWidth: 1,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md
   },
+  primary: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary
+  },
+  primaryText: {
+    color: colors.onPrimary
+  },
+  secondary: {
+    backgroundColor: colors.transparent,
+    borderColor: colors.primary
+  },
   ghost: {
-    backgroundColor: colors.transparent
+    backgroundColor: colors.transparent,
+    borderColor: colors.transparent
+  },
+  secondaryText: {
+    color: colors.primary
+  },
+  ghostText: {
+    color: colors.primary
   },
   disabled: {
     backgroundColor: colors.surfaceMuted,
-    // Devre dışı buton gradyan taşımaz; kenarlık tek ayırt edici olur.
-    borderColor: colors.border,
-    borderWidth: Platform.OS === "ios" ? StyleSheet.hairlineWidth : 1
+    borderColor: colors.border
   },
-  content: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: spacing.sm,
-    justifyContent: "center"
-  },
-  label: {
-    ...typography.button
-  },
-  primaryLabel: {
-    color: "#FFFFFF"
+  disabledText: {
+    color: colors.textMuted
   }
 });

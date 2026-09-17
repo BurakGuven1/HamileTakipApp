@@ -40,7 +40,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { QueryState } from "@/components/QueryState";
 import { Reveal } from "@/components/Reveal";
 import { Screen } from "@/components/Screen";
-import { PageHeader } from "@/components/PageHeader";
+import { VibrantBackdrop } from "@/components/VibrantBackdrop";
 import { WeeklyBabyDevelopmentCard } from "@/components/WeeklyBabyDevelopmentCard";
 import { trackEvent } from "@/lib/analytics";
 import {
@@ -162,7 +162,15 @@ export default function PregnancyTimelineScreen() {
   return (
     <Screen>
       <View style={styles.container}>
-        <PageHeader back eyebrow="Hamilelik yol haritam" title="Bu hafta ne önemli?" />
+        <VibrantBackdrop />
+
+        <View style={styles.topBar}>
+          <BackButton />
+          <View style={styles.screenTitleGroup}>
+            <Text style={styles.screenEyebrow}>HAMİLELİK YOL HARİTAM</Text>
+            <Text style={styles.screenTitle}>Bu hafta ne önemli?</Text>
+          </View>
+        </View>
 
         <Reveal>
           <WeeklyBabyDevelopmentCard

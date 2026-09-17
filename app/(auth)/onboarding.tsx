@@ -905,7 +905,7 @@ function HeaderBlock({
     <View style={{ gap: spacing.md }}>
       <View style={[styles.iconBubble, { backgroundColor: appTheme.tint }]}>{icon}</View>
       <View style={{ gap: spacing.sm }}>
-        <Text style={typography.display}>{title}</Text>
+        <Text style={typography.heading1}>{title}</Text>
         <Text style={typography.body}>{body}</Text>
       </View>
     </View>

@@ -1,6 +1,7 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Activity, AlertTriangle, BellRing, CalendarDays, FileHeart, FileText, Minus, NotebookPen, ShieldCheck, Thermometer, Trash2, TrendingDown, TrendingUp } from "lucide-react-native";
+import { router } from "expo-router";
+import { Activity, AlertTriangle, ArrowLeft, BellRing, CalendarDays, FileHeart, FileText, Minus, NotebookPen, ShieldCheck, Thermometer, Trash2, TrendingDown, TrendingUp } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -25,7 +26,6 @@ import {
 } from "@/components/motion";
 import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
-import { PageHeader } from "@/components/PageHeader";
 import { TextField } from "@/components/TextField";
 import { resolveInterpretationContext } from "@/features/document-insight/pregnancyContext";
 import {
@@ -267,7 +267,16 @@ export default function PregnancyHealthFileScreen() {
   return (
     <Screen>
       <View style={styles.page}>
-        <PageHeader back eyebrow="Gebelik kayıtların" icon={FileHeart} title="Sağlık Dosyam" />
+        <View style={styles.topBar}>
+          <Pressable accessibilityLabel="Geri dön" accessibilityRole="button" onPress={() => router.back()} style={styles.iconButton}>
+            <ArrowLeft color={colors.text} size={22} />
+          </Pressable>
+          <View style={{ flex: 1 }}>
+            <Text style={typography.eyebrow}>GEBELİK KAYITLARIN</Text>
+            <Text style={typography.heading1}>Sağlık Dosyam</Text>
+          </View>
+          <FileHeart color={appTheme.primary} size={30} />
+        </View>
 
         <Card style={{ backgroundColor: appTheme.tint }}>
           <View style={styles.stack}>

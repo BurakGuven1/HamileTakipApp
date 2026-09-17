@@ -14,7 +14,6 @@ import {
 import { getCurrentProfile } from "@/api/profiles";
 import { Card } from "@/components/Card";
 import { Screen } from "@/components/Screen";
-import { PageHeader } from "@/components/PageHeader";
 import { createCareUuid } from "@/features/care-journal/careSync";
 import {
   CONTRACTION_RED_FLAGS,
@@ -147,11 +146,14 @@ export default function ContractionTimerScreen() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.content}>
-        <PageHeader
-          eyebrow="Kasılma sayacı"
-          subtitle="Her kasılma başladığında tek düğmeye bas, bittiğinde tekrar bas. Süreyi, aralığı ve düzeni uygulama hesaplar."
-          title="Ne kadar sürüyor, ne kadar arayla"
-        />
+        <View style={{ gap: spacing.xs }}>
+          <Text style={typography.eyebrow}>Kasılma sayacı</Text>
+          <Text style={typography.heading1}>Ne kadar sürüyor, ne kadar arayla</Text>
+          <Text style={styles.muted}>
+            Her kasılma başladığında tek düğmeye bas, bittiğinde tekrar bas.
+            Süreyi, aralığı ve düzeni uygulama hesaplar.
+          </Text>
+        </View>
 
         {/* One large target, because this is used mid-contraction, one-handed. */}
         <Pressable

@@ -1,9 +1,7 @@
 export {
   accentColors,
   colors,
-  gradients,
   palette,
-  semanticColor,
   vibrantColors,
   vibrantGradients,
   vibrantPalette,
@@ -26,5 +24,4 @@ export {
 } from "@/theme/motion";
 export { radii } from "@/theme/radii";
 export { spacing } from "@/theme/spacing";
-export { shadows } from "@/theme/shadows";
 export { fonts, typography } from "@/theme/typography";
