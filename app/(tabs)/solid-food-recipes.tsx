@@ -6,8 +6,7 @@ import {
   Clock3,
   Search,
   ShieldCheck,
-  Soup,
-  TriangleAlert
+  Soup
 } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import {
@@ -21,8 +20,6 @@ import {
 
 import { Screen } from "@/components/Screen";
 import {
-  getSolidFoodAgeBand,
-  solidFoodAgeBands,
   solidFoodRecipeCategories,
   solidFoodRecipes,
   type SolidFoodRecipe,
@@ -32,29 +29,24 @@ import { useAppTheme } from "@/providers/AppThemeProvider";
 import { colors, radii, spacing, typography } from "@/theme";
 
 type RecipeFilter = "Tümü" | SolidFoodRecipeCategory;
-type AgeFilter = "Tümü" | string;
 
 export default function SolidFoodRecipesScreen() {
   const accentColor = useAppTheme();
   const appTheme = accentColor.theme;
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<RecipeFilter>("Tümü");
-  const [ageFilter, setAgeFilter] = useState<AgeFilter>("Tümü");
   const featuredRecipe = solidFoodRecipes[0]!;
   const normalizedQuery = query.trim().toLocaleLowerCase("tr-TR");
   const filteredRecipes = useMemo(
     () =>
       solidFoodRecipes.filter((recipe) => {
         const matchesFilter = filter === "Tümü" || recipe.category === filter;
-        const matchesAge = ageFilter === "Tümü" || getSolidFoodAgeBand(recipe.minMonth).id === ageFilter;
         const searchable = `${recipe.title} ${recipe.summary} ${recipe.ingredients.join(" ")}`
           .toLocaleLowerCase("tr-TR");
-        return matchesFilter && matchesAge && (!normalizedQuery || searchable.includes(normalizedQuery));
+        return matchesFilter && (!normalizedQuery || searchable.includes(normalizedQuery));
       }),
-    [ageFilter, filter, normalizedQuery]
+    [filter, normalizedQuery]
   );
-  const activeAgeBand = solidFoodAgeBands.find((band) => band.id === ageFilter);
-  const hasActiveFilter = Boolean(normalizedQuery) || filter !== "Tümü" || ageFilter !== "Tümü";
 
   return (
     <Screen>
@@ -101,38 +93,6 @@ export default function SolidFoodRecipesScreen() {
         </View>
 
         <ScrollView
-          accessibilityLabel="Bebeğin ay aralığı"
-          contentContainerStyle={styles.filterContent}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-        >
-          {(["Tümü", ...solidFoodAgeBands.map((band) => band.id)] as AgeFilter[]).map((bandId) => {
-            const band = solidFoodAgeBands.find((item) => item.id === bandId);
-            const active = ageFilter === bandId;
-            return (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{ selected: active }}
-                key={bandId}
-                onPress={() => setAgeFilter(bandId)}
-                style={[
-                  styles.filterChip,
-                  active && { backgroundColor: appTheme.accent, borderColor: appTheme.accent }
-                ]}
-              >
-                <Text style={[styles.filterText, active && styles.filterTextActive]}>
-                  {band ? band.label : "Her ay"}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-
-        {activeAgeBand ? (
-          <Text style={styles.ageBandNote}>{activeAgeBand.description}</Text>
-        ) : null}
-
-        <ScrollView
           accessibilityLabel="Tarif kategorileri"
           contentContainerStyle={styles.filterContent}
           horizontal
@@ -157,14 +117,14 @@ export default function SolidFoodRecipesScreen() {
           })}
         </ScrollView>
 
-        {!hasActiveFilter ? (
+        {!normalizedQuery && filter === "Tümü" ? (
           <FeaturedRecipeCard recipe={featuredRecipe} />
         ) : null}
 
         <View style={styles.sectionHeading}>
           <View style={styles.sectionHeadingCopy}>
             <Text style={typography.heading2}>
-              {hasActiveFilter ? "Eşleşen tarifler" : "Tüm tarifler"}
+              {normalizedQuery || filter !== "Tümü" ? "Eşleşen tarifler" : "Tüm tarifler"}
             </Text>
             <Text style={styles.resultCount}>{filteredRecipes.length} tarif</Text>
           </View>
@@ -252,20 +212,6 @@ function RecipeRow({ recipe }: { recipe: SolidFoodRecipe }) {
           <View style={styles.metaDot} />
           <Text style={styles.metaText}>{recipe.texture}</Text>
         </View>
-        <View style={styles.allergenRow}>
-          {recipe.allergens.length ? (
-            <>
-              <TriangleAlert color={colors.highlight} size={13} />
-              <Text numberOfLines={1} style={styles.allergenText}>
-                {recipe.allergens.join(" · ")}
-              </Text>
-            </>
-          ) : (
-            <Text style={[styles.allergenText, { color: colors.success }]}>
-              Yaygın alerjen içermez
-            </Text>
-          )}
-        </View>
       </View>
       <ChevronRight color={colors.textMuted} size={20} />
     </Pressable>
@@ -320,9 +266,6 @@ const styles = StyleSheet.create({
   },
   searchInput: { ...typography.body, color: colors.text, flex: 1, minHeight: 52, paddingVertical: 0 },
   filterContent: { gap: spacing.sm, paddingRight: spacing.lg },
-  ageBandNote: { ...typography.body, color: colors.textMuted, fontSize: 13, lineHeight: 19 },
-  allergenRow: { alignItems: "center", flexDirection: "row", gap: spacing.xs },
-  allergenText: { ...typography.label, color: colors.highlight, flex: 1, fontSize: 11, lineHeight: 16 },
   filterChip: {
     alignItems: "center",
     borderColor: colors.border,

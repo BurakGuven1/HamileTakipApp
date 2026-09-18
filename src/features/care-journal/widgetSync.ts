@@ -125,7 +125,7 @@ export async function syncCareQuickWidget(
                 }
               : {
                   headline: "Bugün yeni kayıt yok",
-                  detail: "İlk kaydı eklemek için dokun.",
+                  detail: "İstersen yalnızca son durumu görmek için dokun.",
                   destination: babyId
                     ? "hamiletakip://care-journal"
                     : "hamiletakip://home"
@@ -135,7 +135,7 @@ export async function syncCareQuickWidget(
 
         const primary = cards[0] ?? {
           headline: "Bugün yeni kayıt yok",
-          detail: "İlk kaydı eklemek için dokun.",
+          detail: "İstersen yalnızca son durumu görmek için dokun.",
           destination: "hamiletakip://home"
         };
         const alternate = cards[1];

@@ -1,27 +1,10 @@
-import { buildHcgPregnancyContext, HCG_SOURCE_LABEL, HCG_SOURCE_URL } from "./hcgContext";
-import {
-  applyInterpretationGuard,
-  GENERIC_SOURCE_URL,
-  isPregnancySensitiveTest
-} from "./interpretationGuard";
-import {
-  combineHypertensionAndProteinuria,
-  detectDocumentRedFlags
-} from "./redFlags";
 import type {
   DocumentInsightResult,
   DocumentInsightValue,
-  DocumentInterpretationContext,
   DocumentReferenceStatus,
   MaskedFieldType,
   OcrPageInput
 } from "./types.ts";
-
-export const UNKNOWN_INTERPRETATION_CONTEXT: DocumentInterpretationContext = {
-  pregnancyStatus: "unknown",
-  trimester: null,
-  pregnancyWeek: null
-};
 
 type Marker = DocumentInsightValue["documentMarker"];
 type Knowledge = {
@@ -73,24 +56,19 @@ const KNOWLEDGE: Knowledge[] = [
   knowledge(["total kolesterol", "toplam kolesterol", "total cholesterol", "kolesterol total", "kolesterol"], "Total kolesterol", "Kandaki farklı kolesterol taşıyıcılarının toplam miktarını gösterir.", "Belgedeki aralık veya hedef içinde görünüyor.", "Düşük total kolesterol çoğu zaman tek başına bir sorun göstermez; diğer lipid değerleri daha açıklayıcıdır.", "Yüksek total kolesterol, özellikle LDL de yüksekse, kalp-damar riskiyle ilişkili olabilir.", [], ["Yüksek kolesterol çoğu zaman belirti vermez"], "Total kolesterol tek başına değil; LDL, HDL, trigliserid ve kişisel risk etkenleriyle birlikte değerlendirilir.", "MedlinePlus — Cholesterol Levels", "https://medlineplus.gov/lab-tests/cholesterol-levels/"),
   knowledge(["trigliserid", "triglyceride", "triglycerides", "trig", "tg"], "Trigliserid", "Vücudun enerji için kullandığı ve fazlasını yağ hücrelerinde depoladığı kandaki bir yağ türüdür.", "Belgedeki aralık içinde görünüyor. Açlık durumu sonucu etkileyebilir.", "Düşük trigliserid çoğu zaman ayrıca bir sorun göstermez.", "Yüksek trigliserid kalp-damar ve metabolik risklerle ilişkili olabilir; çok yüksek düzeylerde pankreas iltihabı riski de artabilir.", [], ["Yüksek trigliserid çoğu zaman belirti vermez"], "Sonuç açlık durumu, glukoz/HbA1c, tiroid, karaciğer değerleri, LDL ve HDL ile birlikte değerlendirilir.", "MedlinePlus — Triglycerides Test", "https://medlineplus.gov/lab-tests/triglycerides-test/"),
   knowledge(["crp", "c reaktif protein"], "CRP", "Vücutta iltihap olduğunda yükselebilen, ancak iltihabın nedenini veya yerini tek başına göstermeyen bir proteindir.", "Belgedeki aralık içinde görünüyor.", "CRP için düşük sonuç genellikle ayrıca bir sorun anlamına gelmez.", "Yüksek CRP enfeksiyon veya başka bir iltihabi süreçle ilişkili olabilir; tek başına nedeni göstermez.", [], ["Ateş", "Halsizlik", "Altta yatan duruma göre değişen yakınmalar"], "CRP belirtiler, muayene ve diğer testlerle birlikte değerlendirilir.", "MedlinePlus — C-Reactive Protein Test", "https://medlineplus.gov/lab-tests/c-reactive-protein-crp-test/"),
-  knowledge(["idrarda protein", "idrar protein", "proteinuri", "proteinüri", "urine protein"], "İdrarda protein", "İdrarla atılan protein miktarını gösterir. Çoğu raporda sayısal bir değer yerine negatif, eser veya +1/+2 gibi kademeli olarak yazılır.", "Belgede bu sonuç için protein saptanmadığı bildirilmiş.", "Belgede bu sonuç için protein saptanmadığı bildirilmiş.", "İdrarda protein saptanması tek başına bir sonuç göstermez. Gebelikte bu bulgu asıl olarak tansiyon ölçümüyle birlikte değerlendirilir.", [], ["Ellerde ve yüzde şişlik", "Baş ağrısı", "Görmede değişiklik", "Karın üst bölümünde ağrı"], "İdrardaki protein; tansiyon ölçümleri, gebelik haftası, böbrek testleri ve idrar yolu enfeksiyonu olup olmadığıyla birlikte değerlendirilir.", "MedlinePlus — Protein in Urine", "https://medlineplus.gov/lab-tests/protein-in-urine/"),
   knowledge(["kreatinin", "creatinine"], "Kreatinin", "Kasların normal çalışması sırasında oluşan ve böbrekler yoluyla atılan bir atık maddedir.", "Belgedeki aralık içinde görünüyor.", "Düşük kreatinin çoğu zaman düşük kas kütlesi veya gebelikteki fizyolojik değişikliklerle ilişkili olabilir.", "Yüksek kreatinin böbreklerin süzme işlevindeki değişikliklerle veya sıvı kaybıyla ilişkili olabilir.", [], ["Şişlik", "İdrar miktarında değişiklik", "Yorgunluk"], "Kreatinin eGFR, idrar sonuçları, kas yapısı ve gebelik durumu dikkate alınarak değerlendirilir.", "MedlinePlus — Creatinine Test", "https://medlineplus.gov/lab-tests/creatinine-test/"),
   knowledge(["alt", "alanin aminotransferaz", "sgpt"], "ALT", "Özellikle karaciğer hücrelerinde bulunan bir enzimin kandaki düzeyidir.", "Belgedeki aralık içinde görünüyor.", "Düşük ALT çoğunlukla tek başına klinik bir sorun göstermez.", "Yüksek ALT karaciğer hücrelerinde etkilenme olabileceğini gösterebilir; nedeni tek başına belirlemez.", [], ["Çoğu zaman belirti vermeyebilir", "Bulantı", "Karın sağ üst bölümünde rahatsızlık", "Sarılık"], "ALT; AST ve diğer karaciğer testleri, ilaçlar ve belirtilerle birlikte değerlendirilir.", "MedlinePlus — ALT Blood Test", "https://medlineplus.gov/lab-tests/alt-blood-test/"),
   knowledge(["ast", "aspartat aminotransferaz", "sgot"], "AST", "Karaciğerin yanı sıra kas ve başka dokularda da bulunan bir enzimin kandaki düzeyidir.", "Belgedeki aralık içinde görünüyor.", "Düşük AST çoğunlukla tek başına klinik bir sorun göstermez.", "Yüksek AST karaciğer veya kas gibi farklı dokularla ilişkili olabilir; tek başına kaynağını göstermez.", [], ["Altta yatan duruma göre değişir"], "AST; ALT, diğer karaciğer testleri, kas yakınmaları ve kullanılan ilaçlarla birlikte değerlendirilir.", "MedlinePlus — AST Test", "https://medlineplus.gov/lab-tests/ast-test/")
 ];
 
-export function buildOnDeviceDocumentResult(
-  pages: OcrPageInput[],
-  context: DocumentInterpretationContext = UNKNOWN_INTERPRETATION_CONTEXT
-): DocumentInsightResult {
+export function buildOnDeviceDocumentResult(pages: OcrPageInput[]): DocumentInsightResult {
   const allText = pages.flatMap((page) => [page.fullText ?? "", ...page.lines.map((line) => line.text)]);
   const maskedFieldTypes = detectSensitiveFieldTypes(allText);
   const parsed = pages.flatMap(extractMeasurementsFromPage);
-  const values = deduplicateValues(parsed).slice(0, 100).map((value) => applyInterpretationGuard({
+  const values = deduplicateValues(parsed).slice(0, 100).map((value) => ({
     ...value,
-    plainLanguage: buildPlainLanguage(value, context)
-  }, context));
-  const redFlags = combineHypertensionAndProteinuria(detectDocumentRedFlags(values, context));
+    plainLanguage: buildPlainLanguage(value)
+  }));
   const glossaryItems = KNOWLEDGE
     .filter((term) => values.some((value) => matchesKnowledge(value.testName, term)))
     .map(({ aliases: _aliases, within: _within, below: _below, above: _above, lowSymptoms: _lowSymptoms, highSymptoms: _highSymptoms, clinicianContext: _clinicianContext, whatItIs: explanation, ...term }) => ({
@@ -100,18 +78,9 @@ export function buildOnDeviceDocumentResult(
       sourceUrl: term.sourceUrl
     }));
   const flagged = values.filter(isFlagged);
-  const doctorQuestions = [
-    ...redFlags.map((flag) => `${flag.testName} sonucum bugün ayrıca değerlendirilmeli mi, ek bir tetkik gerekiyor mu?`),
-    // Both the values we refused to read and the ones we could only compare
-    // against a non-pregnancy range lead to the same question for the doctor.
-    ...values
-      .filter((value) => value.interpretability !== "explained" && value.trimesterSensitive)
-      .slice(0, 2)
-      .map((value) => `${value.testName} için gebelik haftama uygun referans aralığı nedir?`),
-    ...flagged.map(
-      (value) => `${value.testName} sonucum değerlendirilirken gebelik haftam, belirtilerim ve diğer hangi sonuçlar birlikte ele alınmalı?`
-    )
-  ].filter((question, index, list) => list.indexOf(question) === index).slice(0, 6);
+  const doctorQuestions = flagged.slice(0, 5).map(
+    (value) => `${value.testName} sonucum değerlendirilirken gebelik haftam, belirtilerim ve diğer hangi sonuçlar birlikte ele alınmalı?`
+  );
   if (!doctorQuestions.length && values.length) {
     doctorQuestions.push("Bu sonuçlar gebelik veya doğum sonrası dönemime göre değerlendirilirken hangi bilgiler dikkate alınmalı?");
   }
@@ -120,9 +89,7 @@ export function buildOnDeviceDocumentResult(
     documentType: values.length ? "lab_report" : "other",
     readability: values.length ? "readable" : pages.some((page) => page.lines.length || page.fullText?.trim()) ? "partially_readable" : "unreadable",
     maskedFieldTypes,
-    context,
     values,
-    redFlags,
     glossary: glossaryItems,
     doctorQuestions,
     privacy: {
@@ -132,7 +99,7 @@ export function buildOnDeviceDocumentResult(
       processedOnDevice: true,
       sentToOpenAI: false
     },
-    safetyNotice: "Bu bilgi tıbbi tavsiye değildir; tanı ve tedavi için doktoruna başvur. Bu ekran belgedeki sonucu ve laboratuvarın kendi referans bilgisini anlaşılır dile çevirir, doktoruna sorman için hazırlar. Emin olmadığı hiçbir değeri yorumlamaz."
+    safetyNotice: "Bu ekran belgedeki sonucu ve laboratuvarın kendi referans bilgisini anlaşılır dile çevirir. Genel bilgiler tanı koymaz; gebeliğin durumu, aciliyet, tedavi, ilaç veya doz önerisi üretmez. Kesin değerlendirme kişisel öykü, muayene ve diğer sonuçlarla sağlık profesyoneli tarafından yapılır."
   };
 }
 
@@ -311,25 +278,12 @@ function makeValue(
     confidence: ocrConfidence < 0.65 ? "low" as const : referenceRange || CATEGORICAL_RESULT.test(result) ? "high" as const : "medium" as const,
     pageNumber,
     referenceStatus: comparison.status,
-    referenceExplanation: comparison.explanation,
-    // The guard decides these; parsing only reports what it measured.
-    interpretability: "explained" as const,
-    notInterpretableReason: "",
-    contextNote: "",
-    trimesterSensitive: isPregnancySensitiveTest(testName)
+    referenceExplanation: comparison.explanation
   };
-  // Parsing has no pregnancy context; the caller re-runs this with the real one
-  // before the guard decides what survives.
-  return {
-    ...base,
-    plainLanguage: buildPlainLanguage(base as DocumentInsightValue, UNKNOWN_INTERPRETATION_CONTEXT)
-  };
+  return { ...base, plainLanguage: buildPlainLanguage(base as DocumentInsightValue) };
 }
 
-function buildPlainLanguage(
-  value: DocumentInsightValue,
-  context: DocumentInterpretationContext
-): DocumentInsightValue["plainLanguage"] {
+function buildPlainLanguage(value: DocumentInsightValue): DocumentInsightValue["plainLanguage"] {
   const item = KNOWLEDGE.find((candidate) => matchesKnowledge(value.testName, candidate));
   const resultSummary = buildResultSummary(value);
   if (!item) {
@@ -340,12 +294,12 @@ function buildPlainLanguage(
       symptomContext: [],
       clinicianContext: "Bu değer diğer sonuçlar, belirtiler ve kişisel sağlık bilgileriyle birlikte değerlendirilir.",
       sourceLabel: "MedlinePlus — Laboratuvar testlerini anlama",
-      sourceUrl: GENERIC_SOURCE_URL
+      sourceUrl: "https://medlineplus.gov/lab-tests/how-to-understand-your-lab-results/"
     };
   }
   const direction = effectiveDirection(value);
   const possibleMeaning = isHcg(item)
-    ? buildHcgMeaning(value, item, direction, context)
+    ? buildHcgMeaning(value, item, direction)
     : item.term === "HbA1c"
       ? buildHba1cMeaning(value, item, direction)
       : direction === "below"
@@ -361,8 +315,8 @@ function buildPlainLanguage(
     possibleMeaning,
     symptomContext: direction === "below" ? item.lowSymptoms : direction === "above" ? item.highSymptoms : [],
     clinicianContext: item.clinicianContext,
-    sourceLabel: isHcg(item) && context.pregnancyStatus !== "not_pregnant" ? HCG_SOURCE_LABEL : item.sourceLabel,
-    sourceUrl: isHcg(item) && context.pregnancyStatus !== "not_pregnant" ? HCG_SOURCE_URL : item.sourceUrl
+    sourceLabel: item.sourceLabel,
+    sourceUrl: item.sourceUrl
   };
 }
 
@@ -376,22 +330,7 @@ function buildResultSummary(value: Pick<DocumentInsightValue, "referenceStatus" 
   return value.referenceRange ? "Belgede referans bilgisi var, ancak bağlama göre değiştiği için sonuç otomatik olarak tek bir aralıkla karşılaştırılmadı." : "Belgede bu sonuç için güvenle okunabilen bir referans aralığı bulunamadı.";
 }
 
-/**
- * In a pregnancy context this deliberately returns information, never a
- * verdict: a single hCG level cannot say whether a pregnancy is progressing,
- * where it is, or exactly how far along it is. The 5 / 25 mIU/mL cut-offs below
- * describe assay positivity and are only applied when the reader is known not
- * to be pregnant.
- */
-function buildHcgMeaning(
-  value: DocumentInsightValue,
-  item: Knowledge,
-  direction: "below" | "above" | "within" | "unknown",
-  context: DocumentInterpretationContext
-) {
-  if (context.pregnancyStatus !== "not_pregnant") {
-    return buildHcgPregnancyContext(context.pregnancyWeek);
-  }
+function buildHcgMeaning(value: DocumentInsightValue, item: Knowledge, direction: "below" | "above" | "within" | "unknown") {
   const numeric = parseLocaleNumber(value.result);
   if (numeric === null || !/(?:mIU\/mL|IU\/L)/i.test(value.unit)) return direction === "below" ? item.below : direction === "above" ? item.above : item.within;
   if (numeric < 5) return "Serum hCG için 5'in altındaki değerler çoğu laboratuvarda gebelik olmayan aralıkla uyumludur. Çok erken test zamanı ve laboratuvar yöntemi yine de sonucu etkileyebilir.";

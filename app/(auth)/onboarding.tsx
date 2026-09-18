@@ -32,14 +32,6 @@ import { Thread } from "@/components/Thread";
 import { trackEvent } from "@/lib/analytics";
 import { registerAndSavePushToken } from "@/lib/notifications";
 import {
-  getNotificationPermissionRationale,
-  getNotificationPermissionState,
-  ONBOARDING_PERMISSION_BULLETS,
-  openNotificationSettings,
-  PERMISSION_BLOCKED_COPY,
-  requestNotificationPermissionForFeature
-} from "@/features/notifications/permission";
-import {
   getPregnancyAgeError,
   getPregnancyAgeFromDueDate,
   getPregnancyDueDateFromAge
@@ -99,11 +91,6 @@ export default function OnboardingScreen() {
   const [nickname, setNickname] = useState("");
   const [nicknameAvailable, setNicknameAvailable] = useState<boolean | null>(null);
   const [completing, setCompleting] = useState(false);
-  // İzin adımı iki aşamalı: önce kendi ön-izin açıklamamız, ancak kullanıcı
-  // "Tamam" derse sistem istemi. iOS sistem istemini uygulama ömrü boyunca BİR
-  // KEZ gösterir; bağlamsız sorup harcamak, izni kalıcı olarak kaybetmek demek.
-  const [permissionBlocked, setPermissionBlocked] = useState(false);
-  const permissionRationale = getNotificationPermissionRationale("onboarding");
 
   const profileQuery = useQuery({
     queryKey: ["current-profile"],
@@ -234,20 +221,6 @@ export default function OnboardingScreen() {
   const suggestedThemeId =
     status === "baby" ? getSuggestedThemeForGender(babyGender) : "sage";
   const suggestedTheme = themeOptions.find((item) => item.id === suggestedThemeId);
-
-  // Kullanıcı izni daha önce (ör. yeniden kurulumda) reddettiyse iOS sistem
-  // istemini bir daha göstermez. Bu durumda "Bildirimleri aç" düğmesi hiçbir
-  // şey yapmayan bir düğme olurdu; bunun yerine doğrudan ayarlara yönlendir.
-  useEffect(() => {
-    if (step !== "notifications") return;
-    let cancelled = false;
-    void getNotificationPermissionState().then((state) => {
-      if (!cancelled) setPermissionBlocked(state === "blocked");
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [step]);
 
   const updateStepMutation = useMutation({
     mutationFn: updateCurrentProfile,
@@ -439,21 +412,8 @@ export default function OnboardingScreen() {
     try {
       if (requestNotifications) {
         try {
-          // Sistem istemini yalnızca burada, kullanıcı ön-izin ekranında
-          // "Bildirimleri aç" dedikten sonra gösteriyoruz.
-          const state = await requestNotificationPermissionForFeature();
-          if (state === "granted") {
-            // İzin zaten alındı; token alınırken ikinci kez SORMA.
-            const token = await registerAndSavePushToken(false);
-            notificationSetupFailed = !token;
-          } else {
-            notificationSetupFailed = false;
-            if (state === "blocked") {
-              setPermissionBlocked(true);
-              setCompleting(false);
-              return;
-            }
-          }
+          const token = await registerAndSavePushToken();
+          notificationSetupFailed = !token;
         } catch {
           notificationSetupFailed = true;
         }
@@ -840,48 +800,25 @@ export default function OnboardingScreen() {
             <View style={{ gap: spacing.lg }}>
               <HeaderBlock
                 icon={<Bell color={colors.primary} size={26} />}
-                title={permissionRationale.title}
-                body={permissionRationale.body}
+                title="Nazik hatırlatmalar ister misin?"
+                body="Aşı takvimi, haftalık gebelik özetleri ve forum etkileşimleri için kaliteli bildirimler göndeririz."
               />
               <View style={{ gap: spacing.sm }}>
-                {ONBOARDING_PERMISSION_BULLETS.map((bullet) => (
-                  <FeatureRow key={bullet} label={bullet} />
-                ))}
+                <FeatureRow label="Aşı ve kontrol hatırlatmaları" />
+                <FeatureRow label="Gebelik haftana uygun özetler" />
+                <FeatureRow label="Forum yorum ve beğeni bildirimleri" />
               </View>
-              {permissionBlocked ? (
-                <>
-                  <Text style={typography.body}>{PERMISSION_BLOCKED_COPY}</Text>
-                  <Button
-                    label="Telefon ayarlarını aç"
-                    variant="secondary"
-                    onPress={() => void openNotificationSettings()}
-                  />
-                  <Button
-                    disabled={completing}
-                    label={completing ? "Kurulum tamamlanıyor…" : "Bildirimsiz devam et"}
-                    onPress={() => completeOnboarding(false)}
-                  />
-                </>
-              ) : (
-                <>
-                  <Button
-                    disabled={completing}
-                    label={completing ? "Kurulum tamamlanıyor…" : "Bildirimleri aç ve başla"}
-                    onPress={() => completeOnboarding(true)}
-                  />
-                  <Button
-                    disabled={completing}
-                    label="Şimdilik bildirim alma"
-                    variant="ghost"
-                    onPress={() => completeOnboarding(false)}
-                  />
-                  <Text style={typography.body}>
-                    Bu adımı atlayabilirsin. Bildirimleri sonradan bir hatırlatma
-                    kurarken ya da Ayarlar&apos;dan açabilirsin; kampanya bildirimleri
-                    ayrı bir onaya bağlıdır ve varsayılan olarak kapalıdır.
-                  </Text>
-                </>
-              )}
+              <Button
+                disabled={completing}
+                label={completing ? "Kurulum tamamlanıyor…" : "Bildirimleri aç ve başla"}
+                onPress={() => completeOnboarding(true)}
+              />
+              <Button
+                disabled={completing}
+                label="Şimdilik bildirim alma"
+                variant="ghost"
+                onPress={() => completeOnboarding(false)}
+              />
             </View>
           </Card>
         ) : null}

@@ -54,24 +54,6 @@ import {
   unregisterPushTokenForCurrentUser
 } from "@/lib/notifications";
 import {
-  dismissCareTimerLiveActivities
-} from "@/features/care-journal/careTimerLiveActivity";
-import {
-  dismissNightShiftLiveActivities
-} from "@/features/care-journal/nightShiftLiveActivity";
-import {
-  getLiveActivityEnabled,
-  setLiveActivityEnabled
-} from "@/features/notifications/liveActivityPreference";
-import { MARKETING_CONSENT_COPY } from "@/features/notifications/marketingConsent";
-import {
-  getNotificationPermissionState,
-  openNotificationSettings,
-  PERMISSION_BLOCKED_COPY,
-  requestNotificationPermissionForFeature,
-  type NotificationPermissionState
-} from "@/features/notifications/permission";
-import {
   appStoreSubscriptionsUrl,
   openLegalPage,
   type LegalPage
@@ -110,10 +92,6 @@ export default function SettingsScreen() {
   const [showMoreNotificationPreferences, setShowMoreNotificationPreferences] =
     useState(false);
   const [waterRemindersEnabled, setWaterRemindersEnabledState] = useState(false);
-  const [liveActivityEnabled, setLiveActivityEnabledState] = useState(true);
-  const [updatingLiveActivity, setUpdatingLiveActivity] = useState(false);
-  const [permissionState, setPermissionState] =
-    useState<NotificationPermissionState>("undetermined");
   const [updatingWaterReminders, setUpdatingWaterReminders] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const profileEditorYRef = useRef(0);
@@ -151,20 +129,6 @@ export default function SettingsScreen() {
   }, []);
 
   useEffect(() => {
-    getLiveActivityEnabled()
-      .then(setLiveActivityEnabledState)
-      .catch(() => setLiveActivityEnabledState(true));
-  }, []);
-
-  // İzin durumu sistem ayarlarından değişmiş olabilir; ekran her açıldığında
-  // yeniden okunur ki "izin kapalı" uyarısı gerçeği yansıtsın.
-  useEffect(() => {
-    getNotificationPermissionState()
-      .then(setPermissionState)
-      .catch(() => undefined);
-  }, []);
-
-  useEffect(() => {
     if (!profile || profileEditOpen) {
       return;
     }
@@ -180,23 +144,11 @@ export default function SettingsScreen() {
     mutationFn: async (update: ProfileUpdate) => {
       const updated = await updateCurrentProfile(update);
 
-      // Pazarlama onayı ASLA sistem izin istemini tetiklemez: 4.5.4 kapsamındaki
-      // bu anahtar yalnızca "onay verdim" der; bildirim izni ayrı ve kendi
-      // bağlamında sorulur.
-      const marketingOnly = Object.keys(update).every(
-        (key) => key === "notify_premium_offers" || key === "notify_premium_emails"
-      );
-
-      if (!marketingOnly && Object.values(update).some((value) => value === true)) {
-        const state = await requestNotificationPermissionForFeature();
-        setPermissionState(state);
-        const token =
-          state === "granted" ? await registerAndSavePushToken(false) : null;
+      if (Object.values(update).some((value) => value === true)) {
+        const token = await registerAndSavePushToken();
         if (!token) {
           showInfo(
-            state === "blocked"
-              ? PERMISSION_BLOCKED_COPY
-              : "Telefon ayarlarından bildirim izni verirsen bu tercih aktif çalışır.",
+            "Telefon ayarlarından bildirim izni verirsen bu tercih aktif çalışır.",
             "Bildirim izni kapalı"
           );
         }
@@ -335,20 +287,9 @@ export default function SettingsScreen() {
 
   async function refreshNotificationPermission() {
     try {
-      const state = await requestNotificationPermissionForFeature();
-      setPermissionState(state);
-
-      if (state === "granted") {
-        const token = await registerAndSavePushToken(false);
-        if (token) {
-          showSuccess("Bildirim izni güncellendi.");
-          return;
-        }
-      }
-
-      if (state === "blocked") {
-        showInfo(PERMISSION_BLOCKED_COPY, "Bildirim izni kapalı");
-        await openNotificationSettings();
+      const token = await registerAndSavePushToken();
+      if (token) {
+        showSuccess("Bildirim izni güncellendi.");
         return;
       }
 
@@ -358,32 +299,6 @@ export default function SettingsScreen() {
       );
     } catch (error) {
       showError(error, "Bildirim izni yenilenemedi");
-    }
-  }
-
-  async function updateLiveActivity(enabled: boolean) {
-    setUpdatingLiveActivity(true);
-    try {
-      const next = await setLiveActivityEnabled(enabled);
-      setLiveActivityEnabledState(next);
-      if (!next) {
-        // Çalışan kartlar hemen kaldırılsın; "kapattım ama hâlâ duruyor"
-        // deneyimi bu ekranın verdiği sözü boşa çıkarır.
-        await Promise.all([
-          dismissCareTimerLiveActivities(),
-          dismissNightShiftLiveActivities()
-        ]);
-        showSuccess("Kilit ekranı sayacı kapatıldı.", "Sayaç kapalı");
-      } else {
-        showSuccess(
-          "Sayaç başlattığında kilit ekranında görünecek.",
-          "Kilit ekranı sayacı açık"
-        );
-      }
-    } catch (error) {
-      showError(error, "Kilit ekranı sayacı güncellenemedi");
-    } finally {
-      setUpdatingLiveActivity(false);
     }
   }
 
@@ -892,15 +807,9 @@ export default function SettingsScreen() {
             <View style={{ gap: spacing.xs }}>
               <Text style={typography.heading2}>Bildirim tercihleri</Text>
               <Text style={typography.body}>
-                Her bildirim türünü ayrı ayrı açıp kapatabilirsin. Hiçbiri
-                uygulamanın çalışması için zorunlu değildir.
+                Bildirim izinleri cihaz ayarından, içerik tercihleri buradan yönetilir.
               </Text>
-              {permissionState === "blocked" ? (
-                <Text style={typography.body}>{PERMISSION_BLOCKED_COPY}</Text>
-              ) : null}
             </View>
-
-            <PreferenceGroupTitle title="Topluluk" />
 
             <PreferenceRow
               label="Gönderime yorum gelince"
@@ -921,31 +830,15 @@ export default function SettingsScreen() {
               }
             />
             {experienceStage !== "general" ? (
-              <>
-                <PreferenceGroupTitle title="Aşı hatırlatmaları" />
-                <PreferenceRow
-                  label="Aşı hatırlatmaları"
-                  description="Yaklaşan aşı tarihleri için bildirim al."
-                  value={Boolean(profile?.notify_vaccine_reminders)}
-                  disabled={!profile || updatePreferenceMutation.isPending}
-                  onValueChange={(value) =>
-                    updatePreferenceMutation.mutate({ notify_vaccine_reminders: value })
-                  }
-                />
-              </>
-            ) : null}
-
-            {Platform.OS === "ios" ? (
-              <>
-                <PreferenceGroupTitle title="Sayaç ve kilit ekranı" />
-                <PreferenceRow
-                  label="Kilit ekranı sayacı"
-                  description="Emzirme, sağma ve uyku sayacın çalışırken kilit ekranında ve Dynamic Island'da görünsün. Kapattığında kayıtların etkilenmez."
-                  value={liveActivityEnabled}
-                  disabled={updatingLiveActivity}
-                  onValueChange={(value) => void updateLiveActivity(value)}
-                />
-              </>
+              <PreferenceRow
+                label="Aşı hatırlatmaları"
+                description="Yaklaşan aşı tarihleri için bildirim al."
+                value={Boolean(profile?.notify_vaccine_reminders)}
+                disabled={!profile || updatePreferenceMutation.isPending}
+                onValueChange={(value) =>
+                  updatePreferenceMutation.mutate({ notify_vaccine_reminders: value })
+                }
+              />
             ) : null}
             {showMoreNotificationPreferences ? (
               <>
@@ -973,6 +866,24 @@ export default function SettingsScreen() {
                   disabled={!profile || updatePreferenceMutation.isPending}
                   onValueChange={(value) =>
                     updatePreferenceMutation.mutate({ notify_daily_support: value })
+                  }
+                />
+                <PreferenceRow
+                  label="Premium fırsatları"
+                  description="Yalnızca özel dönemlerde Anne+ Premium teklif bildirimi al. Varsayılan olarak kapalıdır."
+                  value={Boolean(profile?.notify_premium_offers)}
+                  disabled={!profile || updatePreferenceMutation.isPending}
+                  onValueChange={(value) =>
+                    updatePreferenceMutation.mutate({ notify_premium_offers: value })
+                  }
+                />
+                <PreferenceRow
+                  label="E-posta ile Premium fırsatları"
+                  description="Premium yenilik ve fırsatlarını e-postayla almak için açık rızandır. Varsayılan olarak kapalıdır; istediğin an kapatabilirsin."
+                  value={Boolean(profile?.notify_premium_emails)}
+                  disabled={!profile || updatePreferenceMutation.isPending}
+                  onValueChange={(value) =>
+                    updatePreferenceMutation.mutate({ notify_premium_emails: value })
                   }
                 />
                 {experienceStage === "pregnancy" ? (
@@ -1038,32 +949,6 @@ export default function SettingsScreen() {
               </>
             ) : null}
 
-            <PreferenceGroupTitle title="Ürün ve kampanya duyuruları" />
-            {/*
-              App Store Review Guideline 4.5.4: pazarlama bildirimi için açık
-              onay ve her zaman erişilebilir bir kapatma yolu şart. Bu iki satır
-              bu yüzden "diğer tercihler" katlamasının DIŞINDA, kart açılır
-              açılmaz görünür durumda tutulur.
-            */}
-            <PreferenceRow
-              label={MARKETING_CONSENT_COPY.label}
-              description={MARKETING_CONSENT_COPY.description}
-              value={Boolean(profile?.notify_premium_offers)}
-              disabled={!profile || updatePreferenceMutation.isPending}
-              onValueChange={(value) =>
-                updatePreferenceMutation.mutate({ notify_premium_offers: value })
-              }
-            />
-            <PreferenceRow
-              label="E-posta ile Premium fırsatları"
-              description="Premium yenilik ve fırsatlarını e-postayla almak için açık rızandır. Varsayılan olarak kapalıdır; istediğin an kapatabilirsin."
-              value={Boolean(profile?.notify_premium_emails)}
-              disabled={!profile || updatePreferenceMutation.isPending}
-              onValueChange={(value) =>
-                updatePreferenceMutation.mutate({ notify_premium_emails: value })
-              }
-            />
-
             <Button
               label={
                 showMoreNotificationPreferences
@@ -1076,28 +961,11 @@ export default function SettingsScreen() {
               }
             />
 
-            {permissionState === "blocked" ? (
-              // İzin bir kez reddedildiyse iOS istemi bir daha göstermez; sahte
-              // bir "yenile" düğmesi yerine tek çalışan yola yönlendir.
-              <Button
-                label="Sistem bildirim ayarlarını aç"
-                variant="secondary"
-                onPress={() => void openNotificationSettings()}
-              />
-            ) : (
-              <>
-                <Button
-                  label="Bildirim iznini yenile"
-                  variant="secondary"
-                  onPress={refreshNotificationPermission}
-                />
-                <Button
-                  label="Sistem bildirim ayarları"
-                  variant="ghost"
-                  onPress={() => void openNotificationSettings()}
-                />
-              </>
-            )}
+            <Button
+              label="Bildirim iznini yenile"
+              variant="secondary"
+              onPress={refreshNotificationPermission}
+            />
           </View>
         </Card>
 
@@ -1268,15 +1136,6 @@ function ThemeChip({
       </Text>
     </Pressable>
   );
-}
-
-/**
- * Bildirim tercihleri kategori başlığı. App Review, kullanıcının hangi
- * bildirim TÜRÜNÜ kapattığını ayırt edebilmesini bekler; tek bir uzun anahtar
- * listesi bunu sağlamaz.
- */
-function PreferenceGroupTitle({ title }: { title: string }) {
-  return <Text style={typography.eyebrow}>{title}</Text>;
 }
 
 function PreferenceRow({
