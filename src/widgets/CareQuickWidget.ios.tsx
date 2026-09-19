@@ -1,4 +1,4 @@
-import { Button, HStack, Image, Spacer, Text, VStack } from "@expo/ui/swift-ui";
+import { Button, HStack, Text, VStack } from "@expo/ui/swift-ui";
 import {
   background,
   buttonStyle,
@@ -32,18 +32,17 @@ function CareQuickWidget(
 
   // Widget code runs in an isolated runtime. Keep every runtime value inside
   // the function or receive it through props.
-  // DESIGN.md token'ları: Krem Zemin / Gece Eriği yüzeyler, Ada Yeşili vurgu.
   const isDark = environment.colorScheme === "dark";
-  const backgroundColor = isDark ? "#211D24" : "#F9F4F0";
-  const primaryText = isDark ? "#F5F1EC" : "#372F3D";
-  const secondaryText = isDark ? "#C3BAC2" : "#655F57";
-  const accentText = isDark ? "#8FBBA2" : "#3F6F59";
-  const actionBackground = isDark ? "#29242C" : "#FFFCF8";
+  const backgroundColor = isDark ? "#17231E" : "#EAF0EC";
+  const primaryText = isDark ? "#F7F3EE" : "#302B34";
+  const secondaryText = isDark ? "#C8D2CC" : "#625C66";
+  const accentText = isDark ? "#A9CFB8" : "#557664";
+  const actionBackground = isDark ? "#304139" : "#FFFFFFE8";
   const snapshot = {
     subjectName: props?.subjectName || "Anne+",
     headline: props?.headline || "Bugün yeni kayıt yok",
     detail:
-      props?.detail || "İlk kaydı eklemek için dokun.",
+      props?.detail || "İstersen yalnızca son durumu görmek için dokun.",
     alternateHeadline: props?.alternateHeadline || "",
     alternateDetail: props?.alternateDetail || "",
     alternateDestination: props?.alternateDestination || "",
@@ -80,27 +79,15 @@ function CareQuickWidget(
   }
 
   if (environment.widgetFamily === "accessoryRectangular") {
-    // Kilit ekranı "vibrant" modda çizer: sistem her rengi tek bir maskeye
-    // düşürür, bu yüzden burada RENK DEĞİL yalnızca ağırlık ve boyut
-    // hiyerarşisi kullanılır. foregroundStyle eklemek okunurluğu bozar.
     return (
-      <VStack
-        spacing={2}
-        modifiers={[
-          frame({ maxWidth: Infinity, alignment: "topLeading" }),
-          ...openModifiers
-        ]}
-      >
-        <HStack spacing={4}>
-          <Image systemName="heart.text.square.fill" />
-          <Text modifiers={[font({ size: 11, weight: "semibold" }), lineLimit(1)]}>
-            {snapshot.subjectName}
-          </Text>
-        </HStack>
-        <Text modifiers={[font({ size: 15, weight: "bold" }), lineLimit(2)]}>
+      <VStack spacing={3} modifiers={[frame({ maxWidth: Infinity, alignment: "topLeading" }), ...openModifiers]}>
+        <Text modifiers={[font({ size: 11, weight: "bold" }), lineLimit(1)]}>
+          Anne+ · {snapshot.subjectName}
+        </Text>
+        <Text modifiers={[font({ size: 14, weight: "bold" }), lineLimit(2)]}>
           {headline}
         </Text>
-        <Text modifiers={[font({ size: 11 }), lineLimit(1)]}>{detail}</Text>
+        <Text modifiers={[font({ size: 10 }), lineLimit(1)]}>{detail}</Text>
       </VStack>
     );
   }
@@ -137,12 +124,9 @@ function CareQuickWidget(
     );
   }
 
-  // systemMedium küçük boyutun büyütülmüş hali değildir: burada yer olduğu
-  // için iki durum aynı anda görünür ve düğmeye gerek kalmaz. Küçük boyutta
-  // ikinci duruma ancak düğmeyle geçilir.
   return (
     <VStack
-      spacing={9}
+      spacing={10}
       modifiers={[
         frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: "topLeading" }),
         padding({ all: 16 }),
@@ -150,39 +134,24 @@ function CareQuickWidget(
         ...openModifiers
       ]}
     >
-      <HStack spacing={6} modifiers={[frame({ maxWidth: Infinity })]}>
-        <Image systemName="heart.text.square.fill" color={accentText} />
-        <Text modifiers={[font({ size: 12, weight: "bold" }), foregroundStyle(accentText), lineLimit(1)]}>
+      <HStack modifiers={[frame({ maxWidth: Infinity })]}>
+        <Text modifiers={[font({ size: 12, weight: "bold" }), foregroundStyle(accentText)]}>
           ŞU AN NE ÖNEMLİ? · {snapshot.subjectName}
         </Text>
-        <Spacer />
       </HStack>
       <Text modifiers={[font({ size: 20, weight: "bold" }), foregroundStyle(primaryText), lineLimit(2)]}>
-        {snapshot.headline}
+        {headline}
       </Text>
       <Text modifiers={[font({ size: 12 }), foregroundStyle(secondaryText), lineLimit(2)]}>
-        {snapshot.detail}
+        {detail}
       </Text>
       {hasAlternate ? (
-        <HStack
-          spacing={7}
-          modifiers={[
-            frame({ maxWidth: Infinity, alignment: "leading" }),
-            padding({ vertical: 7, horizontal: 10 }),
-            background(actionBackground),
-            cornerRadius(12)
-          ]}
-        >
-          <Image systemName="circle.fill" color={accentText} />
-          <VStack spacing={1} modifiers={[frame({ maxWidth: Infinity, alignment: "topLeading" })]}>
-            <Text modifiers={[font({ size: 12, weight: "semibold" }), foregroundStyle(primaryText), lineLimit(1)]}>
-              {snapshot.alternateHeadline}
-            </Text>
-            <Text modifiers={[font({ size: 10 }), foregroundStyle(secondaryText), lineLimit(1)]}>
-              {snapshot.alternateDetail}
-            </Text>
-          </VStack>
-        </HStack>
+        <Button
+          label={showingAlternate ? "Öncelikli duruma dön" : "Diğer durumu göster"}
+          target="toggle-context"
+          onPress={() => ({ showAlternate: !snapshot.showAlternate })}
+          modifiers={toggleModifiers}
+        />
       ) : null}
     </VStack>
   );

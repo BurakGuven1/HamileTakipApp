@@ -1,11 +1,10 @@
-import { Button, HStack, Image, Spacer, Text, VStack } from "@expo/ui/swift-ui";
+import { HStack, Image, Text, VStack } from "@expo/ui/swift-ui";
 import {
   activityBackgroundTint,
   font,
   foregroundStyle,
   frame,
   lineLimit,
-  monospacedDigit,
   padding
 } from "@expo/ui/swift-ui/modifiers";
 import {
@@ -23,27 +22,17 @@ export type NightShiftLiveActivityProps = {
   nextReminderLine: string;
 };
 
-/** Dynamic Island'daki "Vardiyayı bitir" düğmesinin hedefi. */
-export const NIGHT_SHIFT_FINISH_TARGET = "night-shift-finish";
-
 function NightShiftLiveActivity(
   props: NightShiftLiveActivityProps,
   environment: LiveActivityEnvironment
 ) {
   "widget";
 
-  // SwiftUI'da `.frame(maxWidth: .infinity)` karşılığı. Doğrudan `Infinity`
-  // yazılamaz: modifier'lar yerel tarafa JSON ile geçiyor ve
-  // `JSON.stringify(Infinity)` "null" üretiyor, bu da çerçeveyi sıfır
-  // genişliğe düşürüp rozeti boş bir kutuya çeviriyor.
-  const EXPAND = 100000;
-
-  // Gece vardiyası mint taşır. Kilit ekranı rozeti kendi koyu zeminini
-  // kullanır; kontrast `colorScheme`'e bırakılmaz.
-  const accent = "#56E3C6"; // Mint
-  const primary = "#F4F0FF"; // Açık mürekkep
-  const secondary = "#A9A2BF"; // Soluk mürekkep
-  const backgroundColor = "#1A1426"; // Koyu yüzey
+  const isDark = environment.colorScheme === "dark";
+  const accent = isDark ? "#A9CFB8" : "#557664";
+  const primary = isDark ? "#F5F2ED" : "#2E2931";
+  const secondary = isDark ? "#C7D0CB" : "#625C66";
+  const backgroundColor = isDark ? "#14211C" : "#EAF0EC";
   const startedAt = new Date(props?.startedAtMs || Date.now());
   const plannedEndAt = new Date(
     props?.plannedEndAtMs || Date.now() + 60 * 60 * 1000
@@ -62,13 +51,13 @@ function NightShiftLiveActivity(
           activityBackgroundTint(backgroundColor)
         ]}
       >
-        <HStack modifiers={[frame({ maxWidth: EXPAND })]}>
+        <HStack modifiers={[frame({ maxWidth: Infinity })]}>
           <Text modifiers={[font({ size: 12, weight: "bold" }), foregroundStyle(accent)]}>
             ANNE+ · GECE VARDİYASI
           </Text>
         </HStack>
         <HStack spacing={10}>
-          <VStack spacing={3} modifiers={[frame({ maxWidth: EXPAND, alignment: "topLeading" })]}>
+          <VStack spacing={3} modifiers={[frame({ maxWidth: Infinity, alignment: "topLeading" })]}>
             <Text modifiers={[font({ size: 19, weight: "bold" }), foregroundStyle(primary), lineLimit(1)]}>
               {babyName}
             </Text>
@@ -84,11 +73,7 @@ function NightShiftLiveActivity(
             <Text
               timerInterval={{ lower: startedAt, upper: plannedEndAt }}
               countsDown
-              modifiers={[
-                font({ size: 30, weight: "bold", design: "rounded" }),
-                monospacedDigit(),
-                foregroundStyle(accent)
-              ]}
+              modifiers={[font({ size: 20, weight: "bold" }), foregroundStyle(accent)]}
             />
           )}
         </HStack>
@@ -104,11 +89,7 @@ function NightShiftLiveActivity(
       <Text
         timerInterval={{ lower: startedAt, upper: plannedEndAt }}
         countsDown
-        modifiers={[
-          font({ size: 13, weight: "bold" }),
-          monospacedDigit(),
-          foregroundStyle(accent)
-        ]}
+        modifiers={[font({ size: 12, weight: "bold" }), foregroundStyle(primary)]}
       />
     ),
     minimal: <Image systemName={isCompleted ? "checkmark.circle.fill" : "moon.stars.fill"} color={accent} />,
@@ -138,32 +119,15 @@ function NightShiftLiveActivity(
         </Text>
       </VStack>
     ),
-    expandedCenter: (
-      <VStack spacing={2}>
-        <Text modifiers={[font({ size: 15, weight: "bold" }), foregroundStyle(primary), lineLimit(1)]}>
-          {babyName}
+    expandedBottom: (
+      <VStack spacing={4} modifiers={[padding({ horizontal: 12, vertical: 8 })]}>
+        <Text modifiers={[font({ size: 14, weight: "bold" }), foregroundStyle(primary), lineLimit(1)]}>
+          {babyName} · {statusLine}
         </Text>
         <Text modifiers={[font({ size: 11 }), foregroundStyle(secondary), lineLimit(1)]}>
-          {props?.caregiverName || "Gece vardiyası"}
-        </Text>
-      </VStack>
-    ),
-    expandedBottom: (
-      <HStack spacing={10} modifiers={[padding({ horizontal: 10, vertical: 6 })]}>
-        <Text modifiers={[font({ size: 12 }), foregroundStyle(secondary), lineLimit(1)]}>
           {nextReminderLine}
         </Text>
-        <Spacer />
-        {isCompleted ? null : (
-          // iOS 17+ LiveActivityIntent: vardiyayı kilit ekranından bitirir.
-          <Button
-            label="Vardiyayı bitir"
-            systemImage="checkmark.circle.fill"
-            target={NIGHT_SHIFT_FINISH_TARGET}
-            modifiers={[font({ size: 13, weight: "bold" }), foregroundStyle(accent)]}
-          />
-        )}
-      </HStack>
+      </VStack>
     )
   };
 }

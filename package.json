@@ -21,7 +21,6 @@
     "verify:firebase:ios": "node --env-file-if-exists=.env tools/verify-firebase-ios-config.mjs",
     "verify:firebase:ios:generated": "node tools/verify-generated-firebase-ios.mjs",
     "verify:google-ads": "node tools/verify-google-ads-config.mjs",
-    "verify:ios-notifications": "node tools/verify-ios-notifications.mjs",
     "eas-build-post-install": "npm run verify:revenuecat && npm run verify:meta && npm run verify:firebase:ios && npm run verify:google-ads"
   },
   "expo": {
@@ -50,7 +49,6 @@
     "expo-apple-authentication": "~57.0.1",
     "expo-asset": "~57.0.7",
     "expo-audio": "~57.0.3",
-    "expo-blur": "~57.0.3",
     "expo-build-properties": "~57.0.11",
     "expo-clipboard": "~57.0.1",
     "expo-constants": "~57.0.7",

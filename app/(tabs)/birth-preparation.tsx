@@ -10,9 +10,11 @@ import {
   PackageCheck,
   Plus,
   Trash2,
+  Users
 } from "lucide-react-native";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
@@ -34,9 +36,7 @@ import { getCurrentProfile } from "@/api/profiles";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
-import { SkeletonList } from "@/components/motion";
 import { Screen } from "@/components/Screen";
-import { PageHeader } from "@/components/PageHeader";
 import { TextField } from "@/components/TextField";
 import { trackEvent } from "@/lib/analytics";
 import { useAppTheme } from "@/providers/AppThemeProvider";
@@ -181,7 +181,9 @@ export default function BirthPreparationScreen() {
   if (profileQuery.isPending) {
     return (
       <Screen scroll={false}>
-        <SkeletonList count={3} />
+        <View style={styles.loading}>
+          <ActivityIndicator color={appTheme.primary} />
+        </View>
       </Screen>
     );
   }
@@ -203,13 +205,25 @@ export default function BirthPreparationScreen() {
   return (
     <Screen>
       <View style={styles.container}>
-        <PageHeader
-          back
-          eyebrow="Doğuma hazırlık"
-          icon={ClipboardCheck}
-          subtitle="Anne ve baba aynı listeyi görür. Yapılan her işaretleme iki hesapta da güncellenir."
-          title="Aklında tutma, birlikte tamamla"
-        />
+        <BackButton color={appTheme.primary} />
+
+        <View style={[styles.hero, { backgroundColor: appTheme.primarySoft }]}>
+          <View style={styles.heroHeader}>
+            <View style={[styles.heroIcon, { backgroundColor: appTheme.accentSoft }]}>
+              <ClipboardCheck color={appTheme.primary} size={28} />
+            </View>
+            <View style={styles.sharedPill}>
+              <Users color={appTheme.primary} size={15} />
+              <Text style={[styles.sharedPillText, { color: appTheme.primary }]}>Ortak liste</Text>
+            </View>
+          </View>
+          <Text style={typography.eyebrow}>Doğuma hazırlık</Text>
+          <Text style={typography.heading1}>Aklında tutma, birlikte tamamla</Text>
+          <Text style={styles.heroText}>
+            Anne ve baba aynı listeyi görür. Yapılan her işaretleme iki hesapta da
+            güncellenir.
+          </Text>
+        </View>
 
         <View style={styles.segment}>
           <SegmentButton
@@ -257,7 +271,7 @@ export default function BirthPreparationScreen() {
         </Card>
 
         {itemsQuery.isPending ? (
-          <SkeletonList count={3} />
+          <ActivityIndicator color={appTheme.primary} />
         ) : itemsQuery.isError ? (
           <EmptyState
             title="Hazırlık listesi yüklenemedi"

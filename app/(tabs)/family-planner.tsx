@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   AlarmClock,
+  ArrowLeft,
   BellRing,
   Check,
   ChevronRight,
@@ -55,7 +56,6 @@ import { EmptyState } from "@/components/EmptyState";
 import { QueryState } from "@/components/QueryState";
 import { Reveal } from "@/components/Reveal";
 import { Screen } from "@/components/Screen";
-import { PageHeader } from "@/components/PageHeader";
 import { TextField } from "@/components/TextField";
 import { createCareUuid } from "@/features/care-journal/careSync";
 import { showPaywallIfNeeded } from "@/features/subscription/showPaywallIfNeeded";
@@ -494,26 +494,42 @@ export default function FamilyPlannerScreen() {
   return (
     <Screen>
       <View style={styles.container}>
-        <PageHeader
-          back
-          eyebrow={
-            lifeStage === "pregnancy"
-              ? "Gebelik desteği"
-              : `${selectedBaby?.name ?? "Bebek"} bakımı`
-          }
-          icon={Users}
-          subtitle="Görev ve alarm yalnız seçtiğin kişilere gider; tamamlandığında iki cihazda da aynı anda görünür."
-          title="Kimin sırası belli olsun"
-        />
+        <View style={styles.topBar}>
+          <Pressable
+            accessibilityLabel="Geri dön"
+            accessibilityRole="button"
+            hitSlop={10}
+            onPress={() => router.back()}
+            style={({ pressed }) => [
+              styles.backButton,
+              pressed && styles.pressed
+            ]}
+          >
+            <ArrowLeft color={colors.text} size={24} />
+          </Pressable>
+          <View style={styles.topBarCopy}>
+            <Text style={typography.heading2}>Aile görevleri</Text>
+            <Text style={styles.topBarMeta}>
+              {lifeStage === "pregnancy" ? "Gebelik desteği" : `${selectedBaby?.name ?? "Bebek"} bakımı`}
+            </Text>
+          </View>
+        </View>
 
         <Reveal>
-          <View style={styles.hero}>
+          <View style={[styles.hero, { backgroundColor: appTheme.primarySoft }]}>
             <View style={styles.heroTopRow}>
+              <View style={[styles.heroIcon, { backgroundColor: appTheme.accentSoft }]}>
+                <Users color={appTheme.primary} size={27} />
+              </View>
               <CreditBadge
                 isPremium={Boolean(featureAccess?.is_premium)}
                 remaining={featureAccess?.remaining ?? null}
               />
             </View>
+            <Text style={typography.heading1}>Kimin sırası belli olsun</Text>
+            <Text style={styles.heroText}>
+              Görev ve alarm yalnız seçtiğin kişilere gider; tamamlandığında iki cihazda da aynı anda görünür.
+            </Text>
             <View style={styles.participantRow}>
               {context.participants.map((participant) => (
                 <View key={participant.user_id} style={styles.participantItem}>

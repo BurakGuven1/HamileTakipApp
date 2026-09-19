@@ -327,7 +327,7 @@ export default function SignInScreen() {
       <View style={styles.container}>
         <View style={styles.hero}>
           <Text style={typography.eyebrow}>Anne+ Takip</Text>
-          <Text style={typography.display}>
+          <Text style={typography.heading1}>
             {isFamilyMember
               ? "Aileye bağlan"
               : isSignUp

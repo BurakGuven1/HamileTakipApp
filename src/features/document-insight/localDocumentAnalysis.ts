@@ -1,26 +1,14 @@
 import { Directory, File, Paths } from "expo-file-system";
 
-import {
-  buildOnDeviceDocumentResult,
-  UNKNOWN_INTERPRETATION_CONTEXT
-} from "@/features/document-insight/documentRules";
-import type {
-  DocumentInterpretationContext,
-  OcrPageInput
-} from "@/features/document-insight/types";
+import { buildOnDeviceDocumentResult } from "@/features/document-insight/documentRules";
+import type { OcrPageInput } from "@/features/document-insight/types";
 
 type AnalyzeInput = {
   uri: string;
   mimeType: string;
-  /** Which reference ranges may be applied. Defaults to the cautious "unknown". */
-  context?: DocumentInterpretationContext;
 };
 
-export async function analyzeDocumentOnDevice({
-  uri,
-  mimeType,
-  context = UNKNOWN_INTERPRETATION_CONTEXT
-}: AnalyzeInput) {
+export async function analyzeDocumentOnDevice({ uri, mimeType }: AnalyzeInput) {
   try {
     const ocr = await import("@dariyd/react-native-text-recognition");
     const available = await ocr.isAvailable();
@@ -35,7 +23,7 @@ export async function analyzeDocumentOnDevice({
     });
     if (!result.success) throw new Error(result.errorMessage || "Belge cihazda okunamadı.");
     const pages = toSafePageLines(result.pages ?? [], result.fullText ?? "");
-    return buildOnDeviceDocumentResult(pages, context);
+    return buildOnDeviceDocumentResult(pages);
   } catch (error) {
     if (error instanceof Error && /doesn.t seem to be linked|not using Expo Go|rebuilt the app/i.test(error.message)) {
       throw new Error("Cihaz içi belge okuyucu bu uygulama sürümünde bulunmuyor. Özelliği içeren yeni sürüm kurulmalı.");

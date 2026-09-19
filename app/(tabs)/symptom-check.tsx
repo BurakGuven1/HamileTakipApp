@@ -9,7 +9,6 @@ import { getCurrentProfile } from "@/api/profiles";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Screen } from "@/components/Screen";
-import { PageHeader } from "@/components/PageHeader";
 import {
   evaluateTriage,
   getCallChecklist,
@@ -84,11 +83,14 @@ export default function SymptomCheckScreen() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.content}>
-        <PageHeader
-          eyebrow="Bu normal mi?"
-          subtitle="Yaşadığın belirtileri işaretle. Uygulama teşhis koymaz; sadece bu belirtilerin beklemeye mi yoksa aramaya mı işaret ettiğini söyler."
-          title="Beklemeli mi, aramalı mısın"
-        />
+        <View style={{ gap: spacing.xs }}>
+          <Text style={typography.eyebrow}>Bu normal mi?</Text>
+          <Text style={typography.heading1}>Beklemeli mi, aramalı mısın</Text>
+          <Text style={styles.muted}>
+            Yaşadığın belirtileri işaretle. Uygulama teşhis koymaz; sadece bu
+            belirtilerin beklemeye mi yoksa aramaya mı işaret ettiğini söyler.
+          </Text>
+        </View>
 
         <View style={styles.stageTabs}>
           {availableStages.map((item) => {

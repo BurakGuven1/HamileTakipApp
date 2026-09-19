@@ -1,6 +1,7 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Activity, AlertTriangle, BellRing, CalendarDays, FileHeart, FileText, Minus, NotebookPen, ShieldCheck, Thermometer, Trash2, TrendingDown, TrendingUp } from "lucide-react-native";
+import { router } from "expo-router";
+import { ArrowLeft, BellRing, CalendarDays, FileHeart, FileText, NotebookPen, ShieldCheck, Trash2 } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -14,40 +15,13 @@ import {
   type PregnancyHealthTimelineItem
 } from "@/api/pregnancyHealthFile";
 import { getFamilyFeatureAccess } from "@/api/familyCoordination";
-import { getCurrentProfile } from "@/api/profiles";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
-import {
-  PressableScale,
-  SkeletonShimmer,
-  StaggeredList
-} from "@/components/motion";
 import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
-import { PageHeader } from "@/components/PageHeader";
 import { TextField } from "@/components/TextField";
-import { resolveInterpretationContext } from "@/features/document-insight/pregnancyContext";
-import {
-  buildProteinuriaFlag,
-  combineHypertensionAndProteinuria
-} from "@/features/document-insight/redFlags";
-import type { DocumentRedFlag, DocumentRedFlagSeverity } from "@/features/document-insight/types";
 import { sharePregnancyHealthFilePdf } from "@/features/pregnancy-health/report";
-import {
-  buildVitalSignTrend,
-  evaluateVitalSigns,
-  formatTemperature,
-  formatVitalSignDate,
-  validateVitalSignDraft,
-  type VitalSignReading
-} from "@/features/pregnancy-health/vitalSigns";
-import {
-  listVitalSigns,
-  saveVitalSign,
-  VITAL_SIGNS_QUERY_KEY
-} from "@/features/pregnancy-health/vitalSignsStore";
-import { getPregnancyWeek } from "@/lib/dates";
 import { PREMIUM_FEATURES } from "@/features/subscription/premiumFeatures";
 import { showPaywallIfNeeded } from "@/features/subscription/showPaywallIfNeeded";
 import { trackEvent } from "@/lib/analytics";
@@ -69,56 +43,15 @@ export default function PregnancyHealthFileScreen() {
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderAt, setReminderAt] = useState(() => new Date(Date.now() + 23 * 60 * 60_000));
   const [recipientScope, setRecipientScope] = useState<"self" | "full_family">("self");
-  const [vitalsOpen, setVitalsOpen] = useState(false);
-  const [systolic, setSystolic] = useState("");
-  const [diastolic, setDiastolic] = useState("");
-  const [temperature, setTemperature] = useState("");
-  const [measuredAt, setMeasuredAt] = useState(() => new Date());
   const viewedTrackedRef = useRef(false);
 
   const healthQuery = useQuery({ queryKey: HEALTH_QUERY_KEY, queryFn: listPregnancyHealthTimeline });
-  const vitalsQuery = useQuery({ queryKey: VITAL_SIGNS_QUERY_KEY, queryFn: listVitalSigns });
-  const profileQuery = useQuery({ queryKey: ["profile"], queryFn: getCurrentProfile });
   const featureAccessQuery = useQuery({
     queryKey: ["family-feature-access", PREMIUM_FEATURES.documentInsight.source],
     queryFn: () => getFamilyFeatureAccess(PREMIUM_FEATURES.documentInsight.source)
   });
   const isPremium = Boolean(featureAccessQuery.data?.is_premium);
-  const timeline = useMemo(() => healthQuery.data?.timeline ?? [], [healthQuery.data?.timeline]);
-  const vitals = useMemo(() => vitalsQuery.data ?? [], [vitalsQuery.data]);
-  const profile = profileQuery.data;
-  const interpretationContext = useMemo(
-    () =>
-      resolveInterpretationContext({
-        isPregnant: profile?.is_pregnant ?? null,
-        pregnancyWeek: getPregnancyWeek(profile?.due_date)
-      }),
-    [profile?.due_date, profile?.is_pregnant]
-  );
-
-  /**
-   * A raised blood pressure and a urine protein result mean much more together
-   * than apart, and this screen is the only place both of them exist: the cuff
-   * reading was typed here, the urine protein came from a saved lab report. The
-   * two separate cards are therefore merged into one higher-severity card when
-   * both are present. It still names no condition — only what was measured and
-   * who should look at it.
-   */
-  const vitalFlags = useMemo(() => {
-    const latest = vitals.at(0);
-    if (!latest) return [] as DocumentRedFlag[];
-    const measurementFlags = evaluateVitalSigns(latest, interpretationContext);
-    const proteinuria = findRecentProteinuriaFlag(timeline, interpretationContext);
-    return combineHypertensionAndProteinuria(
-      proteinuria ? [...measurementFlags, proteinuria] : measurementFlags
-    );
-  }, [interpretationContext, timeline, vitals]);
-
-  const systolicTrend = useMemo(() => buildVitalSignTrend(vitals, (item) => item.systolic), [vitals]);
-  const temperatureTrend = useMemo(
-    () => buildVitalSignTrend(vitals, (item) => item.temperatureCelsius),
-    [vitals]
-  );
+  const timeline = healthQuery.data?.timeline ?? [];
   const remindersByEntry = useMemo(
     () => new Map((healthQuery.data?.reminders ?? []).map((reminder) => [reminder.entry_id, reminder])),
     [healthQuery.data?.reminders]
@@ -175,31 +108,6 @@ export default function PregnancyHealthFileScreen() {
       return entry;
     },
     onError: (error) => showError(error, "Sağlık kaydı eklenemedi")
-  });
-
-  const vitalMutation = useMutation({
-    mutationFn: async () => {
-      const validation = validateVitalSignDraft({ measuredAt, systolic, diastolic, temperature });
-      if (!validation.ok) throw new Error(validation.message);
-      return saveVitalSign(validation.reading);
-    },
-    onSuccess: async (reading) => {
-      await trackEvent("pregnancy_vital_sign_recorded", {
-        has_blood_pressure: reading.systolic !== null,
-        has_temperature: reading.temperatureCelsius !== null,
-        source: "pregnancy_health_file"
-      });
-      setSystolic("");
-      setDiastolic("");
-      setTemperature("");
-      setVitalsOpen(false);
-      showSuccess("Ölçümün sağlık dosyana eklendi.");
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: VITAL_SIGNS_QUERY_KEY }),
-        queryClient.invalidateQueries({ queryKey: HEALTH_QUERY_KEY })
-      ]);
-    },
-    onError: (error) => showError(error, "Ölçüm kaydedilemedi")
   });
 
   const deleteMutation = useMutation({
@@ -267,7 +175,16 @@ export default function PregnancyHealthFileScreen() {
   return (
     <Screen>
       <View style={styles.page}>
-        <PageHeader back eyebrow="Gebelik kayıtların" icon={FileHeart} title="Sağlık Dosyam" />
+        <View style={styles.topBar}>
+          <Pressable accessibilityLabel="Geri dön" accessibilityRole="button" onPress={() => router.back()} style={styles.iconButton}>
+            <ArrowLeft color={colors.text} size={22} />
+          </Pressable>
+          <View style={{ flex: 1 }}>
+            <Text style={typography.eyebrow}>GEBELİK KAYITLARIN</Text>
+            <Text style={typography.heading1}>Sağlık Dosyam</Text>
+          </View>
+          <FileHeart color={appTheme.primary} size={30} />
+        </View>
 
         <Card style={{ backgroundColor: appTheme.tint }}>
           <View style={styles.stack}>
@@ -324,117 +241,6 @@ export default function PregnancyHealthFileScreen() {
           </Card>
         ) : null}
 
-        {vitalFlags.length ? (
-          <Card style={styles.warningCard}>
-            <View style={styles.stack}>
-              <View style={styles.topBar}>
-                <AlertTriangle color={colors.dustyRose} size={22} />
-                <Text style={[typography.heading2, { flex: 1 }]}>Bunu doktorunla paylaş</Text>
-              </View>
-              <StaggeredList style={styles.stack}>
-                {vitalFlags.map((flag) => (
-                  <View key={flag.id} style={styles.stackTight}>
-                    <View style={styles.sectionHeader}>
-                      <Text style={typography.label}>{flag.testName}</Text>
-                      <Text style={styles.severityText}>{SEVERITY_LABEL[flag.severity]}</Text>
-                    </View>
-                    <Text style={styles.meta}>
-                      {flag.source === "manual_measurement" ? "Kendi ölçümün" : "Tahlil raporundan"}
-                    </Text>
-                    <Text style={typography.body}>{flag.observation}</Text>
-                    <Text style={styles.actionText}>{flag.action}</Text>
-                  </View>
-                ))}
-              </StaggeredList>
-              <Text style={styles.meta}>
-                Bu uyarı bir tanı değildir ve aciliyet değerlendirmesi yapmaz. Kendini kötü hissediyorsan beklemeden sağlık kuruluşuna başvur.
-              </Text>
-            </View>
-          </Card>
-        ) : null}
-
-        <Card>
-          <View style={styles.stack}>
-            <View style={styles.topBar}>
-              <Activity color={appTheme.primary} size={24} />
-              <Text style={[typography.heading2, { flex: 1 }]}>Tansiyon ve ateş</Text>
-            </View>
-            <Text style={typography.body}>
-              Evde ölçtüğün değerleri buraya yaz. Kayıtların zaman çizelgende ve PDF arşivinde yer alır; bu ekran ölçümü açıklar, tanı koymaz.
-            </Text>
-
-            {vitalsQuery.isLoading ? (
-              <>
-                <SkeletonShimmer height={16} width="60%" />
-                <SkeletonShimmer delay={80} height={12} />
-              </>
-            ) : null}
-
-            {!vitalsQuery.isLoading && vitals.length ? (
-              <View style={styles.summaryRow}>
-                <TrendTile
-                  icon={<Activity color={appTheme.primary} size={18} />}
-                  label="Son tansiyon"
-                  value={vitals.find((item) => item.systolic !== null)
-                    ? `${vitals.find((item) => item.systolic !== null)?.systolic}/${vitals.find((item) => item.systolic !== null)?.diastolic}`
-                    : "—"}
-                  direction={systolicTrend.direction}
-                />
-                <TrendTile
-                  icon={<Thermometer color={appTheme.primary} size={18} />}
-                  label="Son ateş"
-                  value={temperatureTrend.latest !== null ? `${formatTemperature(temperatureTrend.latest)} °C` : "—"}
-                  direction={temperatureTrend.direction}
-                />
-              </View>
-            ) : null}
-
-            <Button
-              label={vitalsOpen ? "Vazgeç" : "Ölçüm ekle"}
-              variant={vitalsOpen ? "ghost" : "primary"}
-              onPress={() => setVitalsOpen((value) => !value)}
-            />
-
-            {vitalsOpen ? (
-              <View style={styles.stack}>
-                <View style={styles.actionsRow}>
-                  <TextField containerStyle={styles.flexButton} keyboardType="number-pad" label="Büyük tansiyon" maxLength={3} value={systolic} onChangeText={setSystolic} />
-                  <TextField containerStyle={styles.flexButton} keyboardType="number-pad" label="Küçük tansiyon" maxLength={3} value={diastolic} onChangeText={setDiastolic} />
-                </View>
-                <TextField
-                  helperText="İstersen yalnızca ateş ya da yalnızca tansiyon girebilirsin."
-                  keyboardType="decimal-pad"
-                  label="Ateş (°C)"
-                  maxLength={5}
-                  value={temperature}
-                  onChangeText={setTemperature}
-                />
-                <Text style={typography.label}>Ölçüm zamanı</Text>
-                <DateTimePicker display="compact" mode="datetime" value={measuredAt} onChange={(_, value) => value && setMeasuredAt(value)} />
-                <Button
-                  disabled={vitalMutation.isPending}
-                  label={vitalMutation.isPending ? "Kaydediliyor…" : "Ölçümü kaydet"}
-                  onPress={() => vitalMutation.mutate()}
-                />
-              </View>
-            ) : null}
-
-            {!vitalsQuery.isLoading && !vitals.length ? (
-              <Text style={styles.meta}>Henüz ölçüm yok. İlk tansiyon veya ateş ölçümünü ekleyerek başlayabilirsin.</Text>
-            ) : null}
-
-            {vitals.length ? (
-              <StaggeredList style={styles.stackTight}>
-                {vitals.slice(0, 8).map((reading) => (
-                  <Text key={reading.measuredAt} style={styles.labValue}>
-                    • {formatVitalSignDate(reading.measuredAt)} — {describeReading(reading)}
-                  </Text>
-                ))}
-              </StaggeredList>
-            ) : null}
-          </View>
-        </Card>
-
         <View style={styles.sectionHeader}>
           <Text style={typography.heading2}>Zaman çizelgesi</Text>
           <Text style={styles.meta}>Tüm geçmiş ücretsiz</Text>
@@ -471,81 +277,13 @@ export default function PregnancyHealthFileScreen() {
   );
 }
 
-const SEVERITY_LABEL: Record<DocumentRedFlagSeverity, string> = {
-  urgent: "Bugün değerlendirilmeli",
-  today: "Bugün doktoruna danış",
-  soon: "Dikkat"
-};
-
-/** Urine protein saved from a lab report within the last two weeks. */
-const PROTEINURIA_WINDOW_MS = 14 * 24 * 60 * 60_000;
-
-function findRecentProteinuriaFlag(
-  timeline: PregnancyHealthTimelineItem[],
-  context: Parameters<typeof buildProteinuriaFlag>[1]
-) {
-  const cutoff = Date.now() - PROTEINURIA_WINDOW_MS;
-  for (const item of timeline) {
-    if (Date.parse(item.occurredAt) < cutoff) continue;
-    for (const value of item.labValues) {
-      const flag = buildProteinuriaFlag(
-        { testName: value.test_name, result: value.result_text, unit: value.unit ?? "" },
-        context
-      );
-      if (flag) return flag;
-    }
-  }
-  return null;
-}
-
-function describeReading(reading: VitalSignReading) {
-  const parts = [
-    reading.systolic !== null && reading.diastolic !== null
-      ? `${reading.systolic}/${reading.diastolic} mmHg`
-      : null,
-    reading.temperatureCelsius !== null ? `${formatTemperature(reading.temperatureCelsius)} °C` : null,
-    reading.note
-  ].filter(Boolean);
-  return parts.join(" · ");
-}
-
-/** The arrow says the number moved, never whether the movement is good. */
-function TrendTile({
-  direction,
-  icon,
-  label,
-  value
-}: {
-  direction: "up" | "down" | "flat" | null;
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <View style={styles.summary}>
-      {icon}
-      <Text style={styles.summaryValue}>{value}</Text>
-      <View style={styles.topBar}>
-        {direction === "up" ? <TrendingUp color={colors.textMuted} size={14} />
-          : direction === "down" ? <TrendingDown color={colors.textMuted} size={14} />
-          : direction === "flat" ? <Minus color={colors.textMuted} size={14} />
-          : null}
-        <Text style={styles.meta}>{label}</Text>
-      </View>
-    </View>
-  );
-}
-
 function Summary({ label, value }: { label: string; value: number }) { return <View style={styles.summary}><Text style={styles.summaryValue}>{value}</Text><Text style={styles.meta}>{label}</Text></View>; }
-function Choice({ active, label, onPress }: { active: boolean; label: string; onPress: () => void }) { const theme = useAppTheme(); return <PressableScale accessibilityRole="button" onPress={onPress} style={[styles.choice, active && { backgroundColor: theme.primary, borderColor: theme.primary }]}><Text style={[styles.choiceText, active && { color: colors.onPrimary }]}>{label}</Text></PressableScale>; }
+function Choice({ active, label, onPress }: { active: boolean; label: string; onPress: () => void }) { const theme = useAppTheme(); return <Pressable accessibilityRole="button" onPress={onPress} style={[styles.choice, active && { backgroundColor: theme.primary, borderColor: theme.primary }]}><Text style={[styles.choiceText, active && { color: colors.onPrimary }]}>{label}</Text></Pressable>; }
 function timelineIcon(kind: PregnancyHealthTimelineItem["kind"], color: string) { return kind === "appointment" ? <CalendarDays color={color} size={20} /> : kind === "lab_report" ? <FileText color={color} size={20} /> : <NotebookPen color={color} size={20} />; }
 function formatDateTime(value: string) { return new Intl.DateTimeFormat("tr-TR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)); }
 
 const styles = StyleSheet.create({
-  page: { gap: spacing.lg }, stack: { gap: spacing.md }, stackTight: { gap: spacing.xs },
-  warningCard: { backgroundColor: colors.accentSoft, borderColor: colors.dustyRose, borderWidth: 1 },
-  severityText: { ...typography.label, color: colors.text },
-  actionText: { ...typography.body, color: colors.text, fontWeight: "700" }, topBar: { alignItems: "center", flexDirection: "row", gap: spacing.md },
+  page: { gap: spacing.lg }, stack: { gap: spacing.md }, topBar: { alignItems: "center", flexDirection: "row", gap: spacing.md },
   iconButton: { alignItems: "center", borderRadius: radii.pill, justifyContent: "center", minHeight: 44, minWidth: 44 },
   summaryRow: { flexDirection: "row", gap: spacing.sm }, summary: { alignItems: "center", backgroundColor: colors.surface, borderRadius: radii.lg, flex: 1, padding: spacing.md }, summaryValue: { ...typography.heading2, color: colors.primary },
   actionsRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm }, flexButton: { flex: 1 },

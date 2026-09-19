@@ -125,20 +125,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         "Bebek fotoğraflarını çekebilmek için kamera erişimi kullanılır.",
       NSPhotoLibraryUsageDescription:
         "Ana sayfa görselini seçmek ve anı galerisine fotoğraf eklemek için fotoğraf erişimi kullanılır.",
-      // "audio": ninni çalar ekran kilitliyken de çalmaya devam eder
-      // (LullabyPlayerProvider, shouldPlayInBackground: true).
-      // "remote-notification": bakım alarmları ve Live Activity içerik
-      // güncellemeleri APNs üzerinden gelir. İkisi de gerçekten kullanılıyor;
-      // kullanılmayan bir arka plan modu App Review'da red sebebidir.
       UIBackgroundModes: ["audio", "remote-notification"],
-      // Kilit ekranı sayacı ve Dynamic Island için zorunlu. expo-widgets
-      // eklentisi de bu anahtarı yazar; burada açıkça tutulması niyeti
-      // belgeler ve eklenti sırası değişirse anahtarın kaybolmasını önler.
-      NSSupportsLiveActivities: true,
-      // Saniyede bir push ile güncelleme YAPMIYORUZ: sayaç sistem yönetimli
-      // Text(timerInterval:) ile çiziliyor. Bu yüzden "frequent updates"
-      // kapalı; açık bırakmak hem pil hem App Review açısından gereksiz.
-      NSSupportsLiveActivitiesFrequentUpdates: false,
       NSUserTrackingUsageDescription: metaTrackingPermission,
       SKAdNetworkItems: skAdNetworkIdentifiers
     },
@@ -214,8 +201,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         bundleIdentifier: `${process.env.EXPO_PUBLIC_IOS_BUNDLE_IDENTIFIER ?? "com.burakguven.hamiletakip"}.widgets`,
         groupIdentifier: `group.${process.env.EXPO_PUBLIC_IOS_BUNDLE_IDENTIFIER ?? "com.burakguven.hamiletakip"}`,
         enablePushNotifications: true,
-        // Bkz. NSSupportsLiveActivitiesFrequentUpdates yorumu.
-        frequentUpdates: false,
         widgets: [
           {
             name: "CareQuickWidget",

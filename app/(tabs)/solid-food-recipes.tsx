@@ -1,6 +1,7 @@
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import {
+  ArrowLeft,
   ChevronRight,
   Clock3,
   Search,
@@ -18,7 +19,6 @@ import {
 } from "react-native";
 
 import { Screen } from "@/components/Screen";
-import { PageHeader } from "@/components/PageHeader";
 import {
   solidFoodRecipeCategories,
   solidFoodRecipes,
@@ -51,7 +51,19 @@ export default function SolidFoodRecipesScreen() {
   return (
     <Screen>
       <View style={styles.container}>
-        <PageHeader back title="Ek gıda tarifleri" />
+        <View style={styles.headerRow}>
+          <Pressable
+            accessibilityLabel="Geri dön"
+            accessibilityRole="button"
+            hitSlop={8}
+            onPress={() => router.back()}
+            style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
+          >
+            <ArrowLeft color={colors.text} size={24} />
+          </Pressable>
+          <Text style={styles.screenTitle}>Ek gıda tarifleri</Text>
+          <View style={styles.headerSpacer} />
+        </View>
 
         <View style={[styles.intro, { backgroundColor: appTheme.primarySoft }]}>
           <View style={[styles.introIcon, { backgroundColor: colors.surfaceStrong }]}>

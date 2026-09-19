@@ -3,7 +3,7 @@ import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import { Camera, Images } from "lucide-react-native";
+import { Camera, Images, Sparkles } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -23,7 +23,6 @@ import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
-import { PageHeader } from "@/components/PageHeader";
 import { TextField } from "@/components/TextField";
 import { PREMIUM_FEATURES } from "@/features/subscription/premiumFeatures";
 import { showPaywallIfNeeded } from "@/features/subscription/showPaywallIfNeeded";
@@ -267,12 +266,36 @@ function GalleryContent() {
         )}
         ListHeaderComponent={(
           <View style={styles.headerContent}>
-        <PageHeader
-          eyebrow="Anılar"
-          icon={Images}
-          subtitle="Fotoğrafları tarihe göre sakla; bebeğinin yolculuğunu zaman çizgisi üzerinde gör."
-          title="Fotoğraf galerisi"
-        />
+        <View style={[styles.hero, { backgroundColor: accentColor.accentSoft }]}>
+          <View style={[styles.iconBubble, { backgroundColor: colors.surface }]}>
+            <Images color={accentColor.primary} size={28} />
+          </View>
+          <View style={{ gap: spacing.xs }}>
+            <Text style={typography.eyebrow}>Anılar</Text>
+            <Text style={typography.heading1}>Fotoğraf galerisi</Text>
+            <Text style={styles.heroText}>
+              Fotoğrafları tarihe göre sakla; bebeğinin yolculuğunu zaman çizgisi
+              üzerinde gör.
+            </Text>
+          </View>
+        </View>
+
+        <Pressable
+          accessibilityHint="Foto Stüdyo'da aylık anı kartı hazırlar"
+          accessibilityRole="button"
+          onPress={() => router.push("/photo-studio/milestone")}
+          style={[styles.studioCard, { borderColor: accentColor.primary }]}
+        >
+          <View style={[styles.iconBubble, { backgroundColor: accentColor.accentSoft }]}>
+            <Sparkles color={accentColor.primary} size={22} />
+          </View>
+          <View style={styles.studioCopy}>
+            <Text style={typography.label}>Aylık anı kartı yap</Text>
+            <Text style={styles.studioHint}>
+              Fotoğrafına kaç aylık olduğunu, kilo ve boyunu tatlı tabelalarla ekle.
+            </Text>
+          </View>
+        </Pressable>
 
         {babies.length > 0 ? (
           <View style={styles.babyChips}>
@@ -506,6 +529,25 @@ const styles = StyleSheet.create({
   heroText: {
     ...typography.body,
     color: colors.text
+  },
+  studioCard: {
+    ...radii.card,
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+    padding: spacing.md
+  },
+  studioCopy: {
+    flex: 1,
+    gap: spacing.xs
+  },
+  studioHint: {
+    ...typography.body,
+    fontSize: 13,
+    lineHeight: 19
   },
   babyChips: {
     flexDirection: "row",

@@ -24,7 +24,6 @@ import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { QueryState } from "@/components/QueryState";
 import { Screen } from "@/components/Screen";
-import { PageHeader } from "@/components/PageHeader";
 import { TextField } from "@/components/TextField";
 import { Thread } from "@/components/Thread";
 import { formatDate, getRelativeDayLabel } from "@/lib/dates";
@@ -177,13 +176,18 @@ export default function VaccinesScreen() {
   return (
     <Screen>
       <View style={styles.container}>
-        <PageHeader
-          back
-          eyebrow="Ortak aile alanı"
-          icon={Syringe}
-          subtitle="Gebelik ve bebek aşı planlarını yaşam evrenden bağımsız olarak aynı yerde takip et."
-          title="Aşı merkezi"
-        />
+        <View style={[styles.hero, { backgroundColor: appTheme.primarySoft }]}>
+          <View style={[styles.heroIcon, { backgroundColor: colors.surface }]}>
+            <Syringe color={appTheme.primary} size={29} />
+          </View>
+          <View style={styles.heroCopy}>
+            <Text style={[typography.eyebrow, { color: appTheme.primary }]}>Ortak aile alanı</Text>
+            <Text style={typography.heading1}>Aşı merkezi</Text>
+            <Text style={styles.heroText}>
+              Gebelik ve bebek aşı planlarını yaşam evrenden bağımsız olarak aynı yerde takip et.
+            </Text>
+          </View>
+        </View>
 
         <View style={[styles.medicalNote, { backgroundColor: appTheme.accentSoft }]}>
           <ShieldCheck color={appTheme.primary} size={22} />

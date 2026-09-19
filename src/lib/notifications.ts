@@ -160,17 +160,6 @@ export async function ensureNotificationChannels() {
       sound: "default",
       lightColor: "#E3B873"
     }),
-    // Pazarlama/kampanya kanalı bilerek DÜŞÜK önemde ve ayrı tutulur: kullanıcı
-    // sistem ayarlarından yalnızca bunu susturabilsin, hatırlatmaları değil
-    // (App Store Review Guideline 4.5.4 karşılığı Android davranışı).
-    Notifications.setNotificationChannelAsync("premium-offers", {
-      name: "Ürün ve kampanya duyuruları",
-      description:
-        "Yalnızca açık onay verdiysen gelen Anne+ Premium kampanya ve yeni özellik duyuruları.",
-      importance: Notifications.AndroidImportance.LOW,
-      sound: null,
-      lightColor: "#E3B873"
-    }),
     Notifications.setNotificationChannelAsync("milk-inventory", {
       name: "Anne sütü stoğu",
       description:

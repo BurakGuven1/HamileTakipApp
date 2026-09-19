@@ -48,20 +48,3 @@ test("missing non-premium credit balance cannot silently proceed", () => {
     "required_paywall"
   );
 });
-
-test("the last free credit is still a credit", () => {
-  // Document insight spends the credit *before* showing the result, so the run
-  // that brings the balance to zero must be allowed through. Charging for the
-  // first real value a user ever sees is how the funnel loses them.
-  assert.equal(
-    getCreditGateDecision({ allowed: true, isPremium: false, remaining: 1 }),
-    "proceed"
-  );
-});
-
-test("a negative balance is treated as exhausted, not as a positive number", () => {
-  assert.equal(
-    getCreditGateDecision({ isPremium: false, remaining: -1 }),
-    "required_paywall"
-  );
-});

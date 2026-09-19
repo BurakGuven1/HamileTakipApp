@@ -8,6 +8,7 @@ export type PremiumAccessMode = "credits" | "premium";
 export type PremiumBundleKey =
   | "family_sharing"
   | "health_archive"
+  | "memory_studio"
   | "smart_care";
 
 export type PremiumBundleDefinition = {
@@ -31,6 +32,11 @@ export const PREMIUM_BUNDLES = {
     key: "family_sharing",
     promise: "Bakımı eşinle paylaş; kimin sırası olduğu hep belli olsun.",
     title: "Aile Paylaşımı"
+  },
+  memory_studio: {
+    key: "memory_studio",
+    promise: "Fotoğrafını paylaşmaya hazır bir anıya çevir.",
+    title: "Anı Stüdyosu"
   }
 } as const satisfies Record<PremiumBundleKey, PremiumBundleDefinition>;
 
@@ -154,6 +160,20 @@ export const PREMIUM_FEATURES = {
     lifeStage: "postpartum",
     source: "sleep_prediction",
     title: "Akıllı uyku tahmini"
+  },
+  photoStudioMilestone: {
+    accessMode: "premium",
+    bundle: "memory_studio",
+    lifeStage: "postpartum",
+    source: "photo_studio_milestone",
+    title: "Tüm anı kartı konseptleri"
+  },
+  photoStudioBelly: {
+    accessMode: "premium",
+    bundle: "memory_studio",
+    lifeStage: "pregnancy",
+    source: "photo_studio_belly",
+    title: "Tüm karın ışıltısı konseptleri"
   },
   milkInventory: {
     accessMode: "premium",

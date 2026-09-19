@@ -2,9 +2,9 @@ import { Plus } from "lucide-react-native";
 import { StyleSheet, Text, View } from "react-native";
 
 import { Button } from "@/components/Button";
-import { GlassSurface } from "@/components/glass";
+import { Thread } from "@/components/Thread";
 import { useAppTheme } from "@/providers/AppThemeProvider";
-import { radii, spacing, typography } from "@/theme";
+import { colors, radii, spacing, typography } from "@/theme";
 
 type EmptyStateProps = {
   actionHint?: string;
@@ -24,9 +24,21 @@ export function EmptyState({
   const appTheme = useAppTheme();
 
   return (
-    <GlassSurface contentStyle={styles.wrapper} elevation="soft" radius={26}>
-      <View style={[styles.invitationMark, { backgroundColor: appTheme.primarySoft }]}>
-        <Plus color={appTheme.primary} size={24} strokeWidth={2.4} />
+    <View style={styles.wrapper}>
+      <View style={styles.signature}>
+        <Thread
+          accessibilityLabel={`${title} için açık ilmek`}
+          color={appTheme.primary}
+          height={58}
+          markers={[{ kind: "loop", position: 0.26 }]}
+          mutedColor={appTheme.theme.primarySoft}
+          progress={0.27}
+          semantic="timeline"
+          variant="progress"
+        />
+        <View style={[styles.invitationMark, { backgroundColor: appTheme.theme.primarySoft }]}>
+          <Plus color={appTheme.primary} size={20} strokeWidth={2.4} />
+        </View>
       </View>
       <View style={styles.copy}>
         <Text style={styles.title}>{title}</Text>
@@ -40,32 +52,43 @@ export function EmptyState({
           onPress={onActionPress}
         />
       ) : null}
-    </GlassSurface>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
-    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    ...radii.card,
+    borderWidth: StyleSheet.hairlineWidth,
     gap: spacing.lg,
+    overflow: "hidden",
     padding: spacing.xl
+  },
+  signature: {
+    minHeight: 58,
+    position: "relative"
   },
   invitationMark: {
     alignItems: "center",
     borderRadius: radii.pill,
-    height: 56,
+    height: 38,
     justifyContent: "center",
-    width: 56
+    position: "absolute",
+    right: spacing.sm,
+    top: spacing.sm,
+    width: 38
   },
   copy: {
     gap: spacing.sm
   },
   title: {
-    ...typography.heading3,
-    textAlign: "center"
+    ...typography.heading2,
+    color: colors.text
   },
   description: {
-    ...typography.caption,
-    textAlign: "center"
+    ...typography.body,
+    color: colors.textMuted
   }
 });
